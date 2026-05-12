@@ -9,15 +9,23 @@ import (
 )
 
 func Seed() {
-	// 1. Create Teacher
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), 14)
-	teacher := models.User{
-		Name:     "Demo Teacher",
-		Email:    "teacher@codevault.edu",
-		Password: string(hashedPassword),
-		Role:     "teacher",
+	// 1. Create Default Access Profiles across all 5 Target Scopes
+	hashPass := func(p string) string {
+		h, _ := bcrypt.GenerateFromPassword([]byte(p), 14)
+		return string(h)
 	}
-	db.DB.FirstOrCreate(&teacher, models.User{Email: "teacher@codevault.edu"})
+
+	users := []models.User{
+		{Name: "Dr. Ramesh S.", Email: "admin@campuscore.edu", Password: hashPass("admin123"), Role: "admin"},
+		{Name: "Prof. Anjali M.", Email: "ct@campuscore.edu", Password: hashPass("classteacher123"), Role: "classteacher"},
+		{Name: "Mr. Vikram K.", Email: "st@campuscore.edu", Password: hashPass("subjectteacher123"), Role: "subjectteacher"},
+		{Name: "Aarav Nikam", Email: "student@campuscore.edu", Password: hashPass("student123"), Role: "student", StudentID: "CS-01"},
+		{Name: "Mrs. Sunita Nikam", Email: "parent@campuscore.edu", Password: hashPass("parent123"), Role: "parent"},
+	}
+
+	for _, u := range users {
+		db.DB.FirstOrCreate(&u, models.User{Email: u.Email})
+	}
 
 	// 2. Create Problems
 	problems := []models.Problem{
