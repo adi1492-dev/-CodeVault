@@ -95,6 +95,46 @@ const ProblemPage = () => {
     }
   }, [targetId]);
 
+  // Helper logic extracting fallback expected text maps cleanly
+  const trExpectedFallback = (tc: any, probData: any) => {
+    if (tc.expected_output) return tc.expected_output;
+    if (tc.ExpectedOutput) return tc.ExpectedOutput;
+    if (probData.expected_output_preview) return probData.expected_output_preview.split('\n')[0];
+    return 'Valid compilation match sequence';
+  };
+
+  // Dynamically map active UI test cases array directly from real backend database entries or simulated assignment fallback suites
+  const displayTestCases = problem.test_cases || problem.TestCases || [
+    {
+      id: 1,
+      input: 'Array buffer size: 10',
+      expected_output: problem.expected_output_preview ? problem.expected_output_preview.split('\n')[0] : 'Output checksum verified: sum equals 45',
+      weight: 25,
+      is_hidden: false
+    },
+    {
+      id: 2,
+      input: 'Edge constraints pointer lookup pass',
+      expected_output: 'Memory bound aligned',
+      weight: 25,
+      is_hidden: false
+    },
+    {
+      id: 3,
+      input: 'Stress test dynamic loop conditions',
+      expected_output: 'Output checksum verified',
+      weight: 25,
+      is_hidden: true
+    },
+    {
+      id: 4,
+      input: 'Static timeline execution limit verification',
+      expected_output: 'Time limits respected (<100ms)',
+      weight: 25,
+      is_hidden: true
+    }
+  ];
+
   // Lightning-fast real-time C Code Lexer tokenizer simulation
   const simulateCompilerExecution = (srcCode: string) => {
     const lines = srcCode.split('\n');
@@ -151,36 +191,14 @@ const ProblemPage = () => {
       score: finalScore,
       tokens,
       ast: astTree,
-      test_results: [
-        {
-          passed: true,
-          weight: 25,
-          input: 'Buffer size: 10, offset: 0',
-          expected: problem.expected_output_preview ? problem.expected_output_preview.split('\n')[0] : 'Valid execution return token',
-          actual: problem.expected_output_preview ? problem.expected_output_preview.split('\n')[0] : 'Valid execution return token'
-        },
-        {
-          passed: true,
-          weight: 25,
-          input: 'Pointer trace mapping check',
-          expected: 'Memory bound aligned',
-          actual: 'Memory bound aligned'
-        },
-        {
-          passed: passedAll,
-          weight: 25,
-          input: 'Stress validation input sequence',
-          expected: 'Output checksum verified',
-          actual: passedAll ? 'Output checksum verified' : 'Warning: Partial array limit reached'
-        },
-        {
-          passed: passedAll,
-          weight: 25,
-          input: 'AST static loops test pass',
-          expected: 'Time limits respected (<100ms)',
-          actual: passedAll ? 'Time limits respected (4ms pass)' : 'Time limit threshold exceeded'
-        }
-      ]
+      test_results: displayTestCases.map((tc: any, i: number) => ({
+        test_case_id: tc.id || i + 1,
+        passed: i < 2 ? true : passedAll,
+        weight: tc.weight || 25,
+        input: tc.input || tc.Input,
+        expected: trExpectedFallback(tc, problem),
+        actual: (i < 2 ? true : passedAll) ? trExpectedFallback(tc, problem) : 'Warning: Partial evaluation check boundary reached'
+      }))
     };
   };
 
@@ -234,7 +252,7 @@ const ProblemPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-black text-white p-4 lg:p-8 relative">
+    <main className="min-h-screen bg-black text-white p-4 lg:p-8 relative overflow-x-hidden">
       {/* Background aesthetic grid highlight */}
       <div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-blue-950/20 via-transparent to-transparent pointer-events-none" />
 
@@ -274,40 +292,20 @@ const ProblemPage = () => {
         </div>
       </div>
 
-      {/* Dedicated High-Visibility Task Goal & Expected Output Information Box */}
+      {/* Dedicated High-Visibility Task Goal Information Box */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          
-          {/* Action item block */}
-          <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/15 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
-              <Target size={16} />
-            </div>
-            <div>
-              <span className="text-[10px] font-mono font-bold text-blue-400 uppercase tracking-wider block mb-1">
-                🎯 Required Implementation Logic
-              </span>
-              <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                {problem.task_goal || 'Write appropriate pointer references or iterative boundaries inside the custom logic blocks.'}
-              </p>
-            </div>
+        <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/15 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+            <Target size={16} />
           </div>
-
-          {/* Expected Output view snippet */}
-          <div className="p-4 rounded-2xl bg-black/50 border border-white/10 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0 mt-0.5">
-              <Terminal size={16} />
-            </div>
-            <div className="w-full overflow-hidden">
-              <span className="text-[10px] font-mono font-bold text-purple-400 uppercase tracking-wider block mb-1">
-                📤 Expected Console Match Output
-              </span>
-              <pre className="text-[11px] font-mono text-emerald-300 bg-black/70 p-2 rounded-lg border border-white/5 whitespace-pre-wrap leading-tight">
-                {problem.expected_output_preview || 'Output checksum verified successfully.\nZero segmentation errors trapped.'}
-              </pre>
-            </div>
+          <div>
+            <span className="text-[10px] font-mono font-bold text-blue-400 uppercase tracking-wider block mb-1">
+              🎯 Required Assignment Implementation Logic
+            </span>
+            <p className="text-xs text-slate-300 leading-relaxed font-sans">
+              {problem.task_goal || 'Write appropriate pointer references or iterative boundaries inside the custom logic blocks below.'}
+            </p>
           </div>
-
         </div>
       </div>
 
@@ -353,94 +351,108 @@ const ProblemPage = () => {
           </button>
         </div>
 
-        {/* Dynamic Verification Output Drawer */}
+        {/* Dynamic Complete Persistent Test Case Verification Inspector Matrix */}
         <div className="lg:col-span-5 space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-white/5">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Sandbox Testbed Ledger</h3>
-            {result && (
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">📋 Assignment Test Cases Matrix</h3>
+            {result ? (
               <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                 Evaluation Pass Complete
               </span>
+            ) : (
+              <span className="text-[10px] font-mono text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 animate-pulse">
+                Awaiting Trigger Pass
+              </span>
             )}
           </div>
-          
-          {!result ? (
-            <div className="glass rounded-2xl p-10 text-center space-y-3 border-white/5 bg-black/40">
-              <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto text-slate-600">
-                <Play size={20} className="ml-0.5" />
-              </div>
-              <span className="text-xs text-slate-500 block font-mono">Editor status stands unparsed</span>
-              <p className="text-[11px] text-slate-600 max-w-xs mx-auto">
-                Press compilation trigger below editor frame to run instant AST evaluator tree steps.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4 animate-fadeIn">
-              
-              {/* Premium Total Result Banner */}
-              <div className="glass rounded-2xl p-6 border-white/5 relative overflow-hidden bg-gradient-to-tr from-blue-950/20 to-transparent flex items-center justify-between">
-                <div className="absolute top-0 right-0 p-3 opacity-5 text-blue-400">
-                  <CheckCircle2 size={90} />
-                </div>
-                
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">
-                    Compiled Score Final
-                  </span>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-4xl font-black text-blue-400">{result.score}</span>
-                    <span className="text-xs text-slate-500 font-bold font-mono">/100 Pts</span>
+
+          {/* Render absolute complete persistent list of EVERY single test case clearly */}
+          <div className="space-y-3 max-h-[580px] overflow-y-auto pr-1 custom-scrollbar">
+            {displayTestCases.map((tc: any, idx: number) => {
+              // Determine active execution results corresponding to this case
+              const simResult = result?.test_results?.[idx] || result?.test_results?.find((r: any) => (r.test_case_id === tc.id || r.test_case_id === idx + 1));
+              const isPassed = simResult ? simResult.passed : false;
+              const expectedStr = trExpectedFallback(tc, problem);
+              const actualOutStr = simResult 
+                ? (simResult.actual || simResult.Actual || simResult.output || simResult.Output || (isPassed ? expectedStr : 'Warning: Evaluation loop timeout threshold'))
+                : '⚠️ Student code uncompiled. Press compile trigger below to process your actual output string.';
+
+              return (
+                <div key={idx} className={`p-4 rounded-xl bg-black/40 border transition-all ${
+                  !result ? 'border-white/10 hover:border-white/20' : isPassed ? 'border-green-500/30 bg-green-500/[0.02]' : 'border-amber-500/30 bg-amber-500/[0.02]'
+                }`}>
+                  <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-white/5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-white">Test Case #{idx + 1}</span>
+                      {tc.is_hidden ? (
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 font-bold">Hidden Target</span>
+                      ) : (
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-bold">Public Check</span>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-slate-400">
+                      Weight: {tc.weight || 25} Pts
+                    </span>
                   </div>
-                </div>
 
-                <div className="text-right">
-                  <span className={`text-[10px] font-mono uppercase font-black block ${result.score === 100 ? 'text-green-400' : 'text-amber-400'}`}>
-                    {result.score === 100 ? 'SUCCESS OPTIMAL' : 'PARTIAL PASS'}
-                  </span>
-                  {result.proxyCorrectionApplied ? (
-                    <span className="text-[9px] text-cyan-400 font-mono block mt-0.5 font-bold">⚡ AST Proxy Intercepted</span>
-                  ) : (
-                    <span className="text-[9px] text-slate-500 block mt-0.5">Tokens parsed: {result.tokens?.length || 24}</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Subunits Array test suites */}
-              <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar">
-                {result.test_results?.map((tr: any, idx: number) => (
-                  <div key={idx} className={`p-3.5 rounded-xl bg-black/40 border transition-colors ${
-                    tr.passed ? 'border-green-500/20 hover:border-green-500/30' : 'border-amber-500/20 hover:border-amber-500/30'
-                  }`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        {tr.passed ? <CheckCircle2 size={14} className="text-green-400 shrink-0" /> : <XCircle size={14} className="text-amber-400 shrink-0" />}
-                        <span className="text-xs font-bold text-slate-200">Testcase Pass #{idx + 1}</span>
-                      </div>
-                      <span className={`text-[10px] font-mono font-black ${tr.passed ? 'text-green-400' : 'text-amber-400'}`}>
-                        +{tr.weight} pts
-                      </span>
+                  <div className="space-y-2 text-[11px] font-mono">
+                    {/* Input String */}
+                    <div className="bg-black/50 p-2 rounded border border-white/5">
+                      <span className="text-[9px] text-slate-500 block uppercase font-sans font-bold mb-0.5">Input Parameters:</span>
+                      <span className="text-slate-300 break-all">{tc.input || tc.Input || 'Standard console input pipe'}</span>
                     </div>
 
-                    <div className="space-y-1.5 text-[10px] font-mono bg-black/60 p-2 rounded-lg border border-white/5">
-                      <div className="flex justify-between text-slate-400">
-                        <span>Expected match:</span>
-                        <span className="text-slate-300">{tr.expected}</span>
+                    {/* Expected Stdout string */}
+                    <div className="bg-black/50 p-2 rounded border border-white/5">
+                      <span className="text-[9px] text-purple-400 block uppercase font-sans font-bold mb-0.5">Expected Match Stdout:</span>
+                      <span className="text-purple-200 break-all">{expectedStr}</span>
+                    </div>
+
+                    {/* Active User Output stream */}
+                    <div className={`p-2 rounded border ${
+                      !result ? 'bg-white/[0.02] border-white/5 text-slate-400 italic' : isPassed ? 'bg-green-500/10 border-green-500/20 text-green-300 font-bold' : 'bg-amber-500/10 border-amber-500/20 text-amber-200 font-bold'
+                    }`}>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[9px] block uppercase font-sans font-bold text-slate-400">Your Evaluated Output:</span>
+                        {result && (
+                          <span className={`text-[9px] uppercase font-black px-1.5 py-0.5 rounded ${isPassed ? 'bg-green-500 text-black' : 'bg-amber-500 text-black'}`}>
+                            {isPassed ? 'MATCHED' : 'MISMATCH'}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex justify-between text-slate-400">
-                        <span>Simulated output:</span>
-                        <span className={tr.passed ? 'text-green-400' : 'text-amber-300'}>{tr.actual}</span>
-                      </div>
+                      <span className="break-all block">{actualOutStr}</span>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              );
+            })}
+          </div>
 
-              <div className="p-2.5 rounded-xl bg-blue-500/5 border border-blue-500/10 text-[10px] text-slate-400 text-center leading-relaxed font-mono">
-                💡 View detailed syntax tokens and Abstract Syntax Tree output bindings inside the <strong>X-Ray Mode</strong> view window.
+          {/* Render Overall Final Score Summary Banner only when result is active */}
+          {result && (
+            <div className="glass rounded-xl p-4 border-white/5 relative overflow-hidden bg-gradient-to-r from-blue-950/30 to-transparent flex items-center justify-between mt-4 animate-fadeIn">
+              <div>
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block">
+                  Compiled Total Checksum Score
+                </span>
+                <span className="text-2xl font-black text-blue-400">{result.score} <span className="text-xs text-slate-500 font-mono">/100 Pts</span></span>
               </div>
-
+              <div className="text-right">
+                {result.proxyCorrectionApplied ? (
+                  <span className="text-[10px] font-mono text-cyan-400 font-bold block">⚡ Custom Proxy Overrode</span>
+                ) : (
+                  <span className="text-[10px] font-mono text-cyan-400 font-bold block">⚡ Auto Compiler Engine</span>
+                )}
+                <button 
+                  onClick={() => setIsXRayOpen(true)}
+                  className="mt-1 px-2.5 py-0.5 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-[10px] font-mono font-bold transition-all"
+                >
+                  Inspect Token Tree
+                </button>
+              </div>
             </div>
           )}
+
         </div>
 
       </div>
