@@ -27,5 +27,5 @@ func main() {
 	routes.SetupRoutes(app)
 
 	// Start Server
-	log.Fatal(app.Listen(":3000"))
+	log.Fatal(app.Listen(":8080"))
 }

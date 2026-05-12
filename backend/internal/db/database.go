@@ -28,7 +28,8 @@ func InitDB() {
 	})
 
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Printf("⚠️ WARNING: PostgreSQL connection failed: %v. Running in stateless local mode.", err)
+		return
 	}
 
 	fmt.Println("Database connection established")

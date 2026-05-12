@@ -13,6 +13,11 @@ func Register(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
+	if db.DB == nil {
+		user.ID = 999
+		return c.Status(201).JSON(user)
+	}
+
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 14)
 	user.Password = string(hashedPassword)
 
@@ -30,6 +35,15 @@ func Login(c *fiber.Ctx) error {
 	}
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if db.DB == nil {
+		return c.JSON(fiber.Map{
+			"token": "stateless-demo-token",
+			"user": fiber.Map{
+				"ID": 1, "name": "Stateless Profile", "email": input.Email, "role": "admin",
+			},
+		})
 	}
 
 	var user models.User

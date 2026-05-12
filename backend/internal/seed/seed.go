@@ -9,6 +9,9 @@ import (
 )
 
 func Seed() {
+	if db.DB == nil {
+		return
+	}
 	// 1. Create Default Access Profiles across all 5 Target Scopes
 	hashPass := func(p string) string {
 		h, _ := bcrypt.GenerateFromPassword([]byte(p), 14)
