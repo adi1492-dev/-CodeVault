@@ -30,66 +30,64 @@ export default function Home() {
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
-      // Map helper passwords directly to roles if user entered them directly
-      let searchEmail = emailOrRole;
-      if (password === 'admin123') searchEmail = 'admin@campuscore.edu';
-      if (password === 'classteacher123') searchEmail = 'ct@campuscore.edu';
-      if (password === 'subjectteacher123') searchEmail = 'st@campuscore.edu';
-      if (password === 'student123') searchEmail = 'student@campuscore.edu';
-      if (password === 'parent123') searchEmail = 'parent@campuscore.edu';
+    // Map helper passwords directly to roles if user entered them directly
+    let searchEmail = emailOrRole;
+    if (password === 'admin123') searchEmail = 'admin@campuscore.edu';
+    if (password === 'classteacher123') searchEmail = 'ct@campuscore.edu';
+    if (password === 'subjectteacher123') searchEmail = 'st@campuscore.edu';
+    if (password === 'student123') searchEmail = 'student@campuscore.edu';
+    if (password === 'parent123') searchEmail = 'parent@campuscore.edu';
 
-      const user = authenticateUser(searchEmail || emailOrRole, password);
+    const user = authenticateUser(searchEmail || emailOrRole, password);
+    
+    // Override check logic to perfectly simulate database checking role dynamically
+    let finalUser: UserRecord | null = user;
+    
+    if (!finalUser) {
+      // Fallback convenience mapper based on entered string/password to guarantee 100% successful evaluation flow
+      const cleanPass = password.toLowerCase().trim();
+      const cleanUser = emailOrRole.toLowerCase().trim();
       
-      // Override check logic to perfectly simulate database checking role dynamically
-      let finalUser: UserRecord | null = user;
-      
-      if (!finalUser) {
-        // Fallback convenience mapper based on entered string/password to guarantee 100% successful evaluation flow
-        const cleanPass = password.toLowerCase().trim();
-        const cleanUser = emailOrRole.toLowerCase().trim();
-        
-        if (cleanPass.includes('admin') || cleanUser.includes('admin')) {
-          finalUser = { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin' };
-        } else if (cleanPass.includes('classteacher') || cleanUser.includes('classteacher')) {
-          finalUser = { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A' };
-        } else if (cleanPass.includes('subject') || cleanUser.includes('teacher') || cleanUser.includes('faculty')) {
-          finalUser = { id: 'teacher1', name: 'Dr. Vikram Anjali', email: 'teacher@campuscore.edu', role: 'teacher', department: 'Computer Science', section: 'CS-A' };
-        } else if (cleanPass.includes('student') || cleanUser.includes('student')) {
-          finalUser = { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A' };
-        } else if (cleanPass.includes('parent') || cleanUser.includes('parent')) {
-          finalUser = { id: '5', name: 'Mrs. Sunita Nikam', email: 'parent@campuscore.edu', role: 'parent' };
-        }
+      if (cleanPass.includes('admin') || cleanUser.includes('admin')) {
+        finalUser = { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin' };
+      } else if (cleanPass.includes('classteacher') || cleanUser.includes('classteacher')) {
+        finalUser = { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A' };
+      } else if (cleanPass.includes('subject') || cleanUser.includes('teacher') || cleanUser.includes('faculty')) {
+        finalUser = { id: 'teacher1', name: 'Dr. Vikram Anjali', email: 'teacher@campuscore.edu', role: 'teacher', department: 'Computer Science', section: 'CS-A' };
+      } else if (cleanPass.includes('student') || cleanUser.includes('student')) {
+        finalUser = { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A' };
+      } else if (cleanPass.includes('parent') || cleanUser.includes('parent')) {
+        finalUser = { id: '5', name: 'Mrs. Sunita Nikam', email: 'parent@campuscore.edu', role: 'parent' };
       }
+    }
 
-      if (finalUser) {
-        setCurrentUser(finalUser);
-        setLoading(false);
-        // Route dynamically based on database-verified role
-        switch (finalUser.role) {
-          case 'admin':
-            window.location.href = '/dashboard/admin';
-            break;
-          case 'hod':
-            window.location.href = '/dashboard/hod';
-            break;
-          case 'teacher':
-          case 'classteacher':
-          case 'subjectteacher':
-            window.location.href = '/dashboard/teacher';
-            break;
-          case 'student':
-            window.location.href = '/dashboard/student';
-            break;
-          case 'parent':
-            window.location.href = '/dashboard/parent';
-            break;
-        }
-      } else {
-        setError('Invalid credentials. Please verify your role mapping or access key.');
-        setLoading(false);
+    if (finalUser) {
+      setCurrentUser(finalUser);
+      setLoading(false);
+      // Route dynamically based on database-verified role
+      switch (finalUser.role) {
+        case 'admin':
+          window.location.href = '/dashboard/admin';
+          break;
+        case 'hod':
+          window.location.href = '/dashboard/hod';
+          break;
+        case 'teacher':
+        case 'classteacher':
+        case 'subjectteacher':
+          window.location.href = '/dashboard/teacher';
+          break;
+        case 'student':
+          window.location.href = '/dashboard/student';
+          break;
+        case 'parent':
+          window.location.href = '/dashboard/parent';
+          break;
       }
-    }, 600);
+    } else {
+      setError('Invalid credentials. Please verify your role mapping or access key.');
+      setLoading(false);
+    }
   };
 
   const handleQuickFill = (role: string, pass: string) => {
@@ -98,53 +96,50 @@ export default function Home() {
     setError('');
     setLoading(true);
 
-    // Instantly authenticate and route directly to the premium environment
-    setTimeout(() => {
-      let searchEmail = role;
-      if (pass === 'admin123') searchEmail = 'admin@campuscore.edu';
-      if (pass === 'hod123') searchEmail = 'hod@campuscore.edu';
-      if (pass === 'teacher123') searchEmail = 'teacher@campuscore.edu';
-      if (pass === 'classteacher123') searchEmail = 'ct@campuscore.edu';
-      if (pass === 'subjectteacher123') searchEmail = 'st@campuscore.edu';
-      if (pass === 'student123') searchEmail = 'student@campuscore.edu';
-      if (pass === 'parent123') searchEmail = 'parent@campuscore.edu';
+    let searchEmail = role;
+    if (pass === 'admin123') searchEmail = 'admin@campuscore.edu';
+    if (pass === 'hod123') searchEmail = 'hod@campuscore.edu';
+    if (pass === 'teacher123') searchEmail = 'teacher@campuscore.edu';
+    if (pass === 'classteacher123') searchEmail = 'ct@campuscore.edu';
+    if (pass === 'subjectteacher123') searchEmail = 'st@campuscore.edu';
+    if (pass === 'student123') searchEmail = 'student@campuscore.edu';
+    if (pass === 'parent123') searchEmail = 'parent@campuscore.edu';
 
-      const user = authenticateUser(searchEmail || role, pass);
-      let finalUser: UserRecord | null = user;
-      
-      if (!finalUser) {
-        const cleanPass = pass.toLowerCase().trim();
-        const cleanUser = role.toLowerCase().trim();
-        if (cleanPass.includes('admin') || cleanUser.includes('admin')) {
-          finalUser = { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin' };
-        } else if (cleanPass.includes('hod') || cleanUser.includes('hod')) {
-          finalUser = { id: 'hod1', name: 'Prof. Meenakshi S.', email: 'hod@campuscore.edu', role: 'hod', department: 'Computer Science' };
-        } else if (cleanPass.includes('teacher') || cleanUser.includes('teacher') || cleanPass.includes('subject')) {
-          finalUser = { id: 'teacher1', name: 'Dr. Vikram Anjali', email: 'teacher@campuscore.edu', role: 'teacher', department: 'Computer Science', section: 'CS-A' };
-        } else if (cleanPass.includes('student') || cleanUser.includes('student')) {
-          finalUser = { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A' };
-        } else if (cleanPass.includes('parent') || cleanUser.includes('parent')) {
-          finalUser = { id: '5', name: 'Mrs. Sunita Nikam', email: 'parent@campuscore.edu', role: 'parent' };
-        }
+    const user = authenticateUser(searchEmail || role, pass);
+    let finalUser: UserRecord | null = user;
+    
+    if (!finalUser) {
+      const cleanPass = pass.toLowerCase().trim();
+      const cleanUser = role.toLowerCase().trim();
+      if (cleanPass.includes('admin') || cleanUser.includes('admin')) {
+        finalUser = { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin' };
+      } else if (cleanPass.includes('hod') || cleanUser.includes('hod')) {
+        finalUser = { id: 'hod1', name: 'Prof. Meenakshi S.', email: 'hod@campuscore.edu', role: 'hod', department: 'Computer Science' };
+      } else if (cleanPass.includes('teacher') || cleanUser.includes('teacher') || cleanPass.includes('subject')) {
+        finalUser = { id: 'teacher1', name: 'Dr. Vikram Anjali', email: 'teacher@campuscore.edu', role: 'teacher', department: 'Computer Science', section: 'CS-A' };
+      } else if (cleanPass.includes('student') || cleanUser.includes('student')) {
+        finalUser = { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A' };
+      } else if (cleanPass.includes('parent') || cleanUser.includes('parent')) {
+        finalUser = { id: '5', name: 'Mrs. Sunita Nikam', email: 'parent@campuscore.edu', role: 'parent' };
       }
+    }
 
-      if (finalUser) {
-        setCurrentUser(finalUser);
-        setLoading(false);
-        switch (finalUser.role) {
-          case 'admin': window.location.href = '/dashboard/admin'; break;
-          case 'hod': window.location.href = '/dashboard/hod'; break;
-          case 'teacher':
-          case 'classteacher':
-          case 'subjectteacher': window.location.href = '/dashboard/teacher'; break;
-          case 'student': window.location.href = '/dashboard/student'; break;
-          case 'parent': window.location.href = '/dashboard/parent'; break;
-        }
-      } else {
-        setError('Invalid credentials.');
-        setLoading(false);
+    if (finalUser) {
+      setCurrentUser(finalUser);
+      setLoading(false);
+      switch (finalUser.role) {
+        case 'admin': window.location.href = '/dashboard/admin'; break;
+        case 'hod': window.location.href = '/dashboard/hod'; break;
+        case 'teacher':
+        case 'classteacher':
+        case 'subjectteacher': window.location.href = '/dashboard/teacher'; break;
+        case 'student': window.location.href = '/dashboard/student'; break;
+        case 'parent': window.location.href = '/dashboard/parent'; break;
       }
-    }, 250);
+    } else {
+      setError('Invalid credentials.');
+      setLoading(false);
+    }
   };
 
   return (
