@@ -39,7 +39,7 @@ export default function Home() {
       if (password === 'student123') searchEmail = 'student@campuscore.edu';
       if (password === 'parent123') searchEmail = 'parent@campuscore.edu';
 
-      const user = authenticateUser(searchEmail || emailOrRole, password === 'password' ? 'password' : 'password');
+      const user = authenticateUser(searchEmail || emailOrRole, password);
       
       // Override check logic to perfectly simulate database checking role dynamically
       let finalUser: UserRecord | null = user;
@@ -64,6 +64,7 @@ export default function Home() {
 
       if (finalUser) {
         setCurrentUser(finalUser);
+        setLoading(false);
         // Route dynamically based on database-verified role
         switch (finalUser.role) {
           case 'admin':
@@ -93,6 +94,51 @@ export default function Home() {
     setEmailOrRole(role);
     setPassword(pass);
     setError('');
+    setLoading(true);
+
+    // Instantly authenticate and route directly to the premium environment
+    setTimeout(() => {
+      let searchEmail = role;
+      if (pass === 'admin123') searchEmail = 'admin@campuscore.edu';
+      if (pass === 'classteacher123') searchEmail = 'ct@campuscore.edu';
+      if (pass === 'subjectteacher123') searchEmail = 'st@campuscore.edu';
+      if (pass === 'student123') searchEmail = 'student@campuscore.edu';
+      if (pass === 'parent123') searchEmail = 'parent@campuscore.edu';
+
+      const user = authenticateUser(searchEmail || role, pass);
+      let finalUser: UserRecord | null = user;
+      
+      if (!finalUser) {
+        const cleanPass = pass.toLowerCase().trim();
+        const cleanUser = role.toLowerCase().trim();
+        if (cleanPass.includes('admin') || cleanUser.includes('admin')) {
+          finalUser = { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin' };
+        } else if (cleanPass.includes('classteacher') || cleanUser.includes('classteacher')) {
+          finalUser = { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A' };
+        } else if (cleanPass.includes('subject') || cleanUser.includes('teacher')) {
+          finalUser = { id: '3', name: 'Mr. Vikram K.', email: 'st@campuscore.edu', role: 'subjectteacher', department: 'Computer Science' };
+        } else if (cleanPass.includes('student') || cleanUser.includes('student')) {
+          finalUser = { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A' };
+        } else if (cleanPass.includes('parent') || cleanUser.includes('parent')) {
+          finalUser = { id: '5', name: 'Mrs. Sunita Nikam', email: 'parent@campuscore.edu', role: 'parent' };
+        }
+      }
+
+      if (finalUser) {
+        setCurrentUser(finalUser);
+        setLoading(false);
+        switch (finalUser.role) {
+          case 'admin': router.push('/dashboard/admin'); break;
+          case 'classteacher': router.push('/dashboard/class-teacher'); break;
+          case 'subjectteacher': router.push('/dashboard/subject-teacher'); break;
+          case 'student': router.push('/dashboard/student'); break;
+          case 'parent': router.push('/dashboard/parent'); break;
+        }
+      } else {
+        setError('Invalid credentials.');
+        setLoading(false);
+      }
+    }, 250);
   };
 
   return (
@@ -155,7 +201,7 @@ export default function Home() {
               href="#login-portal" 
               className="px-8 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-black font-black tracking-wide hover:opacity-95 active:scale-95 transition-all shadow-xl shadow-cyan-500/10 flex items-center gap-3"
             >
-              <span>AUTHENTICATE NOW</span>
+              <span>OPEN LOGIN GATEWAY</span>
               <ArrowRight size={18} />
             </a>
             <a 

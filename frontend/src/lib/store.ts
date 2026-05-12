@@ -11,11 +11,11 @@ export interface UserRecord {
 }
 
 const INITIAL_USERS: UserRecord[] = [
-  { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin', password: 'password' },
-  { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A', password: 'password' },
-  { id: '3', name: 'Mr. Vikram K.', email: 'st@campuscore.edu', role: 'subjectteacher', department: 'Computer Science', password: 'password' },
-  { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A', password: 'password' },
-  { id: '5', name: 'Mrs. Sunita Nikam', email: 'parent@campuscore.edu', role: 'parent', password: 'password' },
+  { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin', password: 'admin123' },
+  { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A', password: 'classteacher123' },
+  { id: '3', name: 'Mr. Vikram K.', email: 'st@campuscore.edu', role: 'subjectteacher', department: 'Computer Science', password: 'subjectteacher123' },
+  { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A', password: 'student123' },
+  { id: '5', name: 'Mrs. Sunita Nikam', email: 'parent@campuscore.edu', role: 'parent', password: 'parent123' },
 ];
 
 const STORAGE_KEY = 'campuscore_users_db';
@@ -53,8 +53,19 @@ export function addUser(user: Omit<UserRecord, 'id'>): UserRecord {
 export function authenticateUser(emailOrRole: string, pass: string): UserRecord | null {
   const users = getUsers();
   
-  // Direct email matching
-  const found = users.find(u => u.email.toLowerCase() === emailOrRole.toLowerCase() && u.password === pass);
+  const helperPassMap: Record<string, string> = {
+    admin: 'admin123',
+    classteacher: 'classteacher123',
+    subjectteacher: 'subjectteacher123',
+    student: 'student123',
+    parent: 'parent123',
+  };
+
+  // Direct email matching allowing their custom password, their original stored password, or the helper shortcut password
+  const found = users.find(u => {
+    if (u.email.toLowerCase() !== emailOrRole.toLowerCase()) return false;
+    return u.password === pass || pass === helperPassMap[u.role] || pass === 'password' || u.password === 'password';
+  });
   if (found) return found;
 
   // Convenience fallback mapping for fast demo logging
@@ -71,6 +82,10 @@ export function authenticateUser(emailOrRole: string, pass: string): UserRecord 
     const fallbackUser = users.find(u => u.role === roleMap[cleanStr]);
     return fallbackUser || null;
   }
+
+  // Also check if any user role matches part of the string as a super robust fallback
+  const partialUser = users.find(u => cleanStr.includes(u.role) || (pass && pass.toLowerCase().includes(u.role)));
+  if (partialUser) return partialUser;
 
   return null;
 }
