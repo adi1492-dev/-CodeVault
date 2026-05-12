@@ -97,10 +97,12 @@ const ProblemsPage = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProblems.map((p) => (
+          {filteredProblems.map((p, idx) => {
+            const problemId = p.id || p.ID || idx + 101;
+            return (
             <Link 
-              key={p.id}
-              href={`/problems/${p.id}`}
+              key={problemId}
+              href={`/problems/${problemId}`}
               className="glass rounded-2xl p-6 hover:bg-white/5 transition-all group border border-white/5 hover:border-blue-500/30 flex flex-col justify-between h-56 relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-blue-500/5 to-transparent rounded-bl-full pointer-events-none" />
@@ -114,7 +116,7 @@ const ProblemsPage = () => {
                   }`}>
                     {p.difficulty}
                   </span>
-                  <span className="text-[10px] font-mono font-bold text-slate-500">Suite #{p.id}</span>
+                  <span className="text-[10px] font-mono font-bold text-slate-500">Suite #{problemId}</span>
                 </div>
 
                 <h2 className="text-base font-bold mb-2 group-hover:text-blue-300 transition-colors flex items-center justify-between">
@@ -127,7 +129,7 @@ const ProblemsPage = () => {
               <div className="flex items-center gap-4 text-xs text-slate-500 font-bold uppercase tracking-tight pt-3 border-t border-white/5">
                 <div className="flex items-center gap-1.5">
                   <BookOpen size={13} className="text-blue-400" />
-                  <span>{p.test_cases?.length || 4} Tests</span>
+                  <span>{p.test_cases?.length || p.TestCases?.length || 4} Tests</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Trophy size={13} className="text-amber-400" />
@@ -135,7 +137,8 @@ const ProblemsPage = () => {
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
 
       </div>
