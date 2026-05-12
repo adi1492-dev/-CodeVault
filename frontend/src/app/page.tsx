@@ -70,6 +70,9 @@ export default function Home() {
           case 'admin':
             window.location.href = '/dashboard/admin';
             break;
+          case 'hod':
+            window.location.href = '/dashboard/hod';
+            break;
           case 'classteacher':
             window.location.href = '/dashboard/class-teacher';
             break;
@@ -100,6 +103,7 @@ export default function Home() {
     setTimeout(() => {
       let searchEmail = role;
       if (pass === 'admin123') searchEmail = 'admin@campuscore.edu';
+      if (pass === 'hod123') searchEmail = 'hod@campuscore.edu';
       if (pass === 'classteacher123') searchEmail = 'ct@campuscore.edu';
       if (pass === 'subjectteacher123') searchEmail = 'st@campuscore.edu';
       if (pass === 'student123') searchEmail = 'student@campuscore.edu';
@@ -113,6 +117,8 @@ export default function Home() {
         const cleanUser = role.toLowerCase().trim();
         if (cleanPass.includes('admin') || cleanUser.includes('admin')) {
           finalUser = { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin' };
+        } else if (cleanPass.includes('hod') || cleanUser.includes('hod')) {
+          finalUser = { id: 'hod1', name: 'Prof. Meenakshi S.', email: 'hod@campuscore.edu', role: 'hod', department: 'Computer Science' };
         } else if (cleanPass.includes('classteacher') || cleanUser.includes('classteacher')) {
           finalUser = { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A' };
         } else if (cleanPass.includes('subject') || cleanUser.includes('teacher')) {
@@ -129,6 +135,7 @@ export default function Home() {
         setLoading(false);
         switch (finalUser.role) {
           case 'admin': window.location.href = '/dashboard/admin'; break;
+          case 'hod': window.location.href = '/dashboard/hod'; break;
           case 'classteacher': window.location.href = '/dashboard/class-teacher'; break;
           case 'subjectteacher': window.location.href = '/dashboard/subject-teacher'; break;
           case 'student': window.location.href = '/dashboard/student'; break;
@@ -256,6 +263,13 @@ export default function Home() {
                   className="text-xs px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 font-medium transition-all"
                 >
                   👑 Admin
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => handleQuickFill('hod@campuscore.edu', 'hod123')}
+                  className="text-xs px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 font-medium transition-all"
+                >
+                  🎓 HOD
                 </button>
                 <button 
                   type="button" 

@@ -12,7 +12,7 @@ import {
   Layers 
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser, setCurrentUser, UserRecord } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getSubjects, updateSyllabusCoverage, UserRecord, SubjectRecord } from '@/lib/store';
 
 interface StudentSubmission {
   id: string;
@@ -60,14 +60,39 @@ export default function SubjectTeacherDashboard() {
 
   const [selectedSub, setSelected] = useState<StudentSubmission | null>(submissions[0]);
   const [overrideScore, setScore] = useState<number>(selectedSub?.autoScore || 0);
+  const [assignedSubjects, setAssignedSubjects] = useState<SubjectRecord[]>([]);
 
   useEffect(() => {
     const user = getCurrentUser();
+    let currDept = department;
     if (user) {
       setCurrent(user);
-      if (user.department) setDepartment(user.department);
+      if (user.department) {
+        currDept = user.department;
+        setDepartment(currDept);
+      }
     }
-  }, []);
+    const allSubs = getSubjects();
+    const activeSubs = allSubs.filter(s => s.teacherId === user?.id || s.department.toLowerCase() === currDept.toLowerCase());
+    setAssignedSubjects(activeSubs);
+  }, [department]);
+
+  const handleUpdatePct = (subjectId: string, newPct: number) => {
+    updateSyllabusCoverage(subjectId, newPct);
+    const user = getCurrentUser();
+    setAssignedSubjects(getSubjects().filter(s => s.teacherId === user?.id || s.department.toLowerCase() === department.toLowerCase()));
+  };
+
+  const handleToggleModule = (subjectId: string, moduleIdx: number) => {
+    const targetSub = assignedSubjects.find(s => s.id === subjectId);
+    if (!targetSub) return;
+    const updatedModules = targetSub.modules.map((m, idx) => idx === moduleIdx ? { ...m, completed: !m.completed } : m);
+    const completedCount = updatedModules.filter(m => m.completed).length;
+    const autoPct = Math.round((completedCount / updatedModules.length) * 100);
+    updateSyllabusCoverage(subjectId, autoPct, updatedModules);
+    const user = getCurrentUser();
+    setAssignedSubjects(getSubjects().filter(s => s.teacherId === user?.id || s.department.toLowerCase() === department.toLowerCase()));
+  };
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -295,6 +320,95 @@ export default function SubjectTeacherDashboard() {
             </div>
             <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold">
               98%
+            </div>
+          </div>
+        </div>
+
+        {/* Full Width Bottom Section: Live Syllabus Coverage Submitter Toolkit */}
+        <div className="lg:col-span-12">
+          <div className="glass p-8 rounded-3xl border-indigo-500/20 bg-gradient-to-r from-indigo-950/10 via-transparent to-purple-950/10 space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-extrabold tracking-tight flex items-center gap-2">
+                  <Layers className="text-indigo-400" size={20} />
+                  <span>Interactive Syllabus Execution Submitter</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Adjust unit ranges and update real-time progress broadcast channels viewable instantaneously by Institutional Authorities.
+                </p>
+              </div>
+
+              <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-[10px] font-mono font-bold text-indigo-400 border border-indigo-500/20">
+                Assigned Allocations: {assignedSubjects.length}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {assignedSubjects.map((s) => (
+                <div key={s.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-indigo-500/30 transition-all flex flex-col justify-between space-y-5">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-xs font-black text-white block">{s.name}</span>
+                        <span className="text-[10px] text-slate-400 font-mono block mt-0.5">Stream: {s.sections.join(', ')}</span>
+                      </div>
+                      <span className="text-xs font-mono font-black text-indigo-300 bg-white/5 px-2 py-0.5 rounded">
+                        {s.code}
+                      </span>
+                    </div>
+
+                    {/* Progress Slider block */}
+                    <div className="space-y-2 pt-2 border-t border-white/5">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                        <span>Total Syllabus Covered Output</span>
+                        <span className="text-indigo-400 font-mono">{s.syllabusCoveredPct}%</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <input 
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={s.syllabusCoveredPct}
+                          onChange={(e) => handleUpdatePct(s.id, Number(e.target.value))}
+                          className="w-full accent-indigo-400 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Interactive Sub-unit toggles */}
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[9px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                        Click Sub-Units to Toggle Module Delivery
+                      </span>
+                      <div className="grid grid-cols-1 gap-1.5 bg-black/30 p-2.5 rounded-xl border border-white/5">
+                        {s.modules.map((m, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleToggleModule(s.id, idx)}
+                            className={`w-full p-2 rounded-lg border text-left text-[11px] transition-all flex items-center justify-between gap-2 ${
+                              m.completed ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300 font-medium' : 'bg-white/[0.02] border-white/5 text-slate-400 hover:bg-white/5'
+                            }`}
+                          >
+                            <span className="truncate">{m.title}</span>
+                            <span className={`w-4 h-4 rounded flex items-center justify-center shrink-0 text-[10px] font-bold ${
+                              m.completed ? 'bg-indigo-400 text-black font-black' : 'bg-black/40 text-transparent'
+                            }`}>
+                              ✓
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] font-mono text-slate-500 pt-2 border-t border-white/5 flex items-center justify-between">
+                    <span>Ledger Entity ID: {s.id}</span>
+                    <span className="text-indigo-400 font-bold">Auto-Sync Online</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -10,15 +10,18 @@ import {
   LogOut, 
   CheckCircle2, 
   Cpu, 
-  Calendar 
+  Calendar,
+  Layers,
+  Receipt
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getCurrentUser, setCurrentUser, UserRecord } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getSubjects, UserRecord, SubjectRecord } from '@/lib/store';
 
 export default function StudentDashboard() {
   const router = useRouter();
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
+  const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
   const [doubtText, setDoubt] = useState('');
   const [doubtsLog, setLog] = useState([
     { q: 'How does the Pratt Parser handle infix precedences?', ans: 'Prof. Vikram: Check ast.go map values for literal bounds.' },
@@ -27,6 +30,7 @@ export default function StudentDashboard() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) setCurrent(user);
+    setSubjects(getSubjects());
   }, []);
 
   const handleLogout = () => {
@@ -202,6 +206,107 @@ export default function StudentDashboard() {
           <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/20 to-transparent border border-cyan-500/10 text-xs text-slate-400 leading-relaxed">
             🎓 Students authenticate against their section roll numbers to automatically feed results to class teacher ledgers.
           </div>
+        </div>
+
+        {/* Full-width bottom space: Synchronized Live Tracked Syllabus Progression & Automated Clearance Receipt */}
+        <div className="lg:col-span-12 space-y-8">
+          
+          {/* Active Syllabus Modules Stream */}
+          <div className="glass p-8 rounded-3xl border-cyan-500/20 bg-gradient-to-r from-cyan-950/10 via-transparent to-indigo-950/10 space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-extrabold tracking-tight flex items-center gap-2">
+                  <Layers className="text-cyan-400" size={20} />
+                  <span>Real-Time Tracked Course Syllabus Progressions</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Continuously synchronized state directly mapped from faculty curriculum update streams.
+                </p>
+              </div>
+
+              <span className="px-3 py-1 rounded-full bg-cyan-500/10 text-[10px] font-mono font-bold text-cyan-400 border border-cyan-500/20">
+                Active Enrolled Curriculums: {subjects.length}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {subjects.map(s => (
+                <div key={s.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-cyan-500/30 transition-all flex flex-col justify-between space-y-4">
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="text-xs font-black text-white block">{s.name}</span>
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/5 text-cyan-400 shrink-0">
+                        {s.code}
+                      </span>
+                    </div>
+
+                    <span className="text-[10px] text-slate-400 block mb-3 font-mono">
+                      Faculty Delivery: <strong className="text-cyan-300 font-sans">{s.teacherName || 'Allocated Pool'}</strong>
+                    </span>
+
+                    {/* Progress slider feedback */}
+                    <div className="space-y-1.5 mb-4">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400 font-medium">Curriculum Delivered</span>
+                        <span className="font-mono font-black text-cyan-300">{s.syllabusCoveredPct}%</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
+                        <div 
+                          className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full transition-all duration-500"
+                          style={{ width: `${s.syllabusCoveredPct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Sub-item state lists */}
+                    <div className="space-y-1.5 bg-black/30 p-2.5 rounded-xl border border-white/5">
+                      <span className="text-[9px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                        Curriculum Delivery Sub-Units
+                      </span>
+                      {s.modules.map((m, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 text-[10px] text-slate-300">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.completed ? 'bg-cyan-400 shadow-sm shadow-cyan-400/50' : 'bg-white/10'}`} />
+                          <span className={`truncate ${m.completed ? 'line-through text-slate-500' : ''}`}>{m.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-white/5 text-[9px] font-mono text-slate-500 text-right">
+                    Last refresh trace: {s.lastUpdated || 'Instant DB Load'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Printable Automated Clearance & Dues Statement Component */}
+          <div className="glass p-6 rounded-3xl border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gradient-to-r from-white/[0.02] via-transparent to-white/[0.01]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+                <Receipt size={20} />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Fiscal Dues & Dynamic Clearance Receipt Parser
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Generate authenticated institutional PDF copies verifying clear academic tracks.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                window.print();
+              }}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 text-black font-black text-xs uppercase tracking-wider transition-all shrink-0 flex items-center gap-2"
+            >
+              <span>Trigger PDF Direct Receipt</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+
         </div>
 
       </main>

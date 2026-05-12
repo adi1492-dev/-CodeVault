@@ -12,11 +12,12 @@ import {
   Layers 
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getUsers, addUser, getCurrentUser, setCurrentUser, UserRecord, UserRole } from '@/lib/store';
+import { getUsers, addUser, getCurrentUser, setCurrentUser, getSubjects, assignSubjectTeacher, UserRecord, UserRole, SubjectRecord } from '@/lib/store';
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [users, setUsers] = useState<UserRecord[]>([]);
+  const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
   
   // Provisioning Form state
@@ -36,6 +37,7 @@ export default function AdminDashboard() {
       setCurrent(user);
     }
     setUsers(getUsers());
+    setSubjects(getSubjects());
   }, []);
 
   const handleAddUser = (e: React.FormEvent) => {
@@ -164,6 +166,7 @@ export default function AdminDashboard() {
                   <option value="student">👨‍🎓 Student Route Profile</option>
                   <option value="classteacher">⭐ Class Teacher (Special Access)</option>
                   <option value="subjectteacher">👨‍🏫 Subject Teacher Route</option>
+                  <option value="hod">🎓 Head of Department (HOD)</option>
                   <option value="parent">👪 Parent / Guardian Ledger</option>
                   <option value="admin">👑 Core Admin Node</option>
                 </select>
@@ -184,7 +187,7 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {role === 'subjectteacher' && (
+              {(role === 'subjectteacher' || role === 'hod') && (
                 <div>
                   <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
                     Department Faculty Allocation
@@ -263,6 +266,7 @@ export default function AdminDashboard() {
                       <span className="text-xs font-bold text-white">{u.name}</span>
                       <span className={`text-[9px] font-mono font-black uppercase px-2 py-0.5 rounded ${
                         u.role === 'admin' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                        u.role === 'hod' ? 'bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20' :
                         u.role === 'classteacher' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
                         u.role === 'subjectteacher' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
                         u.role === 'student' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
@@ -286,6 +290,99 @@ export default function AdminDashboard() {
 
             <div className="mt-4 p-3 rounded-xl bg-white/5 text-[11px] text-slate-400 text-center leading-relaxed">
               💡 When a user enters their credentials at the root portal, the backend parses this identical table to authorize dynamic role execution paths.
+            </div>
+          </div>
+        </div>
+
+        {/* Full Width Bottom Section: Subject Master & Live Syllabus Coverage Matrix */}
+        <div className="lg:col-span-12">
+          <div className="glass p-8 rounded-3xl border-cyan-500/20 bg-gradient-to-r from-cyan-950/10 via-transparent to-indigo-950/10 space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-extrabold tracking-tight flex items-center gap-2">
+                  <Layers className="text-cyan-400" size={20} />
+                  <span>Institutional Subject Master & Live Syllabus Ledgers</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Assign dynamic faculty profile mapping and monitor multi-stream modular syllabus delivery metrics in real time.
+                </p>
+              </div>
+
+              <div className="px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[11px] font-mono font-bold text-cyan-400">
+                Live Broadcast Channel
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {subjects.map((s) => {
+                const availableTeachers = users.filter(u => u.role === 'subjectteacher' || u.role === 'hod');
+                return (
+                  <div key={s.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-cyan-500/30 transition-all flex flex-col justify-between space-y-4">
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <span className="text-xs font-black text-white block">{s.name}</span>
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/5 text-cyan-400 shrink-0">
+                          {s.code}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mb-3 font-mono">Dept: {s.department}</span>
+
+                      {/* Coverage Progress Bar */}
+                      <div className="space-y-1.5 mb-4">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-400 font-medium">Syllabus Covered</span>
+                          <span className="font-mono font-black text-cyan-300">{s.syllabusCoveredPct}%</span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
+                          <div 
+                            className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full transition-all duration-500"
+                            style={{ width: `${s.syllabusCoveredPct}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Modules Checklist Display */}
+                      <div className="space-y-1 bg-black/30 p-2.5 rounded-xl border border-white/5">
+                        <span className="text-[9px] font-mono font-bold text-slate-500 uppercase block mb-1">
+                          Delivery Delivery Sub-Units
+                        </span>
+                        {s.modules.map((m, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5 text-[10px] text-slate-300">
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.completed ? 'bg-cyan-400 shadow-sm shadow-cyan-400/50' : 'bg-white/10'}`} />
+                            <span className={`truncate ${m.completed ? 'line-through text-slate-500' : ''}`}>{m.title}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Teacher Assignment Control */}
+                    <div className="pt-3 border-t border-white/5 space-y-1.5">
+                      <label className="text-[9px] font-mono font-bold text-slate-400 uppercase block">
+                        Assigned Subject Faculty Node
+                      </label>
+                      <select
+                        value={s.teacherId || ''}
+                        onChange={(e) => {
+                          const tId = e.target.value;
+                          const selectedT = availableTeachers.find(t => t.id === tId);
+                          if (selectedT) {
+                            assignSubjectTeacher(s.id, tId, selectedT.name);
+                            setSubjects(getSubjects());
+                          }
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-black border border-white/10 text-xs text-slate-300 focus:outline-none focus:border-cyan-400 font-medium"
+                      >
+                        <option value="">⚠️ Unassigned Slot</option>
+                        {availableTeachers.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} ({t.department})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
