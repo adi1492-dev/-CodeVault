@@ -68,19 +68,19 @@ export default function Home() {
         // Route dynamically based on database-verified role
         switch (finalUser.role) {
           case 'admin':
-            router.push('/dashboard/admin');
+            window.location.href = '/dashboard/admin';
             break;
           case 'classteacher':
-            router.push('/dashboard/class-teacher');
+            window.location.href = '/dashboard/class-teacher';
             break;
           case 'subjectteacher':
-            router.push('/dashboard/subject-teacher');
+            window.location.href = '/dashboard/subject-teacher';
             break;
           case 'student':
-            router.push('/dashboard/student');
+            window.location.href = '/dashboard/student';
             break;
           case 'parent':
-            router.push('/dashboard/parent');
+            window.location.href = '/dashboard/parent';
             break;
         }
       } else {
@@ -128,11 +128,11 @@ export default function Home() {
         setCurrentUser(finalUser);
         setLoading(false);
         switch (finalUser.role) {
-          case 'admin': router.push('/dashboard/admin'); break;
-          case 'classteacher': router.push('/dashboard/class-teacher'); break;
-          case 'subjectteacher': router.push('/dashboard/subject-teacher'); break;
-          case 'student': router.push('/dashboard/student'); break;
-          case 'parent': router.push('/dashboard/parent'); break;
+          case 'admin': window.location.href = '/dashboard/admin'; break;
+          case 'classteacher': window.location.href = '/dashboard/class-teacher'; break;
+          case 'subjectteacher': window.location.href = '/dashboard/subject-teacher'; break;
+          case 'student': window.location.href = '/dashboard/student'; break;
+          case 'parent': window.location.href = '/dashboard/parent'; break;
         }
       } else {
         setError('Invalid credentials.');
@@ -556,8 +556,6 @@ export default function Home() {
           <button
             onClick={() => {
               handleQuickFill('admin@campuscore.edu', 'admin123');
-              const el = document.getElementById('login-portal');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
             }}
             className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 font-bold text-xs hover:bg-white/10 transition-all shrink-0 text-cyan-300"
           >
