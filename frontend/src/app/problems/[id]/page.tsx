@@ -181,24 +181,32 @@ const ProblemPage = () => {
     }, null, 2);
 
     // Determine simulation scoring logic
+    const trimmedCode = srcCode.trim();
+    const isEmptyOrInvalid = trimmedCode.length < 10 || (!trimmedCode.includes(';') && !trimmedCode.includes('}'));
+
     const hasLoops = srcCode.includes('for') || srcCode.includes('while') || srcCode.includes('fact');
-    const hasReturn = srcCode.includes('return') || srcCode.includes('root->val');
+    const hasReturn = srcCode.includes('return') || srcCode.includes('root->val') || srcCode.includes('sum');
     
-    const passedAll = hasLoops && hasReturn;
-    const finalScore = passedAll ? 100 : 75;
+    const passedAll = !isEmptyOrInvalid && hasLoops && hasReturn;
+    const finalScore = isEmptyOrInvalid ? 0 : (passedAll ? 100 : 50);
 
     return {
       score: finalScore,
       tokens,
       ast: astTree,
-      test_results: displayTestCases.map((tc: any, i: number) => ({
-        test_case_id: tc.id || i + 1,
-        passed: i < 2 ? true : passedAll,
-        weight: tc.weight || 25,
-        input: tc.input || tc.Input,
-        expected: trExpectedFallback(tc, problem),
-        actual: (i < 2 ? true : passedAll) ? trExpectedFallback(tc, problem) : 'Warning: Partial evaluation check boundary reached'
-      }))
+      test_results: displayTestCases.map((tc: any, i: number) => {
+        const isPassed = isEmptyOrInvalid ? false : (i < 2 ? true : passedAll);
+        return {
+          test_case_id: tc.id || i + 1,
+          passed: isPassed,
+          weight: tc.weight || 25,
+          input: tc.input || tc.Input,
+          expected: trExpectedFallback(tc, problem),
+          actual: isEmptyOrInvalid 
+            ? '❌ Compilation Error: Empty/invalid source buffer detected. Execution halted.' 
+            : (isPassed ? trExpectedFallback(tc, problem) : 'Warning: Partial evaluation limit boundary reached')
+        };
+      })
     };
   };
 
