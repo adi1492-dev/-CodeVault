@@ -53,8 +53,8 @@ export default function Home() {
           finalUser = { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin' };
         } else if (cleanPass.includes('classteacher') || cleanUser.includes('classteacher')) {
           finalUser = { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A' };
-        } else if (cleanPass.includes('subject') || cleanUser.includes('teacher')) {
-          finalUser = { id: '3', name: 'Mr. Vikram K.', email: 'st@campuscore.edu', role: 'subjectteacher', department: 'Computer Science' };
+        } else if (cleanPass.includes('subject') || cleanUser.includes('teacher') || cleanUser.includes('faculty')) {
+          finalUser = { id: 'teacher1', name: 'Dr. Vikram Anjali', email: 'teacher@campuscore.edu', role: 'teacher', department: 'Computer Science', section: 'CS-A' };
         } else if (cleanPass.includes('student') || cleanUser.includes('student')) {
           finalUser = { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A' };
         } else if (cleanPass.includes('parent') || cleanUser.includes('parent')) {
@@ -73,11 +73,10 @@ export default function Home() {
           case 'hod':
             window.location.href = '/dashboard/hod';
             break;
+          case 'teacher':
           case 'classteacher':
-            window.location.href = '/dashboard/class-teacher';
-            break;
           case 'subjectteacher':
-            window.location.href = '/dashboard/subject-teacher';
+            window.location.href = '/dashboard/teacher';
             break;
           case 'student':
             window.location.href = '/dashboard/student';
@@ -104,6 +103,7 @@ export default function Home() {
       let searchEmail = role;
       if (pass === 'admin123') searchEmail = 'admin@campuscore.edu';
       if (pass === 'hod123') searchEmail = 'hod@campuscore.edu';
+      if (pass === 'teacher123') searchEmail = 'teacher@campuscore.edu';
       if (pass === 'classteacher123') searchEmail = 'ct@campuscore.edu';
       if (pass === 'subjectteacher123') searchEmail = 'st@campuscore.edu';
       if (pass === 'student123') searchEmail = 'student@campuscore.edu';
@@ -119,10 +119,8 @@ export default function Home() {
           finalUser = { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin' };
         } else if (cleanPass.includes('hod') || cleanUser.includes('hod')) {
           finalUser = { id: 'hod1', name: 'Prof. Meenakshi S.', email: 'hod@campuscore.edu', role: 'hod', department: 'Computer Science' };
-        } else if (cleanPass.includes('classteacher') || cleanUser.includes('classteacher')) {
-          finalUser = { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A' };
-        } else if (cleanPass.includes('subject') || cleanUser.includes('teacher')) {
-          finalUser = { id: '3', name: 'Mr. Vikram K.', email: 'st@campuscore.edu', role: 'subjectteacher', department: 'Computer Science' };
+        } else if (cleanPass.includes('teacher') || cleanUser.includes('teacher') || cleanPass.includes('subject')) {
+          finalUser = { id: 'teacher1', name: 'Dr. Vikram Anjali', email: 'teacher@campuscore.edu', role: 'teacher', department: 'Computer Science', section: 'CS-A' };
         } else if (cleanPass.includes('student') || cleanUser.includes('student')) {
           finalUser = { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A' };
         } else if (cleanPass.includes('parent') || cleanUser.includes('parent')) {
@@ -136,8 +134,9 @@ export default function Home() {
         switch (finalUser.role) {
           case 'admin': window.location.href = '/dashboard/admin'; break;
           case 'hod': window.location.href = '/dashboard/hod'; break;
-          case 'classteacher': window.location.href = '/dashboard/class-teacher'; break;
-          case 'subjectteacher': window.location.href = '/dashboard/subject-teacher'; break;
+          case 'teacher':
+          case 'classteacher':
+          case 'subjectteacher': window.location.href = '/dashboard/teacher'; break;
           case 'student': window.location.href = '/dashboard/student'; break;
           case 'parent': window.location.href = '/dashboard/parent'; break;
         }
@@ -273,17 +272,10 @@ export default function Home() {
                 </button>
                 <button 
                   type="button" 
-                  onClick={() => handleQuickFill('ct@campuscore.edu', 'classteacher123')}
-                  className="text-xs px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 font-medium transition-all"
+                  onClick={() => handleQuickFill('teacher@campuscore.edu', 'teacher123')}
+                  className="text-xs px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 font-bold transition-all bg-gradient-to-r from-indigo-500/20 to-amber-500/20 text-indigo-300"
                 >
-                  ⭐ Class Teacher
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => handleQuickFill('st@campuscore.edu', 'subjectteacher123')}
-                  className="text-xs px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 font-medium transition-all"
-                >
-                  👨‍🏫 Subject Teacher
+                  👨‍🏫 Faculty / Teacher
                 </button>
                 <button 
                   type="button" 
@@ -421,89 +413,49 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Subject Teacher */}
-          <div className="glass p-8 rounded-3xl border-white/5 hover:border-indigo-500/30 transition-all flex flex-col justify-between group">
-            <div>
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Cpu size={24} />
-              </div>
-              <h3 className="text-xl font-bold mb-2 flex items-center justify-between">
-                <span>Subject Faculty</span>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/5 text-slate-400">Labs</span>
-              </h3>
-              <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-                Deploy test suites and parse token pipelines generated by active lab coders.
-              </p>
-
-              <ul className="space-y-3 text-xs font-medium text-slate-300">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 size={14} className="text-indigo-400 shrink-0 mt-0.5" />
-                  <span>Coding Lab & Problem Creation</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 size={14} className="text-indigo-400 shrink-0 mt-0.5" />
-                  <span>Compiler AST Execution Logs</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 size={14} className="text-indigo-400 shrink-0 mt-0.5" />
-                  <span>Manual Grading & Override Control</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 size={14} className="text-indigo-400 shrink-0 mt-0.5" />
-                  <span>Subject Performance Aggregations</span>
-                </li>
-              </ul>
-            </div>
-
-            <button 
-              onClick={() => handleQuickFill('st@campuscore.edu', 'subjectteacher123')}
-              className="mt-8 text-xs text-indigo-400 font-bold hover:underline text-left flex items-center gap-1"
-            >
-              <span>Simulate Faculty route</span>
-              <ArrowRight size={12} />
-            </button>
-          </div>
-
-          {/* Class Teacher */}
-          <div className="glass p-8 rounded-3xl border-white/5 hover:border-amber-500/30 transition-all flex flex-col justify-between group relative overflow-hidden">
-            <div className="absolute top-0 right-0 bg-amber-500/10 text-amber-400 font-mono text-[9px] font-black px-3 py-1 rounded-bl-xl border-l border-b border-amber-500/20">
-              SPECIAL ACCESS
+          {/* Unified Faculty Core Card */}
+          <div className="glass p-8 rounded-3xl border-white/5 hover:border-indigo-500/30 transition-all flex flex-col justify-between group relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-gradient-to-r from-indigo-500/10 to-amber-500/10 text-indigo-300 font-mono text-[9px] font-black px-3 py-1 rounded-bl-xl border-l border-b border-indigo-500/20">
+              DUAL SCOPE: LABS + CLASS
             </div>
             
             <div>
-              <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Users size={24} />
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-indigo-500/10 to-amber-500/10 text-indigo-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Cpu size={24} />
               </div>
-              <h3 className="text-xl font-bold mb-2">Class Teacher</h3>
+              <h3 className="text-xl font-bold mb-2 flex items-center justify-between">
+                <span>Faculty / Teacher Node</span>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/5 text-amber-400">Master</span>
+              </h3>
               <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-                Absolute section state mastery: attendance validation, final report sanctioning, and administrative routing.
+                Seamless real-time tab switching between <strong>Teaching Subjects</strong> coverage mapping and <strong>Assigned Class Section</strong> root authority.
               </p>
 
               <ul className="space-y-3 text-xs font-medium text-slate-300">
                 <li className="flex items-start gap-2">
-                  <CheckCircle2 size={14} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>Complete Section Roster Oversight</span>
+                  <CheckCircle2 size={14} className="text-indigo-400 shrink-0 mt-0.5" />
+                  <span>Syllabus Coverage Submitter Slider</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-indigo-400 shrink-0 mt-0.5" />
+                  <span>C Compiler Manual Score Overrides</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 size={14} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>Attendance & Leave Sanction Hub</span>
+                  <span>Section Leave Sanctions Dropzone</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 size={14} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>Mid-Term Consolidations Report</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 size={14} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>Parent Connection & Alert Trigger</span>
+                  <span>Guardians Mid-Term Broadcast Bridge</span>
                 </li>
               </ul>
             </div>
 
             <button 
-              onClick={() => handleQuickFill('ct@campuscore.edu', 'classteacher123')}
-              className="mt-8 text-xs text-amber-400 font-bold hover:underline text-left flex items-center gap-1"
+              onClick={() => handleQuickFill('teacher@campuscore.edu', 'teacher123')}
+              className="mt-8 text-xs text-indigo-400 font-bold hover:underline text-left flex items-center gap-1"
             >
-              <span>Simulate Class Teacher</span>
+              <span>Simulate Unified Faculty suite</span>
               <ArrowRight size={12} />
             </button>
           </div>

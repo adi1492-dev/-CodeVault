@@ -12,7 +12,7 @@ import {
   Layers 
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getUsers, addUser, getCurrentUser, setCurrentUser, getSubjects, assignSubjectTeacher, UserRecord, UserRole, SubjectRecord } from '@/lib/store';
+import { getUsers, addUser, getCurrentUser, setCurrentUser, getSubjects, assignSubjectTeacher, assignClassTeacher, UserRecord, UserRole, SubjectRecord } from '@/lib/store';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -47,8 +47,8 @@ export default function AdminDashboard() {
       email,
       password: password || 'password',
       role,
-      section: role === 'student' || role === 'classteacher' ? section : undefined,
-      department: role === 'subjectteacher' ? department : undefined,
+      section: role === 'student' || role === 'classteacher' || role === 'teacher' ? section : undefined,
+      department: role === 'subjectteacher' || role === 'teacher' ? department : undefined,
     });
     
     setUsers(getUsers());
@@ -164,6 +164,7 @@ export default function AdminDashboard() {
                   className="w-full px-3 py-2.5 rounded-xl bg-black border border-white/10 focus:border-cyan-400 focus:outline-none text-xs font-bold text-cyan-400"
                 >
                   <option value="student">👨‍🎓 Student Route Profile</option>
+                  <option value="teacher">👨‍🏫 Unified Faculty / Teacher (Class + Subjects)</option>
                   <option value="classteacher">⭐ Class Teacher (Special Access)</option>
                   <option value="subjectteacher">👨‍🏫 Subject Teacher Route</option>
                   <option value="hod">🎓 Head of Department (HOD)</option>
@@ -172,10 +173,10 @@ export default function AdminDashboard() {
                 </select>
               </div>
 
-              {(role === 'student' || role === 'classteacher') && (
+              {(role === 'student' || role === 'classteacher' || role === 'teacher') && (
                 <div>
                   <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
-                    Class Section Stream
+                    Class Section Stream {role === 'teacher' ? '(Assigned Class Master Scope)' : ''}
                   </label>
                   <input 
                     type="text"
@@ -187,7 +188,7 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {(role === 'subjectteacher' || role === 'hod') && (
+              {(role === 'subjectteacher' || role === 'hod' || role === 'teacher') && (
                 <div>
                   <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
                     Department Faculty Allocation
@@ -267,6 +268,7 @@ export default function AdminDashboard() {
                       <span className={`text-[9px] font-mono font-black uppercase px-2 py-0.5 rounded ${
                         u.role === 'admin' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
                         u.role === 'hod' ? 'bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20' :
+                        u.role === 'teacher' ? 'bg-gradient-to-r from-indigo-500/20 to-amber-500/20 text-indigo-300 border border-indigo-500/30' :
                         u.role === 'classteacher' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
                         u.role === 'subjectteacher' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
                         u.role === 'student' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
@@ -294,6 +296,53 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Dynamic Section Master Core Allocation Selector */}
+        <div className="lg:col-span-12">
+          <div className="glass p-6 rounded-3xl border-amber-500/20 bg-gradient-to-r from-amber-950/10 via-transparent to-transparent space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-extrabold tracking-tight flex items-center gap-2 text-amber-400">
+                  <Users size={16} />
+                  <span>Class Section Core Master Allocation</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Dynamically bind/re-bind section level authority to unified teacher accounts.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-4 items-center">
+                {['CS-A', 'CS-B'].map(secStream => {
+                  const currentMaster = users.find(u => (u.role === 'teacher' || u.role === 'classteacher') && u.section === secStream);
+                  const candidateTeachers = users.filter(u => u.role === 'teacher' || u.role === 'classteacher' || u.role === 'subjectteacher');
+                  return (
+                    <div key={secStream} className="flex items-center gap-2 bg-black/40 px-3 py-2 rounded-xl border border-white/5">
+                      <span className="text-xs font-mono font-bold text-white">{secStream}:</span>
+                      <select
+                        value={currentMaster?.id || ''}
+                        onChange={(e) => {
+                          const tId = e.target.value;
+                          if (tId) {
+                            assignClassTeacher(tId, secStream);
+                            setUsers(getUsers());
+                          }
+                        }}
+                        className="bg-black text-xs text-amber-300 font-bold border border-white/10 rounded-lg px-2 py-1 focus:outline-none"
+                      >
+                        <option value="">⚠️ Unassigned</option>
+                        {candidateTeachers.map(ct => (
+                          <option key={ct.id} value={ct.id}>
+                            {ct.name} ({ct.role})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Full Width Bottom Section: Subject Master & Live Syllabus Coverage Matrix */}
         <div className="lg:col-span-12">
           <div className="glass p-8 rounded-3xl border-cyan-500/20 bg-gradient-to-r from-cyan-950/10 via-transparent to-indigo-950/10 space-y-6">
@@ -315,7 +364,7 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {subjects.map((s) => {
-                const availableTeachers = users.filter(u => u.role === 'subjectteacher' || u.role === 'hod');
+                const availableTeachers = users.filter(u => u.role === 'subjectteacher' || u.role === 'hod' || u.role === 'teacher');
                 return (
                   <div key={s.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-cyan-500/30 transition-all flex flex-col justify-between space-y-4">
                     <div>
