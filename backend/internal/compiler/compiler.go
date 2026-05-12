@@ -19,7 +19,7 @@ func Execute(code string, input string, config models.ExecutionConfig) models.Ex
 	tokens, _ := l.Tokenize()
 
 	// 2. Syntactic Analysis
-	p := parser.New(l)
+	p := parser.New(lexer.New(code))
 	ast := p.ParseProgram()
 
 	if len(p.Errors()) > 0 {

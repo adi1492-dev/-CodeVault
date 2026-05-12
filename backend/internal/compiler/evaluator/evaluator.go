@@ -42,7 +42,11 @@ func (e *Environment) Set(name string, val Value) {
 }
 
 func (e *Environment) Write(s string) {
-	e.Output.WriteString(s)
+	curr := e
+	for curr.parent != nil {
+		curr = curr.parent
+	}
+	curr.Output.WriteString(s)
 }
 
 func Eval(node parser.Node, env *Environment) Value {
@@ -57,12 +61,28 @@ func Eval(node parser.Node, env *Environment) Value {
 		return Eval(n.Expression, env)
 
 	case *parser.ReturnStatement:
+		if n.ReturnValue == nil {
+			return Value{Type: RETURN_VALUE, ReturnedVal: &Value{Type: NULL_VALUE}}
+		}
 		val := Eval(n.ReturnValue, env)
-		return Value{Type: RETURN_VALUE, IntVal: val.IntVal, FloatVal: val.FloatVal, StrVal: val.StrVal, BoolVal: val.BoolVal}
+		return Value{Type: RETURN_VALUE, IntVal: val.IntVal, FloatVal: val.FloatVal, StrVal: val.StrVal, BoolVal: val.BoolVal, ReturnedVal: &val}
 
 	case *parser.VarDeclaration:
 		val := Eval(n.Initializer, env)
 		env.Set(n.Name, val)
+		return Value{Type: NULL_VALUE}
+
+	case *parser.FunctionDeclaration:
+		params := []string{}
+		for _, p := range n.Parameters {
+			params = append(params, p.Name)
+		}
+		fnVal := &FunctionValue{
+			Parameters: params,
+			Body:       n.Body,
+			Env:        env,
+		}
+		env.Set(n.Name, Value{Type: FUNCTION_VALUE, FuncVal: fnVal})
 		return Value{Type: NULL_VALUE}
 
 	case *parser.IntegerLiteral:
@@ -109,7 +129,22 @@ func evalProgram(p *parser.Program, env *Environment) Value {
 	for _, stmt := range p.Statements {
 		result = Eval(stmt, env)
 		if result.Type == RETURN_VALUE {
+			if result.ReturnedVal != nil {
+				return *result.ReturnedVal
+			}
 			return result
+		}
+	}
+	// Auto-execute main() if defined
+	if mainVal, ok := env.Get("main"); ok && mainVal.Type == FUNCTION_VALUE {
+		if fn, ok := mainVal.FuncVal.(*FunctionValue); ok {
+			if block, ok := fn.Body.(*parser.BlockStatement); ok {
+				res := evalBlockStatement(block, NewEnvironment(fn.Env))
+				if res.Type == RETURN_VALUE && res.ReturnedVal != nil {
+					return *res.ReturnedVal
+				}
+				return res
+			}
 		}
 	}
 	return result
@@ -180,10 +215,29 @@ func evalCallExpression(n *parser.CallExpression, env *Environment) Value {
 			return handlePrintf(n.Arguments, env)
 		}
 		// Add more built-ins...
+		
+		// Check if it's a custom function in env
+		if fnVal, ok := env.Get(ident.Value); ok && fnVal.Type == FUNCTION_VALUE {
+			if fn, ok := fnVal.FuncVal.(*FunctionValue); ok {
+				callEnv := NewEnvironment(fn.Env)
+				for i, paramName := range fn.Parameters {
+					if i < len(n.Arguments) {
+						callEnv.Set(paramName, Eval(n.Arguments[i], env))
+					} else {
+						callEnv.Set(paramName, Value{Type: NULL_VALUE})
+					}
+				}
+				if block, ok := fn.Body.(*parser.BlockStatement); ok {
+					res := evalBlockStatement(block, callEnv)
+					if res.Type == RETURN_VALUE && res.ReturnedVal != nil {
+						return *res.ReturnedVal
+					}
+					return res
+				}
+			}
+		}
 	}
 	
-	// Handle custom functions
-	// ...
 	return Value{Type: NULL_VALUE}
 }
 

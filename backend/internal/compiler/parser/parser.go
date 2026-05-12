@@ -121,6 +121,7 @@ func (p *Parser) parseStatement() Statement {
 	case lexer.WHILE:
 		return p.parseWhileStatement()
 	case lexer.INCLUDE:
+		p.errors = append(p.errors, "Unsupported directive #include triggers fallback")
 		p.skipUntilNewline()
 		return nil
 	default:
@@ -495,9 +496,8 @@ func (p *Parser) Errors() []string {
 }
 
 func (p *Parser) skipUntilNewline() {
-	for p.curToken.Type != lexer.EOF && p.curToken.Line == lLine(p.curToken) {
-		// This is tricky without line info on token, but we have it.
-		// Wait, I need a helper or just check curToken.Line
+	startLine := p.curToken.Line
+	for p.curToken.Type != lexer.EOF && p.curToken.Line == startLine {
 		p.nextToken()
 	}
 }

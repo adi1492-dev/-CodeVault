@@ -21,14 +21,15 @@ const (
 )
 
 type Value struct {
-	Type     ValueType
-	IntVal   int64
-	FloatVal float64
-	StrVal   string
-	CharVal  rune
-	BoolVal  bool
-	ArrayVal []Value
-	FuncVal  interface{} // We'll cast this to *FunctionValue later
+	Type        ValueType
+	IntVal      int64
+	FloatVal    float64
+	StrVal      string
+	CharVal     rune
+	BoolVal     bool
+	ArrayVal    []Value
+	FuncVal     interface{} // We'll cast this to *FunctionValue later
+	ReturnedVal *Value
 }
 
 func (v Value) String() string {
