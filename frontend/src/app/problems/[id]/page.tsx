@@ -79,7 +79,9 @@ const ProblemPage = () => {
             title: finalMock.title, 
             description: finalMock.description,
             task_goal: finalMock.task_goal,
-            expected_output_preview: finalMock.expected_output_preview
+            expected_output_preview: finalMock.expected_output_preview,
+            test_cases: undefined,
+            TestCases: undefined
           } : {
             ...res.data,
             task_goal: res.data.task_goal || res.data.description || finalMock.task_goal,
