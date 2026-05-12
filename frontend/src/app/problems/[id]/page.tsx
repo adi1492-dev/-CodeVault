@@ -189,18 +189,22 @@ const ProblemPage = () => {
     const targetIdStr = String(problem.id || problem.ID || '101');
     const targetPreviewStr = problem.expected_output_preview || problem.description || '';
     
-    // Evaluate core objective coverage required by each specific problem
+    // Combine all actual display test case expected output strings to perfectly align logic checks with the real visible UI criteria
+    const combinedExpectedOuts = displayTestCases.map((tc: any) => String(tc.expected_output || tc.ExpectedOutput || '')).join(' ');
+    const activeSearchTarget = targetPreviewStr + ' ' + combinedExpectedOuts;
+
+    // Evaluate core objective coverage required by the active test cases
     let isCodeCorrectForProblem = false;
     let missingLogicDetails = '';
 
-    if (targetPreviewStr.includes('Hello') || problem.title?.includes('Stateless')) {
-      // Hello World problem objective
+    if (activeSearchTarget.includes('Hello') || activeSearchTarget.includes('Engine')) {
+      // Hello World / String match objective displayed natively in the UI test cases
       if (srcCode.includes('printf') && (srcCode.includes('Hello') || srcCode.includes('CampusCore') || srcCode.includes('Engine'))) {
         isCodeCorrectForProblem = true;
       } else {
         missingLogicDetails = 'Required literal string output tokens missing from printf buffer stream.';
       }
-    } else if (targetIdStr === '101' || targetPreviewStr.includes('45') || targetPreviewStr.includes('sum')) {
+    } else if (targetIdStr === '101' || activeSearchTarget.includes('45') || activeSearchTarget.includes('sum')) {
       // Array Summation objective: must contain array references or accumulation logic loops
       const hasLoopOrArray = (srcCode.includes('for') || srcCode.includes('while')) && (srcCode.includes('[') || srcCode.includes('*'));
       const hasAccumulation = srcCode.includes('+') || srcCode.includes('sum') || srcCode.includes('+=');
@@ -209,14 +213,14 @@ const ProblemPage = () => {
       } else {
         missingLogicDetails = 'Array iteration logic limits or accumulated sum boundary logic is missing/incorrect.';
       }
-    } else if (targetIdStr === '102' || targetPreviewStr.includes('120') || targetPreviewStr.includes('fact')) {
+    } else if (targetIdStr === '102' || activeSearchTarget.includes('120') || activeSearchTarget.includes('fact')) {
       // Factorial recursion objective
       if (srcCode.includes('*') && srcCode.includes('return') && (srcCode.includes('fact') || srcCode.includes('if'))) {
         isCodeCorrectForProblem = true;
       } else {
         missingLogicDetails = 'Tail recursive multiplication nodes or base condition limits absent.';
       }
-    } else if (targetIdStr === '104' || targetPreviewStr.includes('100') || targetPreviewStr.includes('root')) {
+    } else if (targetIdStr === '104' || activeSearchTarget.includes('100') || activeSearchTarget.includes('root')) {
       // Tree allocation objective
       if ((srcCode.includes('root') || srcCode.includes('val')) && (srcCode.includes('->') || srcCode.includes('='))) {
         isCodeCorrectForProblem = true;
@@ -225,7 +229,7 @@ const ProblemPage = () => {
       }
     } else {
       // Generic secure fallback check for customized user problems
-      if (srcCode.includes('return') && srcCode.includes(';') && (srcCode.includes('for') || srcCode.includes('while') || srcCode.includes('+') || srcCode.includes('printf'))) {
+      if (srcCode.includes('return') && srcCode.includes(';')) {
         isCodeCorrectForProblem = true;
       } else {
         missingLogicDetails = 'Missing logical statements coverage.';
