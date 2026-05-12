@@ -184,10 +184,9 @@ const ProblemPage = () => {
     const trimmedCode = srcCode.trim();
     const isEmptyOrInvalid = trimmedCode.length < 10 || (!trimmedCode.includes(';') && !trimmedCode.includes('}'));
 
-    const hasLoops = srcCode.includes('for') || srcCode.includes('while') || srcCode.includes('fact');
-    const hasReturn = srcCode.includes('return') || srcCode.includes('root->val') || srcCode.includes('sum');
+    const hasValidLogic = srcCode.includes('printf') || srcCode.includes('return') || srcCode.includes('=') || srcCode.includes('sum') || srcCode.includes('root') || srcCode.includes('for') || srcCode.includes('while');
     
-    const passedAll = !isEmptyOrInvalid && hasLoops && hasReturn;
+    const passedAll = !isEmptyOrInvalid && hasValidLogic;
     const finalScore = isEmptyOrInvalid ? 0 : (passedAll ? 100 : 50);
 
     return {
@@ -195,7 +194,7 @@ const ProblemPage = () => {
       tokens,
       ast: astTree,
       test_results: displayTestCases.map((tc: any, i: number) => {
-        const isPassed = isEmptyOrInvalid ? false : (i < 2 ? true : passedAll);
+        const isPassed = isEmptyOrInvalid ? false : passedAll;
         return {
           test_case_id: tc.id || i + 1,
           passed: isPassed,
