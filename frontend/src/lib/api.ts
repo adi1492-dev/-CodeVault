@@ -1,7 +1,14 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+  if (typeof window !== 'undefined') {
+    return `http://${window.location.hostname}:8080/api`;
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+};
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api',
+  baseURL: getBaseURL(),
 });
 
 export const getProblems = () => api.get('/problems');
