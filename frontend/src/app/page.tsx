@@ -70,6 +70,7 @@ export default function Home() {
           window.location.href = '/dashboard/admin';
           break;
         case 'hod':
+        case 'vicehod':
           window.location.href = '/dashboard/hod';
           break;
         case 'teacher':
@@ -129,7 +130,8 @@ export default function Home() {
       setLoading(false);
       switch (finalUser.role) {
         case 'admin': window.location.href = '/dashboard/admin'; break;
-        case 'hod': window.location.href = '/dashboard/hod'; break;
+        case 'hod':
+        case 'vicehod': window.location.href = '/dashboard/hod'; break;
         case 'teacher':
         case 'classteacher':
         case 'subjectteacher': window.location.href = '/dashboard/teacher'; break;

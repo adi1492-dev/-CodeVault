@@ -1,4 +1,5 @@
-export type UserRole = 'admin' | 'hod' | 'classteacher' | 'subjectteacher' | 'teacher' | 'student' | 'parent';
+export type UserRole = 'admin' | 'hod' | 'vicehod' | 'classteacher' | 'subjectteacher' | 'teacher' | 'student' | 'parent';
+
 
 export interface UserRecord {
   id: string;
@@ -10,6 +11,11 @@ export interface UserRecord {
   section?: string;
   assignedSubjects?: string[];
   assignedSections?: string[];
+  attendancePct?: number;
+  gradesSummary?: string;
+  feeStatus?: 'Paid' | 'Pending' | 'Overdue';
+  feeAmountDue?: number;
+  rollNo?: string;
 }
 
 const INITIAL_USERS: UserRecord[] = [
@@ -18,7 +24,9 @@ const INITIAL_USERS: UserRecord[] = [
   { id: 'teacher1', name: 'Dr. Vikram Anjali (Unified Faculty)', email: 'teacher@campuscore.edu', role: 'teacher', department: 'Computer Science', section: 'CS-A', password: 'teacher123', assignedSubjects: ['CS301', 'CS402', 'CS305'] },
   { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A', password: 'classteacher123', assignedSubjects: ['CS305'] },
   { id: '3', name: 'Mr. Vikram K.', email: 'st@campuscore.edu', role: 'subjectteacher', department: 'Computer Science', password: 'subjectteacher123', assignedSubjects: ['CS301', 'CS402'] },
-  { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A', password: 'student123' },
+  { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A', department: 'Computer Science', password: 'student123', attendancePct: 91.5, gradesSummary: 'A (Compiler Lab Pass, 94% Avg)', feeStatus: 'Paid', feeAmountDue: 0, rollNo: 'CS2026-001' },
+  { id: 'student2', name: 'Ananya Sharma', email: 'ananya@campuscore.edu', role: 'student', section: 'CS-A', department: 'Computer Science', password: 'password', attendancePct: 84.0, gradesSummary: 'B+ (AST Token Check Pending)', feeStatus: 'Pending', feeAmountDue: 45000, rollNo: 'CS2026-002' },
+  { id: 'student3', name: 'Rahul Verma', email: 'rahul@campuscore.edu', role: 'student', section: 'CS-B', department: 'Computer Science', password: 'password', attendancePct: 96.2, gradesSummary: 'A+ (Outstanding Performance)', feeStatus: 'Paid', feeAmountDue: 0, rollNo: 'CS2026-018' },
   { id: '5', name: 'Mrs. Sunita Nikam', email: 'parent@campuscore.edu', role: 'parent', password: 'parent123' },
 ];
 
@@ -46,9 +54,15 @@ export function saveUsers(users: UserRecord[]) {
 
 export function addUser(user: Omit<UserRecord, 'id'>): UserRecord {
   const users = getUsers();
+  const isStudent = user.role === 'student';
   const newUser: UserRecord = {
     ...user,
     id: String(Date.now()),
+    attendancePct: isStudent ? 88.5 : undefined,
+    gradesSummary: isStudent ? 'A- (Evaluation Passed Cleanly)' : undefined,
+    feeStatus: isStudent ? 'Paid' : undefined,
+    feeAmountDue: isStudent ? 0 : undefined,
+    rollNo: isStudent ? `CS2026-${Math.floor(100 + Math.random() * 899)}` : undefined,
   };
   saveUsers([...users, newUser]);
   return newUser;
@@ -60,6 +74,7 @@ export function authenticateUser(emailOrRole: string, pass: string): UserRecord 
   const helperPassMap: Record<string, string> = {
     admin: 'admin123',
     hod: 'hod123',
+    vicehod: 'vicehod123',
     teacher: 'teacher123',
     classteacher: 'classteacher123',
     subjectteacher: 'subjectteacher123',
@@ -79,6 +94,7 @@ export function authenticateUser(emailOrRole: string, pass: string): UserRecord 
   const roleMap: Record<string, UserRole> = {
     'admin': 'admin',
     'hod': 'hod',
+    'vicehod': 'vicehod',
     'teacher': 'teacher',
     'classteacher': 'classteacher',
     'subjectteacher': 'subjectteacher',
@@ -257,3 +273,92 @@ export function assignClassTeacher(teacherId: string, section: string) {
     setCurrentUser({ ...curr, section });
   }
 }
+
+// ==========================================
+// DEPARTMENTS LEADERSHIP LEDGER MODELS
+// ==========================================
+
+export interface DepartmentRecord {
+  id: string;
+  name: string;
+  code?: string;
+  hodId?: string;
+  viceHodId?: string;
+}
+
+const INITIAL_DEPARTMENTS: DepartmentRecord[] = [
+  { id: 'dept-1', name: 'Computer Science', code: 'CS', hodId: 'hod1', viceHodId: 'teacher1' },
+  { id: 'dept-2', name: 'Electronics & Telecommunication', code: 'EXTC' },
+  { id: 'dept-3', name: 'Mechanical Engineering', code: 'MECH' },
+  { id: 'dept-4', name: 'Information Technology', code: 'IT' },
+];
+
+const DEPARTMENTS_STORAGE_KEY = 'campuscore_departments_db';
+
+export function getDepartments(): DepartmentRecord[] {
+  if (typeof window === 'undefined') return INITIAL_DEPARTMENTS;
+  const stored = localStorage.getItem(DEPARTMENTS_STORAGE_KEY);
+  if (!stored) {
+    localStorage.setItem(DEPARTMENTS_STORAGE_KEY, JSON.stringify(INITIAL_DEPARTMENTS));
+    return INITIAL_DEPARTMENTS;
+  }
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return INITIAL_DEPARTMENTS;
+  }
+}
+
+export function saveDepartments(departments: DepartmentRecord[]) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(DEPARTMENTS_STORAGE_KEY, JSON.stringify(departments));
+  }
+}
+
+export function addDepartment(name: string, code: string, hodId?: string, viceHodId?: string): DepartmentRecord {
+  const depts = getDepartments();
+  const newDept: DepartmentRecord = {
+    id: 'dept-' + Date.now(),
+    name,
+    code,
+    hodId,
+    viceHodId
+  };
+  saveDepartments([...depts, newDept]);
+  return newDept;
+}
+
+export function assignDepartmentLeadership(departmentId: string, hodId?: string, viceHodId?: string) {
+  const depts = getDepartments();
+  const updated = depts.map(d => {
+    if (d.id === departmentId) {
+      return {
+        ...d,
+        hodId: hodId !== undefined ? (hodId === '' ? undefined : hodId) : d.hodId,
+        viceHodId: viceHodId !== undefined ? (viceHodId === '' ? undefined : viceHodId) : d.viceHodId
+      };
+    }
+    return d;
+  });
+  saveDepartments(updated);
+  
+  // Update users' department mapping if an HOD/Vice HOD is assigned
+  const targetDept = updated.find(d => d.id === departmentId);
+  if (targetDept) {
+    const users = getUsers();
+    let changed = false;
+    const nextUsers = users.map(u => {
+      if (hodId && u.id === hodId) {
+        changed = true;
+        return { ...u, department: targetDept.name, role: u.role === 'teacher' || u.role === 'subjectteacher' || u.role === 'student' ? 'hod' : u.role };
+      }
+      if (viceHodId && u.id === viceHodId) {
+        changed = true;
+        return { ...u, department: targetDept.name, role: u.role === 'student' ? 'vicehod' : u.role };
+      }
+      return u;
+    });
+    if (changed) saveUsers(nextUsers);
+  }
+}
+

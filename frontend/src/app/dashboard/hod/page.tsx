@@ -89,10 +89,12 @@ export default function HodDashboard() {
       <header className="border-b border-white/5 bg-white/[0.01] backdrop-blur-xl sticky top-0 z-50 px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-fuchsia-500 to-purple-500 flex items-center justify-center font-black text-black text-xs shadow-md shadow-fuchsia-500/20">
-            HOD
+            {currentUser?.role === 'vicehod' ? 'VHOD' : 'HOD'}
           </div>
           <div>
-            <span className="font-bold tracking-tight text-sm block">Department Head Supervisory Suite</span>
+            <span className="font-bold tracking-tight text-sm block">
+              {currentUser?.role === 'vicehod' ? 'Department Deputy Supervisory Suite' : 'Department Head Supervisory Suite'}
+            </span>
             <span className="text-[10px] font-mono text-fuchsia-400 block">Scope Authority: {department}</span>
           </div>
         </div>
