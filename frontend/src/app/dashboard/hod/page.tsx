@@ -15,10 +15,11 @@ import {
   BookOpen,
   Sparkles,
   TrendingUp,
-  FileCheck
+  FileCheck,
+  PlusCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getUsers, getSubjects, getCurrentUser, setCurrentUser, UserRecord, SubjectRecord } from '@/lib/store';
+import { getUsers, getSubjects, getCurrentUser, setCurrentUser, addUser, UserRecord, SubjectRecord } from '@/lib/store';
 
 export default function HodDashboard() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function HodDashboard() {
   const [overviewSubTab, setOverviewSubTab] = useState<'metrics' | 'guidelines'>('metrics');
   const [directiveSubTab, setDirectiveSubTab] = useState<'send' | 'history'>('send');
   const [syllabusSubTab, setSyllabusSubTab] = useState<'tracking' | 'summary'>('tracking');
-  const [facultySubTab, setFacultySubTab] = useState<'list' | 'load'>('list');
+  const [facultySubTab, setFacultySubTab] = useState<'list' | 'create' | 'load'>('list');
 
   // Directive Form state
   const [directiveTitle, setDirectiveTitle] = useState('');
@@ -45,6 +46,14 @@ export default function HodDashboard() {
     { id: 'd2', title: 'Final Review Guidelines for Lab Scoring', scope: 'Class Teachers', date: '2026-05-10', active: true }
   ]);
   const [successMsg, setSuccessMsg] = useState('');
+
+  // New Teacher creation state
+  const [newTeacherName, setNewTeacherName] = useState('');
+  const [newTeacherEmail, setNewTeacherEmail] = useState('');
+  const [newTeacherRole, setNewTeacherRole] = useState<'teacher' | 'classteacher' | 'subjectteacher'>('teacher');
+  const [newTeacherSection, setNewTeacherSection] = useState('CS-A');
+  const [newTeacherPassword, setNewTeacherPassword] = useState('teacher123');
+  const [teacherSuccessMsg, setTeacherSuccessMsg] = useState('');
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -95,6 +104,33 @@ export default function HodDashboard() {
     setDirectiveSubTab('history');
 
     setTimeout(() => setSuccessMsg(''), 6000);
+  };
+
+  const handleCreateTeacher = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTeacherName || !newTeacherEmail) return;
+
+    const added = addUser({
+      name: newTeacherName,
+      email: newTeacherEmail,
+      role: newTeacherRole,
+      password: newTeacherPassword || 'password',
+      department: department, // Automatically map to the HOD's active managed department!
+      section: newTeacherSection,
+    });
+
+    // Refresh localized state list
+    setFaculty(getUsers().filter(u => 
+      (u.role === 'subjectteacher' || u.role === 'classteacher' || u.role === 'teacher') && 
+      (!u.department || u.department.toLowerCase() === department.toLowerCase())
+    ));
+
+    setTeacherSuccessMsg(`Teacher profile "${added.name}" successfully created and mapped to ${department}!`);
+    setNewTeacherName('');
+    setNewTeacherEmail('');
+    setNewTeacherPassword('teacher123');
+
+    setTimeout(() => setTeacherSuccessMsg(''), 6000);
   };
 
   return (
@@ -535,7 +571,7 @@ export default function HodDashboard() {
           {activeTab === 'faculty' && (
             <div className="space-y-6 animate-fade-in">
               
-              {/* Secondary Horizontal Menu */}
+              {/* Secondary Horizontal Menu Switcher */}
               <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
                 <button
                   onClick={() => setFacultySubTab('list')}
@@ -545,6 +581,15 @@ export default function HodDashboard() {
                 >
                   <Users size={14} />
                   <span>👥 Assigned Instructors</span>
+                </button>
+                <button
+                  onClick={() => setFacultySubTab('create')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    facultySubTab === 'create' ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <PlusCircle size={14} />
+                  <span>➕ Add Teacher Account</span>
                 </button>
                 <button
                   onClick={() => setFacultySubTab('load')}
@@ -589,6 +634,99 @@ export default function HodDashboard() {
                       No faculty members explicitly allocated to this department yet. Manage records using the central Administration Portal.
                     </div>
                   )}
+                </div>
+              )}
+
+              {facultySubTab === 'create' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in max-w-xl mx-auto">
+                  <div className="border-b border-white/5 pb-3">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <PlusCircle size={16} className="text-fuchsia-400" />
+                      <span>Provision Teacher Profile</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Create a dedicated instructor account directly bound to the <strong className="text-fuchsia-300">{department}</strong> department.
+                    </p>
+                  </div>
+
+                  {teacherSuccessMsg && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold leading-relaxed flex items-start gap-2 animate-fade-in">
+                      <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+                      <span>{teacherSuccessMsg}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleCreateTeacher} className="space-y-4 pt-1">
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">Full Name</label>
+                      <input 
+                        type="text"
+                        required
+                        value={newTeacherName}
+                        onChange={(e) => setNewTeacherName(e.target.value)}
+                        placeholder="e.g. Dr. Ramesh Kumar"
+                        className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-fuchsia-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">Email Address (Sign-In ID)</label>
+                      <input 
+                        type="email"
+                        required
+                        value={newTeacherEmail}
+                        onChange={(e) => setNewTeacherEmail(e.target.value)}
+                        placeholder="e.g. ramesh.k@campuscore.edu"
+                        className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-fuchsia-400"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-slate-300 block mb-1">Instructor Role</label>
+                        <select
+                          value={newTeacherRole}
+                          onChange={(e) => setNewTeacherRole(e.target.value as any)}
+                          className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs font-bold text-fuchsia-300 focus:outline-none cursor-pointer"
+                        >
+                          <option value="teacher">Standard Faculty</option>
+                          <option value="subjectteacher">Subject Teacher</option>
+                          <option value="classteacher">Class Teacher</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-slate-300 block mb-1">Primary Class Section</label>
+                        <input 
+                          type="text"
+                          required
+                          value={newTeacherSection}
+                          onChange={(e) => setNewTeacherSection(e.target.value)}
+                          placeholder="e.g. CS-A"
+                          className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-fuchsia-400"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">Temporary Portal Password</label>
+                      <input 
+                        type="text"
+                        required
+                        value={newTeacherPassword}
+                        onChange={(e) => setNewTeacherPassword(e.target.value)}
+                        className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-slate-300 focus:outline-none focus:border-fuchsia-400 font-mono"
+                      />
+                      <span className="text-[10px] text-slate-500 block mt-1">Instructor can use this key to authenticate instantly</span>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-fuchsia-500 to-purple-500 hover:opacity-90 text-white font-extrabold text-xs uppercase tracking-wider transition-all block mt-2 shadow-md"
+                    >
+                      Provision Instructor Profile
+                    </button>
+                  </form>
                 </div>
               )}
 
