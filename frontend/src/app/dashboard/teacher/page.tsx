@@ -21,7 +21,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser, setCurrentUser, getSubjects, updateSyllabusCoverage, UserRecord, SubjectRecord } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getUsers, saveUsers, getSubjects, updateSyllabusCoverage, UserRecord, SubjectRecord } from '@/lib/store';
 
 interface StudentSubmission {
   id: string;
@@ -33,34 +33,20 @@ interface StudentSubmission {
   manualOverride?: number;
 }
 
-interface StudentRoster {
-  id: string;
-  name: string;
-  rollNo: string;
-  attendance: number;
-  grade: string;
-  leaveRequested?: boolean;
-}
-
 export default function UnifiedTeacherDashboard() {
   const router = useRouter();
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
   
-  // Primary Navigation tabs (Left Menu)
   const [activeTab, setActiveTab] = useState<'teaching' | 'labs' | 'class'>('teaching');
-  
-  // Secondary Sub-navigation tab states (Top Horizontal Bar)
   const [teachingSubTab, setTeachingSubTab] = useState<'curriculum' | 'problems'>('curriculum');
   const [classSubTab, setClassSubTab] = useState<'roster' | 'announcements'>('roster');
   
-  // Shared context properties
   const [department, setDepartment] = useState('Computer Science');
   const [section, setSection] = useState('CS-A');
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
+  const [students, setStudents] = useState<UserRecord[]>([]);
 
-  // ==========================================
-  // TEACHING SUBJECTS & LABS STATES
-  // ==========================================
+  // TEACHING & LABS
   const [title, setTitle] = useState('');
   const [testcase, setTest] = useState('');
   const [problems, setProblems] = useState([
@@ -69,44 +55,15 @@ export default function UnifiedTeacherDashboard() {
   ]);
 
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([
-    { 
-      id: 'sub1', 
-      studentName: 'Aarav Nikam', 
-      rollNo: 'CS-01', 
-      codeSnippet: 'void main() { int sum = 0; for(int i=0; i<10; i=i+1) sum=sum+i; printf("%d", sum); }', 
-      status: 'Passed Successful', 
-      autoScore: 90 
-    },
-    { 
-      id: 'sub2', 
-      studentName: 'Neha Sharma', 
-      rollNo: 'CS-02', 
-      codeSnippet: 'int fact(int n) { if(n<=1) return 1; return n * fact(n-1); }', 
-      status: 'Logic Optimal', 
-      autoScore: 95 
-    },
-    { 
-      id: 'sub3', 
-      studentName: 'Rohan Verma', 
-      rollNo: 'CS-03', 
-      codeSnippet: 'while(true) { malloc(1024); } // infinite memory allocation loop', 
-      status: 'Runtime Trapped (Loop limits exceeded)', 
-      autoScore: 10,
-      manualOverride: 25 
-    },
+    { id: 'sub1', studentName: 'Aarav Nikam', rollNo: 'CS-01', codeSnippet: 'void main() { int sum = 0; for(int i=0; i<10; i=i+1) sum=sum+i; printf("%d", sum); }', status: 'Passed Successful', autoScore: 90 },
+    { id: 'sub2', studentName: 'Neha Sharma', rollNo: 'CS-02', codeSnippet: 'int fact(int n) { if(n<=1) return 1; return n * fact(n-1); }', status: 'Logic Optimal', autoScore: 95 },
+    { id: 'sub3', studentName: 'Rohan Verma', rollNo: 'CS-03', codeSnippet: 'while(true) { malloc(1024); }', status: 'Runtime Trapped', autoScore: 10, manualOverride: 25 },
   ]);
 
-  // ==========================================
-  // ASSIGNED CLASS ROSTER & ALERTS STATES
-  // ==========================================
+  // CLASS ROSTER & ANNOUNCEMENTS
   const [message, setMessage] = useState('');
   const [broadcastLog, setBroadcast] = useState<string[]>([]);
-  const [roster, setRoster] = useState<StudentRoster[]>([
-    { id: '101', name: 'Aarav Nikam', rollNo: 'CS-01', attendance: 92, grade: 'A+' },
-    { id: '102', name: 'Neha Sharma', rollNo: 'CS-02', attendance: 85, grade: 'A' },
-    { id: '103', name: 'Rohan Verma', rollNo: 'CS-03', attendance: 64, grade: 'B-', leaveRequested: true },
-    { id: '104', name: 'Priya Patel', rollNo: 'CS-04', attendance: 98, grade: 'O' },
-  ]);
+  const [msg, setMsg] = useState('');
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -116,6 +73,9 @@ export default function UnifiedTeacherDashboard() {
       if (user.section) setSection(user.section);
     }
     setSubjects(getSubjects());
+    // Load real students filtered by section
+    const allStudents = getUsers().filter(u => u.role === 'student');
+    setStudents(allStudents);
   }, []);
 
   const handleLogout = () => {
@@ -158,8 +118,28 @@ export default function UnifiedTeacherDashboard() {
     setSubjects(getSubjects());
   };
 
-  const sanctionLeave = (id: string) => {
-    setRoster(roster.map(s => s.id === id ? { ...s, attendance: s.attendance + 4, leaveRequested: false } : s));
+  const sanctionLeave = (studentId: string) => {
+    const all = getUsers();
+    const updated = all.map(u => {
+      if (u.id === studentId) {
+        const newLeave = Math.max(0, (u.leaveBalance ?? 0) - 1);
+        return { ...u, leaveBalance: newLeave };
+      }
+      return u;
+    });
+    saveUsers(updated);
+    setStudents(updated.filter(u => u.role === 'student'));
+    setMsg('Leave sanctioned and balance updated.');
+    setTimeout(() => setMsg(''), 4000);
+  };
+
+  const updateStudentAttendance = (studentId: string, newPct: number) => {
+    const all = getUsers();
+    const updated = all.map(u => u.id === studentId ? { ...u, attendancePct: Math.min(100, Math.max(0, newPct)) } : u);
+    saveUsers(updated);
+    setStudents(updated.filter(u => u.role === 'student'));
+    setMsg('Attendance updated.');
+    setTimeout(() => setMsg(''), 3000);
   };
 
   const handleBroadcast = (e: React.FormEvent) => {
@@ -548,8 +528,10 @@ export default function UnifiedTeacherDashboard() {
                     </span>
                   </div>
 
+                  {msg && <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-bold mb-3">{msg}</div>}
+
                   <div className="space-y-3">
-                    {roster.map(student => (
+                    {students.filter(s => s.section === section || section === 'CS-A').map(student => (
                       <div key={student.id} className="p-4 rounded-2xl bg-black/40 border border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-white/[0.02]">
                         <div>
                           <div className="flex items-center gap-2">
@@ -559,32 +541,32 @@ export default function UnifiedTeacherDashboard() {
                             </span>
                           </div>
                           <span className="text-[10px] text-slate-400 block mt-1">
-                            Attendance Coverage standing: <strong className="text-white">{student.attendance}%</strong>
+                            Attendance: <strong className={`${(student.attendancePct ?? 0) >= 75 ? 'text-emerald-400' : 'text-red-400'}`}>{student.attendancePct}%</strong> · CGPA: <strong className="text-white">{student.cgpa ?? 'N/A'}</strong> · Leave: <strong className="text-blue-300">{student.leaveBalance ?? 0} days</strong>
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-4 w-full sm:w-auto justify-between pt-2 sm:pt-0 border-t border-white/5 sm:border-t-0">
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between pt-2 sm:pt-0 border-t border-white/5 sm:border-t-0">
                           <div className="text-left sm:text-right">
-                            <span className="text-[9px] uppercase text-slate-500 block font-bold">Midterm Grade</span>
-                            <span className="text-xs font-black text-indigo-300 block">{student.grade}</span>
+                            <span className="text-[9px] uppercase text-slate-500 block font-bold">Fee Status</span>
+                            <span className={`text-xs font-black block ${student.feeStatus === 'Paid' ? 'text-emerald-300' : 'text-amber-300'}`}>{student.feeStatus}</span>
                           </div>
 
-                          {student.leaveRequested ? (
+                          {(student.leaveBalance ?? 0) > 0 ? (
                             <button
                               onClick={() => sanctionLeave(student.id)}
-                              className="px-3 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black text-[11px] animate-pulse shrink-0 transition-all"
+                              className="px-3 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/20 font-bold text-[10px] shrink-0 transition-all"
                             >
-                              Approve Leave (+4%)
+                              Sanction Leave
                             </button>
                           ) : (
-                            <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1 shrink-0">
-                              <CheckCircle2 size={12} />
-                              <span>Approved</span>
-                            </span>
+                            <span className="text-[10px] font-bold text-slate-500 shrink-0">No leave left</span>
                           )}
                         </div>
                       </div>
                     ))}
+                    {students.filter(s => s.section === section || section === 'CS-A').length === 0 && (
+                      <div className="text-xs text-slate-500 text-center py-4 italic">No students in this section.</div>
+                    )}
                   </div>
                 </div>
               )}

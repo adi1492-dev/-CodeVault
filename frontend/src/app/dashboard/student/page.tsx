@@ -186,22 +186,27 @@ export default function StudentDashboard() {
 
               {workspaceSubTab === 'metrics' && (
                 <div className="space-y-6 animate-fade-in">
-                  {/* Quick Stat Blocks */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Quick Stat Blocks from live store */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div className="glass p-5 rounded-3xl border-white/5">
-                      <span className="text-xs text-slate-400 block font-medium">Attendance Rate</span>
-                      <span className="text-3xl font-black text-emerald-400 mt-1 block">92%</span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">Verified standing</span>
+                      <span className="text-xs text-slate-400 block font-medium">Attendance</span>
+                      <span className={`text-3xl font-black mt-1 block ${(currentUser?.attendancePct ?? 0) >= 75 ? 'text-emerald-400' : 'text-red-400'}`}>{currentUser?.attendancePct ?? 0}%</span>
+                      {(currentUser?.attendancePct ?? 0) < 75 && <span className="text-[10px] text-red-400 block mt-0.5 font-bold">⚠ Below 75% shortfall</span>}
                     </div>
                     <div className="glass p-5 rounded-3xl border-white/5">
-                      <span className="text-xs text-slate-400 block font-medium">Completed Lab Work</span>
-                      <span className="text-3xl font-black text-cyan-400 mt-1 block">14/15</span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">Code execution passes</span>
+                      <span className="text-xs text-slate-400 block font-medium">CGPA</span>
+                      <span className="text-3xl font-black text-cyan-400 mt-1 block">{currentUser?.cgpa ?? 'N/A'}</span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">Sem {currentUser?.semesterNo ?? 1}</span>
                     </div>
                     <div className="glass p-5 rounded-3xl border-white/5">
-                      <span className="text-xs text-slate-400 block font-medium">Estimated Average</span>
-                      <span className="text-3xl font-black text-indigo-400 mt-1 block">9.4 GPA</span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">Excellent Rank</span>
+                      <span className="text-xs text-slate-400 block font-medium">Fee Status</span>
+                      <span className={`text-2xl font-black mt-1 block ${currentUser?.feeStatus === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}`}>{currentUser?.feeStatus ?? 'N/A'}</span>
+                      {currentUser?.feeDue ? <span className="text-[10px] text-amber-400 block mt-0.5">Due: ₹{currentUser.feeDue.toLocaleString()}</span> : null}
+                    </div>
+                    <div className="glass p-5 rounded-3xl border-white/5">
+                      <span className="text-xs text-slate-400 block font-medium">Leave Balance</span>
+                      <span className="text-3xl font-black text-indigo-400 mt-1 block">{currentUser?.leaveBalance ?? 0}</span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">days remaining</span>
                     </div>
                   </div>
 

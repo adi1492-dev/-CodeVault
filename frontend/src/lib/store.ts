@@ -18,6 +18,27 @@ export interface UserRecord {
   rollNo?: string;
   academicYear?: string;
   academicYears?: string[];
+  // ERP Extended Fields
+  phone?: string;
+  dob?: string;
+  address?: string;
+  parentName?: string;
+  parentPhone?: string;
+  bloodGroup?: string;
+  category?: string;
+  admissionDate?: string;
+  scholarshipStatus?: 'None' | 'Merit' | 'Need-Based' | 'Govt';
+  hostelStatus?: 'Day Scholar' | 'Hostel';
+  nationality?: string;
+  feePaid?: number;
+  feeDue?: number;
+  totalFee?: number;
+  sgpa?: number[];
+  cgpa?: number;
+  backlogCount?: number;
+  documentStatus?: { name: string; submitted: boolean }[];
+  leaveBalance?: number;
+  semesterNo?: number;
 }
 
 const INITIAL_USERS: UserRecord[] = [
@@ -28,9 +49,54 @@ const INITIAL_USERS: UserRecord[] = [
   { id: 'teacher1', name: 'Dr. Vikram Anjali (Unified Faculty)', email: 'teacher@campuscore.edu', role: 'teacher', department: 'Computer Science', section: 'CS-A', academicYear: '1st Year', academicYears: ['1st Year', '2nd Year'], password: 'teacher123', assignedSubjects: ['CS301', 'CS402', 'CS305'] },
   { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A', academicYear: '1st Year', password: 'classteacher123', assignedSubjects: ['CS305'] },
   { id: '3', name: 'Mr. Vikram K.', email: 'st@campuscore.edu', role: 'subjectteacher', department: 'Computer Science', academicYear: '2nd Year', password: 'subjectteacher123', assignedSubjects: ['CS301', 'CS402'] },
-  { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A', department: 'Computer Science', academicYear: '1st Year', password: 'student123', attendancePct: 91.5, gradesSummary: 'A (Compiler Lab Pass, 94% Avg)', feeStatus: 'Paid', feeAmountDue: 0, rollNo: 'CS2026-001' },
-  { id: 'student2', name: 'Ananya Sharma', email: 'ananya@campuscore.edu', role: 'student', section: 'CS-A', department: 'Computer Science', academicYear: '1st Year', password: 'password', attendancePct: 84.0, gradesSummary: 'B+ (AST Token Check Pending)', feeStatus: 'Pending', feeAmountDue: 45000, rollNo: 'CS2026-002' },
-  { id: 'student3', name: 'Rahul Verma', email: 'rahul@campuscore.edu', role: 'student', section: 'CS-B', department: 'Computer Science', academicYear: '2nd Year', password: 'password', attendancePct: 96.2, gradesSummary: 'A+ (Outstanding Performance)', feeStatus: 'Paid', feeAmountDue: 0, rollNo: 'CS2026-018' },
+  {
+    id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student',
+    section: 'CS-A', department: 'Computer Science', academicYear: '1st Year', semesterNo: 2,
+    password: 'student123', attendancePct: 91.5, gradesSummary: 'A (Compiler Lab Pass, 94% Avg)',
+    feeStatus: 'Paid', feeAmountDue: 0, rollNo: 'CS2026-001',
+    phone: '9876543210', dob: '2006-03-15', parentName: 'Mr. Suresh Nikam', parentPhone: '9123456780',
+    bloodGroup: 'B+', category: 'General', admissionDate: '2024-07-15', scholarshipStatus: 'Merit',
+    hostelStatus: 'Day Scholar', nationality: 'Indian', address: '12, Shivaji Nagar, Pune - 411005',
+    feePaid: 85000, feeDue: 0, totalFee: 85000,
+    sgpa: [8.6, 9.1], cgpa: 8.85, backlogCount: 0, leaveBalance: 8,
+    documentStatus: [
+      { name: '10th Marksheet', submitted: true }, { name: '12th Marksheet', submitted: true },
+      { name: 'Birth Certificate', submitted: true }, { name: 'Caste Certificate', submitted: false },
+      { name: 'Migration Certificate', submitted: true }, { name: 'Medical Fitness', submitted: true }
+    ]
+  },
+  {
+    id: 'student2', name: 'Ananya Sharma', email: 'ananya@campuscore.edu', role: 'student',
+    section: 'CS-A', department: 'Computer Science', academicYear: '1st Year', semesterNo: 2,
+    password: 'password', attendancePct: 84.0, gradesSummary: 'B+ (AST Token Check Pending)',
+    feeStatus: 'Pending', feeAmountDue: 45000, rollNo: 'CS2026-002',
+    phone: '9988776655', dob: '2006-07-22', parentName: 'Mrs. Priya Sharma', parentPhone: '9012345678',
+    bloodGroup: 'A+', category: 'OBC', admissionDate: '2024-07-15', scholarshipStatus: 'Need-Based',
+    hostelStatus: 'Hostel', nationality: 'Indian', address: '45, Gandhi Road, Nashik - 422001',
+    feePaid: 40000, feeDue: 45000, totalFee: 85000,
+    sgpa: [7.4, 7.8], cgpa: 7.6, backlogCount: 1, leaveBalance: 3,
+    documentStatus: [
+      { name: '10th Marksheet', submitted: true }, { name: '12th Marksheet', submitted: true },
+      { name: 'Birth Certificate', submitted: false }, { name: 'Caste Certificate', submitted: true },
+      { name: 'Migration Certificate', submitted: false }, { name: 'Medical Fitness', submitted: true }
+    ]
+  },
+  {
+    id: 'student3', name: 'Rahul Verma', email: 'rahul@campuscore.edu', role: 'student',
+    section: 'CS-B', department: 'Computer Science', academicYear: '2nd Year', semesterNo: 4,
+    password: 'password', attendancePct: 96.2, gradesSummary: 'A+ (Outstanding Performance)',
+    feeStatus: 'Paid', feeAmountDue: 0, rollNo: 'CS2026-018',
+    phone: '9765432100', dob: '2005-11-10', parentName: 'Mr. Anil Verma', parentPhone: '9234567890',
+    bloodGroup: 'O+', category: 'General', admissionDate: '2023-07-12', scholarshipStatus: 'Govt',
+    hostelStatus: 'Hostel', nationality: 'Indian', address: '8, MG Road, Nagpur - 440010',
+    feePaid: 170000, feeDue: 0, totalFee: 170000,
+    sgpa: [9.2, 9.5, 9.8, 9.6], cgpa: 9.53, backlogCount: 0, leaveBalance: 12,
+    documentStatus: [
+      { name: '10th Marksheet', submitted: true }, { name: '12th Marksheet', submitted: true },
+      { name: 'Birth Certificate', submitted: true }, { name: 'Caste Certificate', submitted: false },
+      { name: 'Migration Certificate', submitted: true }, { name: 'Medical Fitness', submitted: true }
+    ]
+  },
   { id: '5', name: 'Mrs. Sunita Nikam', email: 'parent@campuscore.edu', role: 'parent', password: 'parent123' },
 ];
 

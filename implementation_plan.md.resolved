@@ -1,0 +1,309 @@
+# CampusCore — Production-Ready ERP Expansion Plan
+
+## Background
+CampusCore is a full-stack institutional platform with a **Go Fiber + GORM + PostgreSQL** backend and a **Next.js** frontend. The existing frontend uses `localStorage` for state. The goal is to:
+1. Migrate all ERP data to proper Go backend APIs + PostgreSQL.
+2. Expand every dashboard to a full production-grade feature set.
+3. Add a completely new **Canteen Pre-order System** with a dedicated admin portal (`/dashboard/canteen`).
+
+---
+
+## Architecture Decisions (Based on Your Answers)
+
+| Decision | Resolution |
+|---|---|
+| Canteen Wallet | **Dual-mode**: Linked to main institutional fee ledger AND has its own prepaid sub-balance |
+| Canteen Admin | **Separate route**: `/dashboard/canteen` with its own login role `canteen_admin` |
+| Data Backend | **Full Go backend migration** — all new features use REST API calls to Go Fiber, PostgreSQL stores data |
+
+---
+
+## Phase 1: Database Schema (PostgreSQL via GORM)
+
+> [!IMPORTANT]
+> All Go models below add to the existing `users`, `problems`, `submissions` tables. The `users` table gets a major extension.
+
+### New/Extended Tables
+
+#### `users` (EXTEND existing)
+```
++ phone, dob, address, roll_no, section, department, academic_year, semester_no
++ parent_name, parent_phone, blood_group, category, nationality, admission_date
++ hostel_status, scholarship_status
++ attendance_pct, leave_balance, backlog_count, cgpa
++ fee_total, fee_paid, fee_due, fee_status
++ canteen_wallet_balance  (sub-balance, separate from fee ledger)
+```
+
+#### `canteen_items` (NEW)
+```
+id, name, category (Breakfast/Lunch/Snacks/Beverages), price, 
+description, is_available, prep_time_minutes, image_url, created_at
+```
+
+#### `canteen_orders` (NEW)
+```
+id, student_id (FK users), items (JSONB), total_amount, 
+payment_mode (wallet|fee_deduction), order_status (pending|preparing|ready|completed|cancelled),
+pickup_code, scheduled_pickup_time, placed_at, completed_at
+```
+
+#### `canteen_wallet_transactions` (NEW)
+```
+id, user_id (FK), type (credit|debit), amount, 
+description, reference_order_id, created_at
+```
+
+#### `assignments` (NEW)
+```
+id, title, description, subject_id (FK), teacher_id (FK),
+section, due_date, max_marks, attachment_url, created_at
+```
+
+#### `submissions_academic` (NEW — rename existing `submissions` for code only)
+```
+id, assignment_id (FK), student_id (FK), 
+submission_text, attachment_url, marks_awarded, feedback,
+submitted_at, graded_at, graded_by
+```
+
+#### `timetable_slots` (NEW)
+```
+id, section, day_of_week (0-6), period_no (1-8),
+subject_id (FK), teacher_id (FK), room_no, start_time, end_time
+```
+
+#### `leave_applications` (NEW)
+```
+id, applicant_id (FK users), applicant_type (student|teacher),
+leave_type (medical|personal|emergency), from_date, to_date,
+reason, status (pending|approved|rejected), 
+reviewed_by (FK users), reviewed_at, created_at
+```
+
+#### `attendance_records` (NEW)
+```
+id, student_id (FK), subject_id (FK), date, status (present|absent|late),
+marked_by (FK users teacher), created_at
+```
+
+#### `fee_transactions` (NEW)
+```
+id, student_id (FK), amount, payment_mode (online|cash|scholarship),
+semester, description, receipt_no, paid_at, recorded_by (FK)
+```
+
+#### `transport_routes` (NEW)
+```
+id, route_name, driver_name, driver_phone, 
+vehicle_no, capacity, stops (JSONB), departure_time
+```
+
+#### `library_loans` (NEW)
+```
+id, student_id (FK), book_title, book_isbn, 
+issued_at, due_date, returned_at, fine_amount
+```
+
+#### `hostel_rooms` (NEW)
+```
+id, block, room_no, capacity, occupants (JSONB FK array), status
+```
+
+#### `gate_passes` (NEW)
+```
+id, student_id (FK), destination, reason, out_time, in_time,
+status (pending|sanctioned|returned), approved_by (FK warden)
+```
+
+#### `maintenance_complaints` (NEW)
+```
+id, student_id (FK), hostel_room, category (plumbing|electrical|other),
+description, status (open|in_progress|resolved), assigned_to, created_at
+```
+
+#### `announcements` (NEW)
+```
+id, title, body, target_role (all|student|teacher|parent),
+target_section, created_by (FK), created_at
+```
+
+---
+
+## Phase 2: Go Backend — New API Handlers & Routes
+
+> [!NOTE]
+> Module structure: each domain gets its own `handlers/` file and routes group.
+
+### New Handler Files (backend)
+
+| File | Routes |
+|---|---|
+| `handlers/student.go` | GET/PUT `/api/students`, GET `/api/students/:id`, PUT `/api/students/:id/attendance`, GET `/api/students/:id/report` |
+| `handlers/canteen.go` | CRUD `/api/canteen/menu`, POST `/api/canteen/orders`, GET `/api/canteen/orders`, PUT `/api/canteen/orders/:id/status`, GET `/api/canteen/wallet/:userId`, POST `/api/canteen/wallet/recharge` |
+| `handlers/assignments.go` | CRUD `/api/assignments`, POST `/api/assignments/:id/submit`, PUT `/api/assignments/submissions/:id/grade` |
+| `handlers/timetable.go` | GET `/api/timetable/:section`, POST `/api/timetable` (admin/HOD only) |
+| `handlers/leaves.go` | POST `/api/leaves`, GET `/api/leaves`, PUT `/api/leaves/:id/approve`, PUT `/api/leaves/:id/reject` |
+| `handlers/attendance.go` | POST `/api/attendance/mark` (bulk), GET `/api/attendance/:studentId`, GET `/api/attendance/report/:section` |
+| `handlers/fees.go` | GET `/api/fees/:studentId`, POST `/api/fees/payment`, GET `/api/fees/report` |
+| `handlers/transport.go` | CRUD `/api/transport/routes`, GET `/api/transport/student/:id` |
+| `handlers/library.go` | GET `/api/library/:studentId`, POST `/api/library/issue`, PUT `/api/library/return/:id` |
+| `handlers/hostel.go` | GET `/api/hostel/rooms`, PUT `/api/hostel/rooms/:id/assign`, CRUD `/api/hostel/passes`, CRUD `/api/hostel/complaints` |
+| `handlers/announcements.go` | CRUD `/api/announcements`, GET `/api/announcements?role=student&section=CS-A` |
+
+### Frontend API Layer — New `lib/api.ts`
+Replace all `getUsers()`/`saveUsers()` `localStorage` calls with `fetch()` calls to the Go backend. Use Next.js `SERVER_URL` env variable.
+
+---
+
+## Phase 3: Frontend Dashboard Expansions
+
+### 🍽️ Canteen System (NEW — `/dashboard/canteen`)
+
+#### Canteen Admin Portal (`/dashboard/canteen`)
+- **Menu Manager**: Table of all items with Add/Edit/Delete; toggle `is_available`; set price, category, prep time.
+- **Live Order Queue**: Real-time polling of pending orders. Kanban-style columns: `Pending → Preparing → Ready → Completed`. Click to advance order status.
+- **Sales Analytics**: Daily/weekly revenue charts, top 5 best-selling items, busiest hours.
+- **Wallet Manager**: Search any student, view balance, add credit (cash payment at counter). See full transaction log.
+- **Menu Schedule**: Set a daily menu by meal slot (Breakfast 7-9am, Lunch 12-2pm, Snacks 4-6pm).
+
+#### Student — Canteen Hub Tab
+- **Browse Menu**: Cards by category with item name, price, prep time, availability badge. Filter by meal time.
+- **Cart & Checkout**: Add items to cart, choose pickup time slot, pay via Wallet Balance or Fee Account deduction.
+- **Live Order Status**: Real-time polling bar showing `Order Placed → Kitchen Preparing → Ready for Pickup` with countdown.
+- **Pickup Code**: Unique alphanumeric code displayed prominently when order is ready.
+- **Order History**: Past 30 days of orders with items, total, and reorder button.
+
+#### Parent — Canteen Wallet Tab
+- **Wallet Dashboard**: Current canteen wallet balance with transaction history for ward.
+- **Recharge Wallet**: Enter amount and "Pay & Recharge" — debits from parent's linked account, credits ward's wallet.
+- **Dietary View**: Weekly breakdown of what the ward ordered, categories, and total spend.
+
+---
+
+### 🎓 Student Dashboard Expansion
+**New Tabs**: Timetable | Assignments | Library | Transport | Canteen
+
+| Tab | Features |
+|---|---|
+| **Timetable** | Full weekly grid (Mon-Sat × 8 periods) with subject name, teacher, room. Highlight current period live. |
+| **Assignments** | Cards per subject: title, due date, status (Pending/Submitted/Graded). Click to submit text/file. View marks + teacher feedback after grading. |
+| **Library** | List of currently borrowed books with due date countdown (red if overdue). Fine calculator. |
+| **Transport** | Assigned bus route, driver name + phone, all stops with estimated times, live ETA (mocked). |
+| **Leave Apply** | Form: leave type, date range, reason. Status tracker: Pending → Approved/Rejected. |
+
+---
+
+### 👨‍👩‍👧 Parent Dashboard Expansion
+**New Tabs**: Canteen Wallet | Leave | Transport | Documents | Reports | Messaging
+
+| Tab | Features |
+|---|---|
+| **Canteen Wallet** | Recharge, transaction history, dietary summary. |
+| **Leave Application** | Apply leave on ward's behalf with medical upload note. Track status. |
+| **Transport** | Ward's bus details, driver contact, estimated boarding time. |
+| **Documents** | View checklist of ward's submitted/pending documents with statuses. |
+| **Academic Report** | Full semester-wise SGPA/CGPA trend chart, subject-wise marks, teacher comments. |
+| **Messaging** | Send messages to Class Teacher; inbox for replies. |
+
+---
+
+### 👩‍🏫 Teacher Dashboard Expansion
+**New Tabs**: Timetable | Assignments | Attendance | Leave | Communications | Analytics
+
+| Tab | Features |
+|---|---|
+| **My Timetable** | Weekly schedule of classes to teach across sections. |
+| **Assignments** | Create new assignment (title, description, due date, max marks, file attach). View all submissions per assignment. Grade individually with marks + feedback. |
+| **Bulk Attendance** | Select class → date → mark each student Present/Absent/Late with one click. Submit to backend. Monthly attendance report per subject downloadable. |
+| **Leave Request** | Apply for personal leave (medical/casual). Track HOD approval status. Leave balance display. |
+| **Parent Messaging** | Read parent messages, reply. Flag urgent messages. |
+| **Analytics** | Class performance chart (avg marks per subject), attendance heatmap, top performers, at-risk students (attendance < 75% or backlog > 0). |
+
+---
+
+### 🏫 Admin Dashboard Expansion
+**New Tabs**: HR & Payroll | Transport | Timetable Builder | Announcements | Fees Analytics | System Settings
+
+| Tab | Features |
+|---|---|
+| **HR & Payroll** | Staff table: name, role, salary, PAN. Generate mock payslip. View pending staff leaves. |
+| **Transport** | Manage bus routes (CRUD). Assign students to routes. View driver contacts. |
+| **Timetable Builder** | Drag-and-drop style grid to assign subjects + teachers to periods per section. |
+| **Announcements** | Create system-wide notices targeting specific roles (all/students/parents/staff) or sections. |
+| **Fee Analytics** | Total collected vs. outstanding. Overdue students list. Scholarship disbursement tracker. |
+| **System Settings** | Manage academic year, semester dates, grading scheme, and department configuration. |
+
+---
+
+### 🎓 HOD Dashboard Expansion
+**New Tabs**: Staff Leave Approvals | Department Analytics | Timetable | Assignments Review
+
+| Tab | Features |
+|---|---|
+| **Staff Leave** | List of pending leave requests from dept. teachers. Approve/Reject with remarks. |
+| **Dept. Analytics** | Pass rate %, avg CGPA, attendance rate, backlog count — all per subject + per teacher in dept. |
+| **Timetable View** | Read-only view of dept. timetable. Can request changes via Admin. |
+| **Assignments** | View all assignments across dept. subjects. See submission + grading completion rates. |
+
+---
+
+### 🏠 Warden Dashboard Expansion
+**New Tabs**: Mess Management | Maintenance | Student Wellness
+
+| Tab | Features |
+|---|---|
+| **Mess Management** | Weekly mess menu entry (Breakfast/Lunch/Dinner per day). Mess fee tracking (paid/due per student). |
+| **Maintenance** | View all open maintenance complaints. Assign to staff. Mark resolved. Priority flagging. |
+| **Student Wellness** | Flag students for wellness checks (repeated gate passes, low attendance correlation). |
+
+---
+
+## Execution Order
+
+| Step | Work Item | Complexity |
+|---|---|---|
+| 1 | Extend GORM models + run migrations | Medium |
+| 2 | Build all Go API handlers | High |
+| 3 | Create `lib/api.ts` (frontend API layer) | Medium |
+| 4 | Build Canteen Admin portal (`/dashboard/canteen`) | High |
+| 5 | Expand Student dashboard (4 new tabs) | High |
+| 6 | Expand Parent dashboard (4 new tabs) | Medium |
+| 7 | Expand Teacher dashboard (assignments + bulk attendance) | High |
+| 8 | Expand Admin dashboard (HR + transport + timetable) | High |
+| 9 | Expand HOD dashboard | Medium |
+| 10 | Expand Warden dashboard | Medium |
+| 11 | Wire Canteen flow end-to-end (student → admin) | High |
+| 12 | Final build verification + seed data | Low |
+
+---
+
+## Verification Plan
+
+### Backend Tests
+```bash
+# After each handler group:
+go build ./...
+curl http://localhost:3001/api/health
+curl -X POST http://localhost:3001/api/canteen/menu -d '{...}'
+curl http://localhost:3001/api/canteen/orders
+```
+
+### Frontend Build
+```bash
+npm run build  # Must pass after each dashboard expansion
+```
+
+### End-to-End Canteen Flow
+1. **Canteen Admin** → Add menu item "Veg Biryani ₹60"
+2. **Parent** → Recharge ward's wallet with ₹200
+3. **Student** → Browse menu, add to cart, checkout via wallet (balance: ₹200 → ₹140)
+4. **Canteen Admin** → See order in queue → Mark "Preparing" → Mark "Ready"
+5. **Student** → Pickup code displayed, show to canteen counter
+6. **Canteen Admin** → Mark "Completed"
+
+### End-to-End Leave Flow
+1. **Student** → Apply for 2-day medical leave
+2. **Teacher** → See pending leave in dashboard → Approve
+3. **Student** → Leave status changes to "Approved"
+4. **Student Section** → Leave balance auto-deducted

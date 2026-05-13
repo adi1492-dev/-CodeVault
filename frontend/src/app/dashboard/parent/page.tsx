@@ -18,33 +18,32 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser, setCurrentUser, getSubjects, UserRecord, SubjectRecord } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getUsers, saveUsers, getSubjects, UserRecord, SubjectRecord } from '@/lib/store';
 
 export default function ParentDashboard() {
   const router = useRouter();
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
+  const [ward, setWard] = useState<UserRecord | null>(null);
   
-  // Primary Navigation tabs (Left Menu)
   const [activeTab, setActiveTab] = useState<'ward' | 'fees' | 'appointments' | 'syllabus'>('ward');
-  
-  // Secondary Sub-navigation tab states (Top Horizontal Bar)
   const [feeSubTab, setFeeSubTab] = useState<'pay' | 'history'>('pay');
   const [apptSubTab, setApptSubTab] = useState<'schedule' | 'circulars'>('schedule');
 
-  // Appointment scheduler state
   const [targetFaculty, setFaculty] = useState('Prof. Anjali M. (Class Teacher)');
   const [date, setDate] = useState('');
   const [reason, setReason] = useState('');
   const [successAppt, setSuccess] = useState(false);
-
-  // Fee dues state
-  const [duesPaid, setPaid] = useState(false);
+  const [payAmt, setPayAmt] = useState('');
+  const [msg, setMsg] = useState('');
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
 
   useEffect(() => {
     const user = getCurrentUser();
     if (user) setCurrent(user);
     setSubjects(getSubjects());
+    // Load ward (first student found — linked child)
+    const students = getUsers().filter(u => u.role === 'student');
+    if (students.length) setWard(students[0]);
   }, []);
 
   const handleLogout = () => {
@@ -61,9 +60,21 @@ export default function ParentDashboard() {
     setTimeout(() => setSuccess(false), 6000);
   };
 
-  const handlePayFees = () => {
-    setPaid(true);
-    alert('Payment verified securely via standard gateway routing. Ledger records updated instantly.');
+  const handlePayFees = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ward || !payAmt) return;
+    const amt = Number(payAmt);
+    if (isNaN(amt) || amt <= 0) return;
+    const newPaid = (ward.feePaid ?? 0) + amt;
+    const newDue = Math.max(0, (ward.totalFee ?? 0) - newPaid);
+    const newStatus: 'Paid' | 'Pending' | 'Overdue' = newDue === 0 ? 'Paid' : 'Pending';
+    const updatedWard = { ...ward, feePaid: newPaid, feeDue: newDue, feeStatus: newStatus, feeAmountDue: newDue };
+    const all = getUsers().map(u => u.id === ward.id ? updatedWard : u);
+    saveUsers(all);
+    setWard(updatedWard);
+    setPayAmt('');
+    setMsg(`₹${amt.toLocaleString()} payment recorded. Remaining: ₹${newDue.toLocaleString()}`);
+    setTimeout(() => setMsg(''), 5000);
   };
 
   return (
@@ -83,7 +94,7 @@ export default function ParentDashboard() {
                 Parent Portal Overview
               </span>
               <span className="text-[10px] text-emerald-400 block font-semibold">
-                Supervising Ward: Aarav Nikam (Section CS-A)
+                Supervising Ward: {ward?.name ?? 'Loading...'} (Section {ward?.section ?? '—'})
               </span>
             </div>
           </div>
@@ -186,28 +197,35 @@ export default function ParentDashboard() {
                 📊 Continuous Academic Tracking
               </span>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
-                  <span className="text-xs text-slate-400 block font-medium">Verified Attendance</span>
-                  <span className="text-3xl font-black text-white mt-1 block">92%</span>
-                  <span className="text-[10px] text-emerald-400 block mt-0.5">⚡ Tier-1 Status</span>
+                  <span className="text-xs text-slate-400 block font-medium">Attendance</span>
+                  <span className={`text-3xl font-black mt-1 block ${(ward?.attendancePct ?? 0) >= 75 ? 'text-emerald-400' : 'text-red-400'}`}>{ward?.attendancePct ?? 0}%</span>
+                  {(ward?.attendancePct ?? 0) < 75 && <span className="text-[10px] text-red-400 block mt-0.5 font-bold">⚠ Below 75%</span>}
                 </div>
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
-                  <span className="text-xs text-slate-400 block font-medium">Lab Scoring Average</span>
-                  <span className="text-3xl font-black text-white mt-1 block">90/100</span>
-                  <span className="text-[10px] text-slate-500 block mt-0.5">14 Evaluations</span>
+                  <span className="text-xs text-slate-400 block font-medium">CGPA</span>
+                  <span className="text-3xl font-black text-white mt-1 block">{ward?.cgpa ?? 'N/A'}</span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">Sem {ward?.semesterNo ?? 1}</span>
                 </div>
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
-                  <span className="text-xs text-slate-400 block font-medium">Unexcused Absences</span>
-                  <span className="text-3xl font-black text-emerald-400 mt-1 block">0</span>
-                  <span className="text-[10px] text-slate-500 block mt-0.5">Perfect Record</span>
+                  <span className="text-xs text-slate-400 block font-medium">Fee Status</span>
+                  <span className={`text-2xl font-black mt-1 block ${ward?.feeStatus === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}`}>{ward?.feeStatus ?? '—'}</span>
+                  {ward?.feeDue ? <span className="text-[10px] text-amber-400 block mt-0.5">Due: ₹{ward.feeDue.toLocaleString()}</span> : null}
+                </div>
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                  <span className="text-xs text-slate-400 block font-medium">Backlogs</span>
+                  <span className={`text-3xl font-black mt-1 block ${ward?.backlogCount ? 'text-red-400' : 'text-emerald-400'}`}>{ward?.backlogCount ?? 0}</span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">{ward?.backlogCount ? 'Needs attention' : 'Clear record'}</span>
                 </div>
               </div>
 
+              {msg && <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-bold">{msg}</div>}
+
               <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs text-slate-300">
-                <span>Active Objective Standing Target:</span>
+                <span>Grade Summary:</span>
                 <span className="font-bold px-2.5 py-0.5 rounded bg-white/5 text-emerald-400">
-                  Grade O (Outstanding)
+                  {ward?.gradesSummary ?? 'N/A'}
                 </span>
               </div>
             </div>
@@ -250,32 +268,31 @@ export default function ParentDashboard() {
                     </div>
 
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                      duesPaid ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+                      ward?.feeStatus === 'Paid' ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
                     }`}>
-                      {duesPaid ? 'Status: FULLY PAID' : 'Status: PENDING'}
+                      {ward?.feeStatus === 'Paid' ? 'Status: FULLY PAID' : 'Status: PENDING'}
                     </span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <span className="text-xs font-bold text-white block">Even Semester Tuition & Lab Maintenance</span>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">Cutoff Target: May 30, 2026</span>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                      <div className="text-lg font-black text-white">₹{(ward?.totalFee ?? 0).toLocaleString()}</div>
+                      <div className="text-[10px] text-slate-400">Total Fee</div>
                     </div>
-
-                    <div className="text-left sm:text-right">
-                      <span className="text-sm font-black text-emerald-400 block">₹42,500</span>
-                      {duesPaid ? (
-                        <span className="text-[10px] text-emerald-400 italic block mt-0.5 font-medium">Cleared Remotely</span>
-                      ) : (
-                        <button
-                          onClick={handlePayFees}
-                          className="mt-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 text-black font-extrabold text-xs transition-all shadow-md"
-                        >
-                          Clear Dues Now
-                        </button>
-                      )}
+                    <div className="p-3 rounded-xl bg-black/40 border border-emerald-500/20">
+                      <div className="text-lg font-black text-emerald-400">₹{(ward?.feePaid ?? 0).toLocaleString()}</div>
+                      <div className="text-[10px] text-slate-400">Paid</div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-black/40 border border-amber-500/20">
+                      <div className="text-lg font-black text-amber-400">₹{(ward?.feeDue ?? 0).toLocaleString()}</div>
+                      <div className="text-[10px] text-slate-400">Due</div>
                     </div>
                   </div>
+
+                  <form onSubmit={handlePayFees} className="flex gap-3 pt-2">
+                    <input type="number" min="1" required value={payAmt} onChange={e => setPayAmt(e.target.value)} placeholder="Enter amount (₹)" className="flex-1 p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-emerald-400" />
+                    <button type="submit" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-black font-bold text-xs uppercase">Pay Now</button>
+                  </form>
                 </div>
               )}
 

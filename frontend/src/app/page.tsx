@@ -13,7 +13,9 @@ import {
   Lock, 
   CheckCircle2, 
   Sparkles, 
-  UserCheck 
+  UserCheck,
+  Building2,
+  Home as HomeIcon
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { authenticateUser, setCurrentUser, UserRecord } from '@/lib/store';
@@ -270,6 +272,20 @@ export default function Home() {
                 </button>
                 <button 
                   type="button" 
+                  onClick={() => handleQuickFill('section@campuscore.edu', 'section123')}
+                  className="text-xs px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 font-medium transition-all"
+                >
+                  🏢 Students Section
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => handleQuickFill('warden@campuscore.edu', 'warden123')}
+                  className="text-xs px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 font-medium transition-all"
+                >
+                  🛡️ Hostel Warden
+                </button>
+                <button 
+                  type="button" 
                   onClick={() => handleQuickFill('hod@campuscore.edu', 'hod123')}
                   className="text-xs px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 font-medium transition-all"
                 >
@@ -374,7 +390,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Student */}
           <div className="glass p-8 rounded-3xl border-white/5 hover:border-cyan-500/30 transition-all flex flex-col justify-between group">
             <div>
@@ -504,6 +520,92 @@ export default function Home() {
               className="mt-8 text-xs text-emerald-400 font-bold hover:underline text-left flex items-center gap-1"
             >
               <span>Simulate Parent route</span>
+              <ArrowRight size={12} />
+            </button>
+          </div>
+
+          {/* Students Section Admin */}
+          <div className="glass p-8 rounded-3xl border-white/5 hover:border-purple-500/30 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Building2 size={24} />
+              </div>
+              <h3 className="text-xl font-bold mb-2 flex items-center justify-between">
+                <span>Students Section</span>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/5 text-purple-300">Admin Layer</span>
+              </h3>
+              <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+                Centralized registry operations for active enrollment records, leave clearances, and semester roll indexing.
+              </p>
+
+              <ul className="space-y-3 text-xs font-medium text-slate-300">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-purple-400 shrink-0 mt-0.5" />
+                  <span>Student Enrollment Provisioning</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-purple-400 shrink-0 mt-0.5" />
+                  <span>Stream & Section Migration Ledger</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-purple-400 shrink-0 mt-0.5" />
+                  <span>Clearance & Leave Buffer Audits</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-purple-400 shrink-0 mt-0.5" />
+                  <span>Roll Index Allocation Matrix</span>
+                </li>
+              </ul>
+            </div>
+
+            <button 
+              onClick={() => handleQuickFill('section@campuscore.edu', 'section123')}
+              className="mt-8 text-xs text-purple-400 font-bold hover:underline text-left flex items-center gap-1"
+            >
+              <span>Simulate Students Section</span>
+              <ArrowRight size={12} />
+            </button>
+          </div>
+
+          {/* Hostel Warden */}
+          <div className="glass p-8 rounded-3xl border-white/5 hover:border-rose-500/30 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <HomeIcon size={24} />
+              </div>
+              <h3 className="text-xl font-bold mb-2 flex items-center justify-between">
+                <span>Hostel Warden</span>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/5 text-rose-300">Residential</span>
+              </h3>
+              <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+                Supervisory management framework overseeing live residential block mapping, gate exit passes, and visitor logs.
+              </p>
+
+              <ul className="space-y-3 text-xs font-medium text-slate-300">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-rose-400 shrink-0 mt-0.5" />
+                  <span>Residential Room Allocation Binder</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-rose-400 shrink-0 mt-0.5" />
+                  <span>Gate Outing & Night-Out Permissions</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-rose-400 shrink-0 mt-0.5" />
+                  <span>Campus Visitor Authorization Logs</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="text-rose-400 shrink-0 mt-0.5" />
+                  <span>Residential Disciplinary Directives</span>
+                </li>
+              </ul>
+            </div>
+
+            <button 
+              onClick={() => handleQuickFill('warden@campuscore.edu', 'warden123')}
+              className="mt-8 text-xs text-rose-400 font-bold hover:underline text-left flex items-center gap-1"
+            >
+              <span>Simulate Hostel Warden route</span>
               <ArrowRight size={12} />
             </button>
           </div>
