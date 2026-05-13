@@ -16,17 +16,19 @@ export interface UserRecord {
   feeStatus?: 'Paid' | 'Pending' | 'Overdue';
   feeAmountDue?: number;
   rollNo?: string;
+  academicYear?: string;
+  academicYears?: string[];
 }
 
 const INITIAL_USERS: UserRecord[] = [
   { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin', password: 'admin123' },
-  { id: 'hod1', name: 'Prof. Meenakshi S.', email: 'hod@campuscore.edu', role: 'hod', department: 'Computer Science', password: 'hod123' },
-  { id: 'teacher1', name: 'Dr. Vikram Anjali (Unified Faculty)', email: 'teacher@campuscore.edu', role: 'teacher', department: 'Computer Science', section: 'CS-A', password: 'teacher123', assignedSubjects: ['CS301', 'CS402', 'CS305'] },
-  { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A', password: 'classteacher123', assignedSubjects: ['CS305'] },
-  { id: '3', name: 'Mr. Vikram K.', email: 'st@campuscore.edu', role: 'subjectteacher', department: 'Computer Science', password: 'subjectteacher123', assignedSubjects: ['CS301', 'CS402'] },
-  { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A', department: 'Computer Science', password: 'student123', attendancePct: 91.5, gradesSummary: 'A (Compiler Lab Pass, 94% Avg)', feeStatus: 'Paid', feeAmountDue: 0, rollNo: 'CS2026-001' },
-  { id: 'student2', name: 'Ananya Sharma', email: 'ananya@campuscore.edu', role: 'student', section: 'CS-A', department: 'Computer Science', password: 'password', attendancePct: 84.0, gradesSummary: 'B+ (AST Token Check Pending)', feeStatus: 'Pending', feeAmountDue: 45000, rollNo: 'CS2026-002' },
-  { id: 'student3', name: 'Rahul Verma', email: 'rahul@campuscore.edu', role: 'student', section: 'CS-B', department: 'Computer Science', password: 'password', attendancePct: 96.2, gradesSummary: 'A+ (Outstanding Performance)', feeStatus: 'Paid', feeAmountDue: 0, rollNo: 'CS2026-018' },
+  { id: 'hod1', name: 'Prof. Meenakshi S.', email: 'hod@campuscore.edu', role: 'hod', department: 'Computer Science', academicYear: '1st Year', password: 'hod123' },
+  { id: 'teacher1', name: 'Dr. Vikram Anjali (Unified Faculty)', email: 'teacher@campuscore.edu', role: 'teacher', department: 'Computer Science', section: 'CS-A', academicYear: '1st Year', academicYears: ['1st Year', '2nd Year'], password: 'teacher123', assignedSubjects: ['CS301', 'CS402', 'CS305'] },
+  { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A', academicYear: '1st Year', password: 'classteacher123', assignedSubjects: ['CS305'] },
+  { id: '3', name: 'Mr. Vikram K.', email: 'st@campuscore.edu', role: 'subjectteacher', department: 'Computer Science', academicYear: '2nd Year', password: 'subjectteacher123', assignedSubjects: ['CS301', 'CS402'] },
+  { id: '4', name: 'Aarav Nikam', email: 'student@campuscore.edu', role: 'student', section: 'CS-A', department: 'Computer Science', academicYear: '1st Year', password: 'student123', attendancePct: 91.5, gradesSummary: 'A (Compiler Lab Pass, 94% Avg)', feeStatus: 'Paid', feeAmountDue: 0, rollNo: 'CS2026-001' },
+  { id: 'student2', name: 'Ananya Sharma', email: 'ananya@campuscore.edu', role: 'student', section: 'CS-A', department: 'Computer Science', academicYear: '1st Year', password: 'password', attendancePct: 84.0, gradesSummary: 'B+ (AST Token Check Pending)', feeStatus: 'Pending', feeAmountDue: 45000, rollNo: 'CS2026-002' },
+  { id: 'student3', name: 'Rahul Verma', email: 'rahul@campuscore.edu', role: 'student', section: 'CS-B', department: 'Computer Science', academicYear: '2nd Year', password: 'password', attendancePct: 96.2, gradesSummary: 'A+ (Outstanding Performance)', feeStatus: 'Paid', feeAmountDue: 0, rollNo: 'CS2026-018' },
   { id: '5', name: 'Mrs. Sunita Nikam', email: 'parent@campuscore.edu', role: 'parent', password: 'parent123' },
 ];
 
@@ -149,6 +151,7 @@ export interface SubjectRecord {
   sections: string[];
   syllabusCoveredPct: number;
   lastUpdated?: string;
+  academicYear?: string;
   modules: {
     title: string;
     completed: boolean;
@@ -166,6 +169,7 @@ const INITIAL_SUBJECTS: SubjectRecord[] = [
     sections: ['CS-A', 'CS-B'],
     syllabusCoveredPct: 65,
     lastUpdated: '2026-05-10',
+    academicYear: '1st Year',
     modules: [
       { title: 'Array Transformations & Memory Mapping', completed: true },
       { title: 'Linked Lists & Pointer Arithmetic', completed: true },
@@ -183,6 +187,7 @@ const INITIAL_SUBJECTS: SubjectRecord[] = [
     sections: ['CS-A'],
     syllabusCoveredPct: 80,
     lastUpdated: '2026-05-11',
+    academicYear: '1st Year',
     modules: [
       { title: 'Lexical Analysis & Regex State Automata', completed: true },
       { title: 'Context-Free Grammars & Pratt Parsers', completed: true },
@@ -200,6 +205,7 @@ const INITIAL_SUBJECTS: SubjectRecord[] = [
     sections: ['CS-A'],
     syllabusCoveredPct: 45,
     lastUpdated: '2026-05-08',
+    academicYear: '2nd Year',
     modules: [
       { title: 'Process Scheduling & Thread Context Switching', completed: true },
       { title: 'Memory Management & Paging Tables', completed: true },
@@ -284,13 +290,14 @@ export interface DepartmentRecord {
   code?: string;
   hodId?: string;
   viceHodId?: string;
+  academicYear?: string;
 }
 
 const INITIAL_DEPARTMENTS: DepartmentRecord[] = [
-  { id: 'dept-1', name: 'Computer Science', code: 'CS', hodId: 'hod1', viceHodId: 'teacher1' },
-  { id: 'dept-2', name: 'Electronics & Telecommunication', code: 'EXTC' },
-  { id: 'dept-3', name: 'Mechanical Engineering', code: 'MECH' },
-  { id: 'dept-4', name: 'Information Technology', code: 'IT' },
+  { id: 'dept-1', name: 'Computer Science', code: 'CS', hodId: 'hod1', viceHodId: 'teacher1', academicYear: '1st Year' },
+  { id: 'dept-2', name: 'Electronics & Telecommunication', code: 'EXTC', academicYear: '2nd Year' },
+  { id: 'dept-3', name: 'Mechanical Engineering', code: 'MECH', academicYear: '3rd Year' },
+  { id: 'dept-4', name: 'Information Technology', code: 'IT', academicYear: '4th Year' },
 ];
 
 const DEPARTMENTS_STORAGE_KEY = 'campuscore_departments_db';
@@ -315,34 +322,39 @@ export function saveDepartments(departments: DepartmentRecord[]) {
   }
 }
 
-export function addDepartment(name: string, code: string, hodId?: string, viceHodId?: string): DepartmentRecord {
+export function addDepartment(name: string, code: string, hodId?: string, viceHodId?: string, academicYear?: string): DepartmentRecord {
   const depts = getDepartments();
   const newDept: DepartmentRecord = {
     id: 'dept-' + Date.now(),
     name,
     code,
     hodId,
-    viceHodId
+    viceHodId,
+    academicYear: academicYear || '1st Year'
   };
   saveDepartments([...depts, newDept]);
   return newDept;
 }
 
-export function assignDepartmentLeadership(departmentId: string, hodId?: string, viceHodId?: string) {
+export function assignDepartmentLeadership(departmentId: string, hodId?: string, viceHodId?: string, academicYear?: string) {
   const depts = getDepartments();
+  let assignedYear = academicYear;
+  
   const updated = depts.map(d => {
     if (d.id === departmentId) {
+      if (!assignedYear) assignedYear = d.academicYear || '1st Year';
       return {
         ...d,
         hodId: hodId !== undefined ? (hodId === '' ? undefined : hodId) : d.hodId,
-        viceHodId: viceHodId !== undefined ? (viceHodId === '' ? undefined : viceHodId) : d.viceHodId
+        viceHodId: viceHodId !== undefined ? (viceHodId === '' ? undefined : viceHodId) : d.viceHodId,
+        academicYear: assignedYear
       };
     }
     return d;
   });
   saveDepartments(updated);
   
-  // Update users' department mapping if an HOD/Vice HOD is assigned
+  // Update users' department and academicYear mapping if an HOD/Vice HOD is assigned
   const targetDept = updated.find(d => d.id === departmentId);
   if (targetDept) {
     const users = getUsers();
@@ -350,11 +362,21 @@ export function assignDepartmentLeadership(departmentId: string, hodId?: string,
     const nextUsers = users.map(u => {
       if (hodId && u.id === hodId) {
         changed = true;
-        return { ...u, department: targetDept.name, role: u.role === 'teacher' || u.role === 'subjectteacher' || u.role === 'student' ? 'hod' : u.role };
+        return { 
+          ...u, 
+          department: targetDept.name, 
+          academicYear: targetDept.academicYear || assignedYear || '1st Year',
+          role: u.role === 'teacher' || u.role === 'subjectteacher' || u.role === 'student' ? 'hod' : u.role 
+        };
       }
       if (viceHodId && u.id === viceHodId) {
         changed = true;
-        return { ...u, department: targetDept.name, role: u.role === 'student' ? 'vicehod' : u.role };
+        return { 
+          ...u, 
+          department: targetDept.name, 
+          academicYear: targetDept.academicYear || assignedYear || '1st Year',
+          role: u.role === 'student' ? 'vicehod' : u.role 
+        };
       }
       return u;
     });

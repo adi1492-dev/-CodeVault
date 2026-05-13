@@ -54,26 +54,38 @@ export default function HodDashboard() {
   const [newTeacherSection, setNewTeacherSection] = useState('CS-A');
   const [newTeacherPassword, setNewTeacherPassword] = useState('teacher123');
   const [teacherSuccessMsg, setTeacherSuccessMsg] = useState('');
+  const [assignedYearScope, setAssignedYearScope] = useState<string>('1st Year');
+  const [newTeacherMultiYears, setNewTeacherMultiYears] = useState<string[]>(['1st Year']);
 
   useEffect(() => {
     const user = getCurrentUser();
+    let currentYearScope = '1st Year';
     if (user) {
       setCurrent(user);
       if (user.department) setDepartment(user.department);
+      if (user.academicYear) {
+        currentYearScope = user.academicYear;
+        setAssignedYearScope(user.academicYear);
+        setNewTeacherMultiYears([user.academicYear]);
+      }
     }
     
     // Load state
     const allUsers = getUsers();
     const allSubs = getSubjects();
     
-    // Filter faculty belonging to this department
+    // Filter faculty belonging to this department AND active year scope (or multi-year array)
     setFaculty(allUsers.filter(u => 
       (u.role === 'subjectteacher' || u.role === 'classteacher' || u.role === 'teacher') && 
-      (!u.department || u.department.toLowerCase() === department.toLowerCase())
+      (!u.department || u.department.toLowerCase() === department.toLowerCase()) &&
+      (!u.academicYear || u.academicYear === currentYearScope || u.academicYears?.includes(currentYearScope))
     ));
     
-    // Filter subjects mapped to this department
-    setSubjects(allSubs.filter(s => s.department.toLowerCase() === department.toLowerCase()));
+    // Filter subjects mapped to this department AND year scope
+    setSubjects(allSubs.filter(s => 
+      s.department.toLowerCase() === department.toLowerCase() &&
+      (!s.academicYear || s.academicYear === currentYearScope)
+    ));
   }, [department]);
 
   const handleLogout = () => {
@@ -89,7 +101,7 @@ export default function HodDashboard() {
       { 
         id: String(Date.now()), 
         title: directiveTitle, 
-        scope: targetScope === 'all' ? 'All Department Faculty' : targetScope === 'ct' ? 'Class Teachers' : 'Subject Teachers', 
+        scope: targetScope === 'all' ? `All ${assignedYearScope} Faculty` : targetScope === 'ct' ? 'Class Teachers' : 'Subject Teachers', 
         date: new Date().toISOString().split('T')[0], 
         active: true 
       },
@@ -115,17 +127,20 @@ export default function HodDashboard() {
       email: newTeacherEmail,
       role: newTeacherRole,
       password: newTeacherPassword || 'password',
-      department: department, // Automatically map to the HOD's active managed department!
+      department: department,
       section: newTeacherSection,
+      academicYear: assignedYearScope,
+      academicYears: newTeacherMultiYears.length > 0 ? newTeacherMultiYears : [assignedYearScope]
     });
 
     // Refresh localized state list
     setFaculty(getUsers().filter(u => 
       (u.role === 'subjectteacher' || u.role === 'classteacher' || u.role === 'teacher') && 
-      (!u.department || u.department.toLowerCase() === department.toLowerCase())
+      (!u.department || u.department.toLowerCase() === department.toLowerCase()) &&
+      (!u.academicYear || u.academicYear === assignedYearScope || u.academicYears?.includes(assignedYearScope))
     ));
 
-    setTeacherSuccessMsg(`Teacher profile "${added.name}" successfully created and mapped to ${department}!`);
+    setTeacherSuccessMsg(`Teacher profile "${added.name}" successfully created under ${assignedYearScope}!`);
     setNewTeacherName('');
     setNewTeacherEmail('');
     setNewTeacherPassword('teacher123');
@@ -150,7 +165,7 @@ export default function HodDashboard() {
                 {currentUser?.role === 'vicehod' ? 'Vice HOD Portal' : 'Head of Department Portal'}
               </span>
               <span className="text-[10px] text-fuchsia-400 block font-semibold">
-                Managing Department: {department}
+                Managing Department: {department} • Scope: {assignedYearScope}
               </span>
             </div>
           </div>
@@ -706,6 +721,35 @@ export default function HodDashboard() {
                           className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-fuchsia-400"
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">Assigned Academic Year Scopes</label>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {['1st Year', '2nd Year', '3rd Year', '4th Year'].map(yr => {
+                          const isChecked = newTeacherMultiYears.includes(yr);
+                          return (
+                            <button
+                              type="button"
+                              key={yr}
+                              onClick={() => {
+                                if (isChecked) {
+                                  // keep at least assignedYearScope if desired, or let them uncheck freely
+                                  setNewTeacherMultiYears(newTeacherMultiYears.filter(y => y !== yr));
+                                } else {
+                                  setNewTeacherMultiYears([...newTeacherMultiYears, yr]);
+                                }
+                              }}
+                              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                                isChecked ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'bg-white/5 text-slate-500 hover:text-slate-300'
+                              }`}
+                            >
+                              {yr} {yr === assignedYearScope ? '(Primary)' : ''}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <span className="text-[10px] text-slate-500 block mt-1">Cross-year faculty will manage tasks across these year levels simultaneously</span>
                     </div>
 
                     <div>

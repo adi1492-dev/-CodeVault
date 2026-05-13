@@ -94,6 +94,14 @@ export default function AdminDashboard() {
   const [staffSearchQuery, setStaffSearchQuery] = useState('');
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 
+  // ==========================================
+  // ACADEMIC YEAR SCOPE FILTERS & ALLOCATIONS
+  // ==========================================
+  const [selectedYearFilter, setSelectedYearFilter] = useState<string>('1st Year');
+  const [newDeptYear, setNewDeptYear] = useState<string>('1st Year');
+  const [newStaffYear, setNewStaffYear] = useState<string>('1st Year');
+  const [newStaffMultiYears, setNewStaffMultiYears] = useState<string[]>(['1st Year']);
+
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
@@ -146,7 +154,8 @@ export default function AdminDashboard() {
           email: hodEmail,
           password: 'password',
           role: 'hod',
-          department: newDeptName
+          department: newDeptName,
+          academicYear: newDeptYear
         });
         createdHodId = generatedHod.id;
       }
@@ -156,7 +165,8 @@ export default function AdminDashboard() {
           email: vhodEmail,
           password: 'password',
           role: 'vicehod',
-          department: newDeptName
+          department: newDeptName,
+          academicYear: newDeptYear
         });
         createdVhodId = generatedVhod.id;
       }
@@ -166,17 +176,18 @@ export default function AdminDashboard() {
       newDeptName, 
       newDeptCode || newDeptName.substring(0, 4).toUpperCase(),
       createdHodId,
-      createdVhodId
+      createdVhodId,
+      newDeptYear
     );
 
     if (createdHodId || createdVhodId) {
-      assignDepartmentLeadership(created.id, createdHodId, createdVhodId);
+      assignDepartmentLeadership(created.id, createdHodId, createdVhodId, newDeptYear);
     }
 
     setDepartments(getDepartments());
     setUsers(getUsers());
     
-    setDeptSuccessMsg(`Department "${created.name}" created successfully.`);
+    setDeptSuccessMsg(`Department "${created.name}" created successfully under ${newDeptYear}.`);
     setNewDeptName('');
     setNewDeptCode('');
     setHodName('');
@@ -201,12 +212,14 @@ export default function AdminDashboard() {
       password: 'password', // Default starter password
       role: newStaffRole,
       department: newStaffDept || departments[0]?.name || 'General Institute',
-      section: newStaffSection || undefined
+      section: newStaffSection || undefined,
+      academicYear: newStaffYear,
+      academicYears: newStaffMultiYears.length > 0 ? newStaffMultiYears : [newStaffYear]
     });
 
     setUsers(getUsers());
     setSelectedStaffId(created.id); // Instantly highlight newly allocated profile
-    setStaffSuccessMsg(`Profile for "${created.name}" successfully created as ${created.role}.`);
+    setStaffSuccessMsg(`Profile for "${created.name}" successfully created as ${created.role} (${newStaffMultiYears.join(', ')}).`);
     setNewStaffName('');
     setNewStaffEmail('');
     
@@ -255,17 +268,33 @@ export default function AdminDashboard() {
   // LIST FILTERS
   // ==========================================
   
-  // Filter lists by selected department dropdown
-  const filteredSubjects = selectedDeptFilter === 'all'
-    ? subjects
-    : subjects.filter(s => s.department.toLowerCase() === selectedDeptFilter.toLowerCase());
+  // Filter departments by year filter
+  const filteredDepartments = selectedYearFilter === 'All Years' 
+    ? departments 
+    : departments.filter(d => !d.academicYear || d.academicYear === selectedYearFilter);
 
-  // Staff list for assigning leadership
-  const eligibleStaff = users.filter(u => u.role !== 'student' && u.role !== 'parent');
+  // Filter subjects by selected department dropdown and academic year filter
+  const filteredSubjects = subjects.filter(s => {
+    const yearMatch = selectedYearFilter === 'All Years' || !s.academicYear || s.academicYear === selectedYearFilter;
+    const deptMatch = selectedDeptFilter === 'all' || s.department.toLowerCase() === selectedDeptFilter.toLowerCase();
+    return yearMatch && deptMatch;
+  });
 
-  // Search Results for Students
+  // Staff list for assigning leadership filtered by year scope
+  const eligibleStaff = users.filter(u => {
+    if (u.role === 'student' || u.role === 'parent') return false;
+    if (selectedYearFilter !== 'All Years') {
+      const singleMatch = !u.academicYear || u.academicYear === selectedYearFilter;
+      const multiMatch = u.academicYears?.includes(selectedYearFilter);
+      return singleMatch || multiMatch;
+    }
+    return true;
+  });
+
+  // Search Results for Students filtered by Year Scope
   const studentSearchResults = users.filter(u => {
     if (u.role !== 'student') return false;
+    if (selectedYearFilter !== 'All Years' && u.academicYear && u.academicYear !== selectedYearFilter) return false;
     if (!studentSearchQuery) return true;
     const q = studentSearchQuery.toLowerCase();
     return u.name.toLowerCase().includes(q) || 
@@ -276,10 +305,17 @@ export default function AdminDashboard() {
 
   const selectedStudent = users.find(u => u.id === selectedStudentId);
 
-  // User Accounts section filter: ONLY SHOW STAFF, TEACHER, AND HOD PROFILES
+  // User Accounts section filter: ONLY SHOW STAFF, TEACHER, AND HOD PROFILES filtered by Year scope
   // Exclude students and parents completely
   const staffAndFacultyUsers = users.filter(u => {
     if (u.role === 'student' || u.role === 'parent') return false;
+    
+    // Check year filter: single year match or included in multi-year instructor tracking array
+    if (selectedYearFilter !== 'All Years') {
+      const singleMatch = !u.academicYear || u.academicYear === selectedYearFilter;
+      const multiMatch = u.academicYears?.includes(selectedYearFilter);
+      if (!singleMatch && !multiMatch) return false;
+    }
     
     // Check global department filter
     if (selectedDeptFilter !== 'all' && u.department?.toLowerCase() !== selectedDeptFilter.toLowerCase()) {
@@ -450,6 +486,31 @@ export default function AdminDashboard() {
         {/* Right Viewing Content Wrapper */}
         <div className="grow min-w-0 w-full space-y-6">
 
+          {/* Top Horizontal Academic Year Filter Pane */}
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-black/60 border border-white/5 backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              <span className="text-xs font-bold text-slate-300 hidden sm:inline-block">
+                Academic Year Scope:
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1 w-full sm:w-auto justify-end">
+              {['1st Year', '2nd Year', '3rd Year', '4th Year', 'All Years'].map(year => (
+                <button
+                  key={year}
+                  onClick={() => setSelectedYearFilter(year)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                    selectedYearFilter === year
+                      ? 'bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-md shadow-cyan-400/20'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* ========================================================= */}
           {/* TAB 1: DEPARTMENTS SUITE                                  */}
           {/* ========================================================= */}
@@ -485,7 +546,7 @@ export default function AdminDashboard() {
                     <div>
                       <h3 className="text-base font-extrabold text-white flex items-center gap-2">
                         <Building2 className="text-cyan-400" size={18} />
-                        <span>Departments & Staff Progress</span>
+                        <span>Departments & Staff Progress ({selectedYearFilter})</span>
                       </h3>
                       <p className="text-xs text-slate-400 mt-0.5">
                         Assign department leaders and track teacher syllabus updates.
@@ -493,12 +554,12 @@ export default function AdminDashboard() {
                     </div>
 
                     <span className="px-2.5 py-1 rounded-full bg-white/5 text-[10px] font-bold text-cyan-400">
-                      Total Departments: {departments.length}
+                      Total Departments: {filteredDepartments.length}
                     </span>
                   </div>
 
                   <div className="space-y-6">
-                    {departments.map((d) => {
+                    {filteredDepartments.map((d) => {
                       const currentHod = users.find(u => u.id === d.hodId);
                       const currentViceHod = users.find(u => u.id === d.viceHodId);
                       
@@ -687,17 +748,35 @@ export default function AdminDashboard() {
                       />
                     </div>
 
-                    <div>
-                      <label className="text-xs font-bold text-slate-300 block mb-1">
-                        Department Shortcode
-                      </label>
-                      <input 
-                        type="text"
-                        value={newDeptCode}
-                        onChange={(e) => setNewDeptCode(e.target.value)}
-                        placeholder="e.g. AI (Leave empty to generate)"
-                        className="w-full px-3 py-2.5 rounded-xl bg-black/50 border border-white/10 focus:border-cyan-400 focus:outline-none text-xs"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-slate-300 block mb-1">
+                          Department Shortcode
+                        </label>
+                        <input 
+                          type="text"
+                          value={newDeptCode}
+                          onChange={(e) => setNewDeptCode(e.target.value)}
+                          placeholder="e.g. AI (Optional)"
+                          className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 focus:border-cyan-400 focus:outline-none text-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-slate-300 block mb-1">
+                          Target Academic Year Scope
+                        </label>
+                        <select
+                          value={newDeptYear}
+                          onChange={(e) => setNewDeptYear(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-black border border-white/10 text-xs text-cyan-300 font-bold focus:outline-none cursor-pointer"
+                        >
+                          <option value="1st Year">1st Year</option>
+                          <option value="2nd Year">2nd Year</option>
+                          <option value="3rd Year">3rd Year</option>
+                          <option value="4th Year">4th Year</option>
+                        </select>
+                      </div>
                     </div>
 
                     {/* Optional Account Generation */}
@@ -1533,22 +1612,74 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    {(newStaffRole === 'classteacher' || newStaffRole === 'teacher') && (
-                      <div className="animate-fade-in pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                      <div>
                         <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                          Assigned Student Section Scope (Optional)
+                          Primary Academic Scope
                         </label>
                         <select
-                          value={newStaffSection}
-                          onChange={e => setNewStaffSection(e.target.value)}
-                          className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none cursor-pointer"
+                          value={newStaffYear}
+                          onChange={e => {
+                            setNewStaffYear(e.target.value);
+                            if (!newStaffMultiYears.includes(e.target.value)) {
+                              setNewStaffMultiYears([...newStaffMultiYears, e.target.value]);
+                            }
+                          }}
+                          className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-cyan-300 font-bold focus:outline-none cursor-pointer"
                         >
-                          <option value="">No specific section link</option>
-                          <option value="CS-A">Section CS-A</option>
-                          <option value="CS-B">Section CS-B</option>
+                          <option value="1st Year">1st Year</option>
+                          <option value="2nd Year">2nd Year</option>
+                          <option value="3rd Year">3rd Year</option>
+                          <option value="4th Year">4th Year</option>
                         </select>
                       </div>
-                    )}
+
+                      {(newStaffRole === 'classteacher' || newStaffRole === 'teacher') ? (
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                            Assigned Section Scope
+                          </label>
+                          <select
+                            value={newStaffSection}
+                            onChange={e => setNewStaffSection(e.target.value)}
+                            className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none cursor-pointer"
+                          >
+                            <option value="">No specific section link</option>
+                            <option value="CS-A">Section CS-A</option>
+                            <option value="CS-B">Section CS-B</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                            Cross-Year Management Array
+                          </label>
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {['1st Year', '2nd Year', '3rd Year', '4th Year'].map(yr => {
+                              const checked = newStaffMultiYears.includes(yr);
+                              return (
+                                <button
+                                  type="button"
+                                  key={yr}
+                                  onClick={() => {
+                                    if (checked) {
+                                      setNewStaffMultiYears(newStaffMultiYears.filter(y => y !== yr));
+                                    } else {
+                                      setNewStaffMultiYears([...newStaffMultiYears, yr]);
+                                    }
+                                  }}
+                                  className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${
+                                    checked ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-white/5 text-slate-500'
+                                  }`}
+                                >
+                                  {yr}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="pt-2 border-t border-white/5">
                       <button
