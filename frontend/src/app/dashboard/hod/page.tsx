@@ -19,7 +19,7 @@ import {
   PlusCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getUsers, getSubjects, getCurrentUser, setCurrentUser, addUser, UserRecord, SubjectRecord } from '@/lib/store';
+import { getUsers, getSubjects, getCurrentUser, setCurrentUser, assignClassTeacher, assignSubjectTeacher, UserRecord, SubjectRecord } from '@/lib/store';
 
 export default function HodDashboard() {
   const router = useRouter();
@@ -35,7 +35,7 @@ export default function HodDashboard() {
   const [overviewSubTab, setOverviewSubTab] = useState<'metrics' | 'guidelines'>('metrics');
   const [directiveSubTab, setDirectiveSubTab] = useState<'send' | 'history'>('send');
   const [syllabusSubTab, setSyllabusSubTab] = useState<'tracking' | 'summary'>('tracking');
-  const [facultySubTab, setFacultySubTab] = useState<'list' | 'create' | 'load'>('list');
+  const [facultySubTab, setFacultySubTab] = useState<'list' | 'assign' | 'load'>('list');
 
   // Directive Form state
   const [directiveTitle, setDirectiveTitle] = useState('');
@@ -47,15 +47,15 @@ export default function HodDashboard() {
   ]);
   const [successMsg, setSuccessMsg] = useState('');
 
-  // New Teacher creation state
-  const [newTeacherName, setNewTeacherName] = useState('');
-  const [newTeacherEmail, setNewTeacherEmail] = useState('');
-  const [newTeacherRole, setNewTeacherRole] = useState<'teacher' | 'classteacher' | 'subjectteacher'>('teacher');
-  const [newTeacherSection, setNewTeacherSection] = useState('CS-A');
-  const [newTeacherPassword, setNewTeacherPassword] = useState('teacher123');
-  const [teacherSuccessMsg, setTeacherSuccessMsg] = useState('');
+  // Class/Subject Assignment State
+  const [systemTeachers, setSystemTeachers] = useState<UserRecord[]>([]);
+  const [selectedAssignTeacherId, setSelectedAssignTeacherId] = useState('');
+  const [selectedAssignTargetType, setSelectedAssignTargetType] = useState<'section' | 'subject'>('section');
+  const [selectedAssignSection, setSelectedAssignTargetSection] = useState('CS-A');
+  const [selectedAssignSubjectId, setSelectedAssignSubjectId] = useState('');
+  const [assignSuccessMsg, setAssignSuccessMsg] = useState('');
+
   const [assignedYearScope, setAssignedYearScope] = useState<string>('1st Year');
-  const [newTeacherMultiYears, setNewTeacherMultiYears] = useState<string[]>(['1st Year']);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -66,7 +66,6 @@ export default function HodDashboard() {
       if (user.academicYear) {
         currentYearScope = user.academicYear;
         setAssignedYearScope(user.academicYear);
-        setNewTeacherMultiYears([user.academicYear]);
       }
     }
     
@@ -81,10 +80,13 @@ export default function HodDashboard() {
     );
     setSubjects(deptYearSubjects);
 
+    // Filter all system teachers so HOD can select any available faculty to map to class streams
+    const availableFaculty = allUsers.filter(u => u.role === 'teacher' || u.role === 'classteacher' || u.role === 'subjectteacher');
+    setSystemTeachers(availableFaculty);
+
     // Filter faculty belonging to this department/year OR actively teaching any subject in this department/year tier
     const activeTeacherIds = new Set(deptYearSubjects.map(s => s.teacherId).filter(Boolean));
-    setFaculty(allUsers.filter(u => {
-      if (u.role !== 'subjectteacher' && u.role !== 'classteacher' && u.role !== 'teacher') return false;
+    setFaculty(availableFaculty.filter(u => {
       const matchesDept = !u.department || u.department.toLowerCase() === department.toLowerCase();
       const matchesYear = !u.academicYear || u.academicYear === currentYearScope || u.academicYears?.includes(currentYearScope);
       return (matchesDept && matchesYear) || activeTeacherIds.has(u.id);
@@ -121,34 +123,43 @@ export default function HodDashboard() {
     setTimeout(() => setSuccessMsg(''), 6000);
   };
 
-  const handleCreateTeacher = (e: React.FormEvent) => {
+  const handleAssignTeacherAction = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTeacherName || !newTeacherEmail) return;
+    if (!selectedAssignTeacherId) return;
 
-    const added = addUser({
-      name: newTeacherName,
-      email: newTeacherEmail,
-      role: newTeacherRole,
-      password: newTeacherPassword || 'password',
-      department: department,
-      section: newTeacherSection,
-      academicYear: assignedYearScope,
-      academicYears: newTeacherMultiYears.length > 0 ? newTeacherMultiYears : [assignedYearScope]
-    });
+    const targetTeacher = systemTeachers.find(t => t.id === selectedAssignTeacherId);
+    if (!targetTeacher) return;
 
-    // Refresh localized state list
-    setFaculty(getUsers().filter(u => 
-      (u.role === 'subjectteacher' || u.role === 'classteacher' || u.role === 'teacher') && 
-      (!u.department || u.department.toLowerCase() === department.toLowerCase()) &&
-      (!u.academicYear || u.academicYear === assignedYearScope || u.academicYears?.includes(assignedYearScope))
-    ));
+    if (selectedAssignTargetType === 'section') {
+      assignClassTeacher(selectedAssignTeacherId, selectedAssignSection);
+      setAssignSuccessMsg(`Successfully mapped ${targetTeacher.name} as Class Teacher for Section ${selectedAssignSection}!`);
+    } else {
+      if (!selectedAssignSubjectId) return;
+      assignSubjectTeacher(selectedAssignSubjectId, selectedAssignTeacherId, targetTeacher.name);
+      const targetSub = subjects.find(s => s.id === selectedAssignSubjectId);
+      setAssignSuccessMsg(`Successfully assigned ${targetTeacher.name} to teach ${targetSub?.name || 'Subject'}!`);
+    }
 
-    setTeacherSuccessMsg(`Teacher profile "${added.name}" successfully created under ${assignedYearScope}!`);
-    setNewTeacherName('');
-    setNewTeacherEmail('');
-    setNewTeacherPassword('teacher123');
+    // Refresh active local states
+    const allUsers = getUsers();
+    const allSubs = getSubjects();
+    const deptYearSubjects = allSubs.filter(s => 
+      s.department.toLowerCase() === department.toLowerCase() &&
+      (!s.academicYear || s.academicYear === assignedYearScope)
+    );
+    setSubjects(deptYearSubjects);
 
-    setTimeout(() => setTeacherSuccessMsg(''), 6000);
+    const availableFaculty = allUsers.filter(u => u.role === 'teacher' || u.role === 'classteacher' || u.role === 'subjectteacher');
+    setSystemTeachers(availableFaculty);
+
+    const activeTeacherIds = new Set(deptYearSubjects.map(s => s.teacherId).filter(Boolean));
+    setFaculty(availableFaculty.filter(u => {
+      const matchesDept = !u.department || u.department.toLowerCase() === department.toLowerCase();
+      const matchesYear = !u.academicYear || u.academicYear === assignedYearScope || u.academicYears?.includes(assignedYearScope);
+      return (matchesDept && matchesYear) || activeTeacherIds.has(u.id);
+    }));
+
+    setTimeout(() => setAssignSuccessMsg(''), 6000);
   };
 
   return (
@@ -601,13 +612,13 @@ export default function HodDashboard() {
                   <span>👥 Assigned Instructors</span>
                 </button>
                 <button
-                  onClick={() => setFacultySubTab('create')}
+                  onClick={() => setFacultySubTab('assign')}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                    facultySubTab === 'create' ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'text-slate-400 hover:text-white'
+                    facultySubTab === 'assign' ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <PlusCircle size={14} />
-                  <span>➕ Add Teacher Account</span>
+                  <span>👨‍🏫 Map Teacher Assignment</span>
                 </button>
                 <button
                   onClick={() => setFacultySubTab('load')}
@@ -694,123 +705,93 @@ export default function HodDashboard() {
                 </div>
               )}
 
-              {facultySubTab === 'create' && (
+              {facultySubTab === 'assign' && (
                 <div className="glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in max-w-xl mx-auto">
                   <div className="border-b border-white/5 pb-3">
                     <h3 className="text-base font-bold text-white flex items-center gap-2">
                       <PlusCircle size={16} className="text-fuchsia-400" />
-                      <span>Provision Teacher Profile</span>
+                      <span>Map Instructor Allocation ({assignedYearScope})</span>
                     </h3>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Create a dedicated instructor account directly bound to the <strong className="text-fuchsia-300">{department}</strong> department.
+                      Assign available institutional faculty to lead specific class streams or deliver specific curriculum course modules within your managing ledger.
                     </p>
                   </div>
 
-                  {teacherSuccessMsg && (
+                  {assignSuccessMsg && (
                     <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold leading-relaxed flex items-start gap-2 animate-fade-in">
                       <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
-                      <span>{teacherSuccessMsg}</span>
+                      <span>{assignSuccessMsg}</span>
                     </div>
                   )}
 
-                  <form onSubmit={handleCreateTeacher} className="space-y-4 pt-1">
+                  <form onSubmit={handleAssignTeacherAction} className="space-y-4 pt-1">
                     <div>
-                      <label className="text-xs font-bold text-slate-300 block mb-1">Full Name</label>
-                      <input 
-                        type="text"
+                      <label className="text-xs font-bold text-slate-300 block mb-1">Select Available Faculty Member</label>
+                      <select
                         required
-                        value={newTeacherName}
-                        onChange={(e) => setNewTeacherName(e.target.value)}
-                        placeholder="e.g. Dr. Ramesh Kumar"
-                        className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-fuchsia-400"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-300 block mb-1">Email Address (Sign-In ID)</label>
-                      <input 
-                        type="email"
-                        required
-                        value={newTeacherEmail}
-                        onChange={(e) => setNewTeacherEmail(e.target.value)}
-                        placeholder="e.g. ramesh.k@campuscore.edu"
-                        className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-fuchsia-400"
-                      />
+                        value={selectedAssignTeacherId}
+                        onChange={(e) => setSelectedAssignTeacherId(e.target.value)}
+                        className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white font-bold focus:outline-none focus:border-fuchsia-400 cursor-pointer"
+                      >
+                        <option value="">-- Select Instructor --</option>
+                        {systemTeachers.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} ({t.email}) • Role: {t.role}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs font-bold text-slate-300 block mb-1">Instructor Role</label>
+                        <label className="text-xs font-bold text-slate-300 block mb-1">Target Mapping Action</label>
                         <select
-                          value={newTeacherRole}
-                          onChange={(e) => setNewTeacherRole(e.target.value as any)}
+                          value={selectedAssignTargetType}
+                          onChange={(e) => setSelectedAssignTargetType(e.target.value as any)}
                           className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs font-bold text-fuchsia-300 focus:outline-none cursor-pointer"
                         >
-                          <option value="teacher">Standard Faculty</option>
-                          <option value="subjectteacher">Subject Teacher</option>
-                          <option value="classteacher">Class Teacher</option>
+                          <option value="section">⭐ Assign as Class Teacher</option>
+                          <option value="subject">📚 Map Subject Instructor</option>
                         </select>
                       </div>
 
-                      <div>
-                        <label className="text-xs font-bold text-slate-300 block mb-1">Primary Class Section</label>
-                        <input 
-                          type="text"
-                          required
-                          value={newTeacherSection}
-                          onChange={(e) => setNewTeacherSection(e.target.value)}
-                          placeholder="e.g. CS-A"
-                          className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-fuchsia-400"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-300 block mb-1">Assigned Academic Year Scopes</label>
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {['1st Year', '2nd Year', '3rd Year', '4th Year'].map(yr => {
-                          const isChecked = newTeacherMultiYears.includes(yr);
-                          return (
-                            <button
-                              type="button"
-                              key={yr}
-                              onClick={() => {
-                                if (isChecked) {
-                                  // keep at least assignedYearScope if desired, or let them uncheck freely
-                                  setNewTeacherMultiYears(newTeacherMultiYears.filter(y => y !== yr));
-                                } else {
-                                  setNewTeacherMultiYears([...newTeacherMultiYears, yr]);
-                                }
-                              }}
-                              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                                isChecked ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'bg-white/5 text-slate-500 hover:text-slate-300'
-                              }`}
-                            >
-                              {yr} {yr === assignedYearScope ? '(Primary)' : ''}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <span className="text-[10px] text-slate-500 block mt-1">Cross-year faculty will manage tasks across these year levels simultaneously</span>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-300 block mb-1">Temporary Portal Password</label>
-                      <input 
-                        type="text"
-                        required
-                        value={newTeacherPassword}
-                        onChange={(e) => setNewTeacherPassword(e.target.value)}
-                        className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-slate-300 focus:outline-none focus:border-fuchsia-400 font-mono"
-                      />
-                      <span className="text-[10px] text-slate-500 block mt-1">Instructor can use this key to authenticate instantly</span>
+                      {selectedAssignTargetType === 'section' ? (
+                        <div>
+                          <label className="text-xs font-bold text-slate-300 block mb-1">Target Class Section Stream</label>
+                          <select
+                            value={selectedAssignSection}
+                            onChange={(e) => setSelectedAssignTargetSection(e.target.value)}
+                            className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none cursor-pointer"
+                          >
+                            <option value="CS-A">Section CS-A</option>
+                            <option value="CS-B">Section CS-B</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="text-xs font-bold text-slate-300 block mb-1">Select Assigned Course Unit</label>
+                          <select
+                            required
+                            value={selectedAssignSubjectId}
+                            onChange={(e) => setSelectedAssignSubjectId(e.target.value)}
+                            className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none cursor-pointer"
+                          >
+                            <option value="">-- Pick Course --</option>
+                            {subjects.map(s => (
+                              <option key={s.id} value={s.id}>
+                                {s.name} ({s.code})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
 
                     <button
                       type="submit"
                       className="w-full py-3 rounded-xl bg-gradient-to-r from-fuchsia-500 to-purple-500 hover:opacity-90 text-white font-extrabold text-xs uppercase tracking-wider transition-all block mt-2 shadow-md"
                     >
-                      Provision Instructor Profile
+                      Confirm Mapping Assignment
                     </button>
                   </form>
                 </div>
