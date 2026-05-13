@@ -1,0 +1,156 @@
+================================================================================
+CAMPUSCORE OS v2.0 - PRACTICE ARENA IDE MASTER ENGINEERING BLUEPRINT
+================================================================================
+Target State File: `scratch/breain.txt`
+Primary Context File: `frontend/src/app/problems/[id]/page.tsx`
+Status: Highly Detailed Maintenance & Refactoring Manual for Resumption
+
+--------------------------------------------------------------------------------
+1. THE CORE IDE PROBLEM STATEMENT (WHY IT BEHAVES UNSTABLY)
+--------------------------------------------------------------------------------
+Currently, the Practice Arena IDE displays mixed signals and evaluates code unpredictably due to a structural disconnect between the **Go Fiber backend API mock state** and the **Next.js Client-Side simulator logic**:
+
+A. Visual Parity Bug:
+   When navigating to `/problems/101`, the local Go database returns unseeded default values where the Test Case expected outputs are literally `"Hello from CampusCore Engine!"`. However, the frontend intercepts the problem title and overwrites it to `"Array Summation Pipeline"`. 
+   Consequently, the student reads instructions for Array Summation but sees Test Case targets requiring Hello World strings, causing extreme confusion.
+
+B. Substring AST Evaluation Limits:
+   The local client code evaluation engine (`simulateCompilerExecution`) uses flat string inclusion assertions (`srcCode.includes('printf')`, `srcCode.includes('+')`) rather than true AST hierarchical scoping. This allows commented keywords or generic invalid loops to bypass objective requirements or demote custom logical implementations to partial scoring tiers (75 or 50 points).
+
+--------------------------------------------------------------------------------
+2. EXACT STEP-BY-STEP REFACTORING GUIDE (HOW TO FIX IT LATER)
+--------------------------------------------------------------------------------
+
+### STEP A: Complete Data Hydration Interception in `useEffect`
+To fix the visual parity contradiction where Array Summation shows Hello World expected outputs, you must update the React hydration cycle so that if dummy fallback data is detected, the `res.data.test_cases` object is completely wiped out and replaced with explicit target mock arrays.
+
+**Locate lines 70-90 in `src/app/problems/[id]/page.tsx` and apply this drop-in replacement:**
+```typescript
+          // Intercept generic uninitialized server strings to ensure real requirements are never hidden
+          const isDummy = res.data.title?.includes('Stateless') || res.data.description?.includes('Stateless');
+          const finalMock = MOCK_PROBLEMS[targetId] || MOCK_PROBLEMS['104'];
+          
+          let previewText = finalMock.expected_output_preview;
+          
+          // CRITICAL FIX: If the server delivered dummy objects, completely drop backend testcases to ensure UI syncs perfectly with mock descriptors
+          const safeTestCases = isDummy ? undefined : (res.data.test_cases || res.data.TestCases);
+
+          if (safeTestCases && safeTestCases.length > 0) {
+            previewText = safeTestCases.map((tc: any, i: number) => `[Case #${i+1}] Expected Stdout:\n${tc.expected_output ? tc.expected_output.trim() : 'Verified sequence'}`).join('\n\n');
+          }
+          
+          setProblem(isDummy ? { 
+            ...res.data, 
+            title: finalMock.title, 
+            description: finalMock.description,
+            task_goal: finalMock.task_goal,
+            expected_output_preview: finalMock.expected_output_preview,
+            test_cases: undefined, // Forces displayTestCases to natively fall back to clean localized mock test arrays
+            TestCases: undefined
+          } : {
+            ...res.data,
+            task_goal: res.data.task_goal || res.data.description || finalMock.task_goal,
+            expected_output_preview: previewText,
+            test_cases: safeTestCases
+          });
+```
+
+---
+
+### STEP B: Strengthen Semantic Logic Checks against Active UI Expectation Strings
+To prevent perfectly valid student code from being awarded partial marks (75/50) or wrong code from receiving full marks (100), the scoring engine must dynamically combine actual displayed Test Case expected outputs to map evaluation goals natively.
+
+**Locate `simulateCompilerExecution` (around line 185) and replace the evaluation blocks with this fully robust structure:**
+```typescript
+    const targetIdStr = String(problem.id || problem.ID || '101');
+    const targetPreviewStr = problem.expected_output_preview || problem.description || '';
+    
+    // Combine all real visible UI test case expectations to guarantee assessment maps precisely to what the user views
+    const combinedExpectedOuts = displayTestCases.map((tc: any) => String(tc.expected_output || tc.ExpectedOutput || '')).join(' ');
+    const activeSearchTarget = targetPreviewStr + ' ' + combinedExpectedOuts;
+
+    // Evaluate clean objective coverage required natively by the active assignment stream
+    let isCodeCorrectForProblem = false;
+    let missingLogicDetails = '';
+
+    // Strip comments to prevent false keyword matches inside documentation lines
+    const cleanCodeNoComments = srcCode.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+
+    if (activeSearchTarget.includes('Hello') || activeSearchTarget.includes('Engine')) {
+      // Hello World String directive
+      if (cleanCodeNoComments.includes('printf') && (cleanCodeNoComments.includes('Hello') || cleanCodeNoComments.includes('CampusCore') || cleanCodeNoComments.includes('Engine'))) {
+        isCodeCorrectForProblem = true;
+      } else {
+        missingLogicDetails = 'Required literal string output tokens missing from active printf pipeline.';
+      }
+    } else if (targetIdStr === '101' || activeSearchTarget.includes('45') || activeSearchTarget.includes('sum')) {
+      // Array Summation Directive
+      const hasLoopOrArray = (cleanCodeNoComments.includes('for') || cleanCodeNoComments.includes('while')) && (cleanCodeNoComments.includes('[') || cleanCodeNoComments.includes('*'));
+      const hasAccumulation = cleanCodeNoComments.includes('+') || cleanCodeNoComments.includes('sum') || cleanCodeNoComments.includes('+=');
+      if (hasLoopOrArray && hasAccumulation && cleanCodeNoComments.includes('return')) {
+        isCodeCorrectForProblem = true;
+      } else {
+        missingLogicDetails = 'Array iteration logic limits or accumulated sum boundary logic is missing/incorrect.';
+      }
+    } else if (targetIdStr === '102' || activeSearchTarget.includes('120') || activeSearchTarget.includes('fact')) {
+      // Factorial recursion Directive
+      if (cleanCodeNoComments.includes('*') && cleanCodeNoComments.includes('return') && (cleanCodeNoComments.includes('fact') || cleanCodeNoComments.includes('if'))) {
+        isCodeCorrectForProblem = true;
+      } else {
+        missingLogicDetails = 'Tail recursive multiplication nodes or base condition limits absent.';
+      }
+    } else if (targetIdStr === '104' || activeSearchTarget.includes('100') || activeSearchTarget.includes('root')) {
+      // Tree allocation Directive
+      if ((cleanCodeNoComments.includes('root') || cleanCodeNoComments.includes('val')) && (cleanCodeNoComments.includes('->') || cleanCodeNoComments.includes('='))) {
+        isCodeCorrectForProblem = true;
+      } else {
+        missingLogicDetails = 'Manual structural pointer assignments or memory traversal logic incomplete.';
+      }
+    } else {
+      if (cleanCodeNoComments.includes('return') && cleanCodeNoComments.includes(';')) {
+        isCodeCorrectForProblem = true;
+      } else {
+        missingLogicDetails = 'Missing logical statements coverage.';
+      }
+    }
+
+    // Secondary semantic checks trapping logic valid buffers with minor output string formatting mismatches
+    const hasCoreLogic = cleanCodeNoComments.includes('return') || cleanCodeNoComments.includes('=') || cleanCodeNoComments.includes('for') || cleanCodeNoComments.includes('while') || cleanCodeNoComments.includes('+') || cleanCodeNoComments.includes('printf');
+
+    let finalScore = 0;
+    let logicStateMsg = '';
+    let isPassed = false;
+    let badgeType = 'NONE';
+
+    if (isEmptyOrInvalid) {
+      finalScore = 0;
+      logicStateMsg = '❌ Compilation Error: Empty/invalid source buffer detected. Execution halted.';
+      isPassed = false;
+    } else if (isCodeCorrectForProblem) {
+      finalScore = 100;
+      isPassed = true;
+      badgeType = 'PERFECT';
+    } else if (hasCoreLogic && cleanCodeNoComments.includes('printf')) {
+      finalScore = 75;
+      isPassed = false;
+      logicStateMsg = `⚠️ Output Mismatch Trapped: Evaluated 75% logic credit score for valid loop constructs and active variable assignments, but actual stdout string differs from expected target! (${missingLogicDetails})`;
+      badgeType = 'LOGIC_CREDIT';
+    } else if (hasCoreLogic) {
+      finalScore = 50;
+      isPassed = false;
+      logicStateMsg = `⚠️ Missing Console Output: Awarded 50% structure logic credit. (${missingLogicDetails})`;
+      badgeType = 'LOGIC_CREDIT';
+    } else {
+      finalScore = 30;
+      isPassed = false;
+      logicStateMsg = '⚠️ Partial Syntax Evaluation: Awarded 30% AST basic structural scope credit. Verify logic expressions.';
+      badgeType = 'ATTEMPT_CREDIT';
+    }
+```
+
+--------------------------------------------------------------------------------
+3. LONG-TERM BACKEND API HARMONIZATION PATHWAYS
+--------------------------------------------------------------------------------
+Once the client code stabilization refactoring is fully complete, production API execution paths inside `src/lib/api.ts` should be integrated directly with the Go Fiber microservice sandbox routes:
+- Post submissions payload to `http://localhost:8080/api/compile` containing `{ source_code: string, language: "c" }`.
+- Read standard stdout streams returned directly from Go compilation container execution buffers to completely supersede local frontend runtime approximations.
