@@ -52,10 +52,16 @@ export default function AdminDashboard() {
   const [departments, setDepartments] = useState<DepartmentRecord[]>([]);
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
   
-  // Navigation tabs
+  // Primary Navigation tabs (Left Menu)
   const [activeTab, setActiveTab] = useState<'departments' | 'students' | 'users' | 'academics' | 'telemetry'>('departments');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('all');
   
+  // Secondary Sub-navigation tab states (Top Horizontal Bar)
+  const [deptSubTab, setDeptSubTab] = useState<'list' | 'create'>('list');
+  const [studentSubTab, setStudentSubTab] = useState<'search' | 'update'>('search');
+  const [staffSubTab, setStaffSubTab] = useState<'directory' | 'add'>('directory');
+  const [academicSubTab, setAcademicSubTab] = useState<'subjects' | 'class_teachers'>('subjects');
+
   // Create Department & Auto Account Creation State
   const [newDeptName, setNewDeptName] = useState('');
   const [newDeptCode, setNewDeptCode] = useState('');
@@ -178,6 +184,9 @@ export default function AdminDashboard() {
     setVhodName('');
     setVhodEmail('');
     
+    // Auto switch to list view to inspect newly created dept
+    setDeptSubTab('list');
+    
     setTimeout(() => setDeptSuccessMsg(''), 6000);
   };
 
@@ -196,11 +205,14 @@ export default function AdminDashboard() {
     });
 
     setUsers(getUsers());
-    setSelectedStaffId(created.id); // Instantly display the newly allocated capabilities
+    setSelectedStaffId(created.id); // Instantly highlight newly allocated profile
     setStaffSuccessMsg(`Profile for "${created.name}" successfully created as ${created.role}.`);
     setNewStaffName('');
     setNewStaffEmail('');
     
+    // Auto switch to directory sub tab to view profile allotments
+    setStaffSubTab('directory');
+
     setTimeout(() => setStaffSuccessMsg(''), 6000);
   };
 
@@ -436,17 +448,213 @@ export default function AdminDashboard() {
         </div>
 
         {/* Right Viewing Content Wrapper */}
-        <div className="grow min-w-0 w-full space-y-8">
+        <div className="grow min-w-0 w-full space-y-6">
 
           {/* ========================================================= */}
           {/* TAB 1: DEPARTMENTS SUITE                                  */}
           {/* ========================================================= */}
           {activeTab === 'departments' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
+            <div className="space-y-6 animate-fade-in">
               
-              {/* Left Column: Create Department Form */}
-              <div className="lg:col-span-5 space-y-6">
-                <div className="glass p-6 rounded-3xl border-cyan-500/20 bg-gradient-to-b from-white/[0.02] to-transparent relative overflow-hidden">
+              {/* Secondary Top Horizontal Sub-Menu */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setDeptSubTab('list')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    deptSubTab === 'list' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Building2 size={14} />
+                  <span>🏢 Departments & Staff List</span>
+                </button>
+                <button
+                  onClick={() => setDeptSubTab('create')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    deptSubTab === 'create' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <PlusCircle size={14} />
+                  <span>➕ Create New Department</span>
+                </button>
+              </div>
+
+              {/* Sub-Feature View 1: List Departments */}
+              {deptSubTab === 'list' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-6 animate-fade-in">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                    <div>
+                      <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                        <Building2 className="text-cyan-400" size={18} />
+                        <span>Departments & Staff Progress</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Assign department leaders and track teacher syllabus updates.
+                      </p>
+                    </div>
+
+                    <span className="px-2.5 py-1 rounded-full bg-white/5 text-[10px] font-bold text-cyan-400">
+                      Total Departments: {departments.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-6">
+                    {departments.map((d) => {
+                      const currentHod = users.find(u => u.id === d.hodId);
+                      const currentViceHod = users.find(u => u.id === d.viceHodId);
+                      
+                      const deptTeachers = users.filter(u => 
+                        u.department?.toLowerCase() === d.name.toLowerCase() && 
+                        (u.role === 'teacher' || u.role === 'subjectteacher' || u.role === 'classteacher')
+                      );
+
+                      return (
+                        <div 
+                          key={d.id} 
+                          className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-cyan-500/20 transition-all space-y-4"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-white">{d.name}</span>
+                                {d.code && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 text-cyan-400">
+                                    {d.code}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-500 block mt-0.5">
+                                Department ID: {d.id}
+                              </span>
+                            </div>
+
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              Active Department
+                            </span>
+                          </div>
+
+                          {/* Leader Selection */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/5">
+                            {/* HOD */}
+                            <div className="space-y-1 bg-black/30 p-2.5 rounded-xl border border-white/5">
+                              <label className="text-[10px] font-bold text-fuchsia-400 uppercase block">
+                                Head of Department (HOD)
+                              </label>
+                              <select
+                                value={d.hodId || ''}
+                                onChange={(e) => {
+                                  assignDepartmentLeadership(d.id, e.target.value, d.viceHodId);
+                                  setDepartments(getDepartments());
+                                  setUsers(getUsers());
+                                }}
+                                className="w-full px-2 py-1 rounded bg-black text-xs text-white border border-white/5 focus:outline-none focus:border-fuchsia-400 font-medium"
+                              >
+                                <option value="">⚠️ Select User</option>
+                                {eligibleStaff.map(c => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.name} ({c.role})
+                                  </option>
+                                ))}
+                              </select>
+                              {currentHod && (
+                                <div className="text-[10px] text-slate-400 truncate pt-0.5">
+                                  {currentHod.email}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Vice HOD */}
+                            <div className="space-y-1 bg-black/30 p-2.5 rounded-xl border border-white/5">
+                              <label className="text-[10px] font-bold text-cyan-400 uppercase block">
+                                Vice HOD
+                              </label>
+                              <select
+                                value={d.viceHodId || ''}
+                                onChange={(e) => {
+                                  assignDepartmentLeadership(d.id, d.hodId, e.target.value);
+                                  setDepartments(getDepartments());
+                                  setUsers(getUsers());
+                                }}
+                                className="w-full px-2 py-1 rounded bg-black text-xs text-white border border-white/5 focus:outline-none focus:border-cyan-400 font-medium"
+                              >
+                                <option value="">⚠️ Select User</option>
+                                {eligibleStaff.map(c => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.name} ({c.role})
+                                  </option>
+                                ))}
+                              </select>
+                              {currentViceHod && (
+                                <div className="text-[10px] text-slate-400 truncate pt-0.5">
+                                  {currentViceHod.email}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Teaching Staff List */}
+                          <div className="pt-3 border-t border-white/5 space-y-2.5">
+                            <span className="text-xs font-bold text-slate-300 block flex items-center justify-between">
+                              <span>👨‍🏫 Teaching Staff & Syllabus Progress</span>
+                              <span className="text-[11px] text-cyan-400 font-normal">
+                                {deptTeachers.length} Teacher{deptTeachers.length === 1 ? '' : 's'}
+                              </span>
+                            </span>
+
+                            {deptTeachers.length === 0 ? (
+                              <div className="p-3 text-center rounded-xl bg-white/5 text-xs text-slate-500 font-medium">
+                                No teachers assigned to this department yet.
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {deptTeachers.map(t => {
+                                  const tSubs = subjects.filter(s => s.teacherId === t.id);
+                                  const avgCovered = tSubs.length > 0 
+                                    ? Math.round(tSubs.reduce((acc, curr) => acc + curr.syllabusCoveredPct, 0) / tSubs.length)
+                                    : 75;
+
+                                  return (
+                                    <div key={t.id} className="p-2.5 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-xs font-bold text-white truncate block">{t.name}</span>
+                                          <span className="text-[9px] font-bold px-1.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 shrink-0">
+                                            {t.role === 'classteacher' ? 'Class Teacher' : 'Subject Teacher'}
+                                          </span>
+                                        </div>
+                                        <span className="text-[11px] text-slate-400 block truncate">
+                                          {tSubs.length > 0 ? `Subjects: ${tSubs.map(sub => sub.name).join(', ')}` : 'No subjects assigned'}
+                                        </span>
+                                      </div>
+
+                                      <div className="w-24 sm:w-32 text-right shrink-0">
+                                        <div className="flex items-center justify-between text-[10px] mb-1">
+                                          <span className="text-slate-500">Syllabus</span>
+                                          <span className="font-bold text-cyan-400">{avgCovered}%</span>
+                                        </div>
+                                        <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                          <div 
+                                            className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full"
+                                            style={{ width: `${avgCovered}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-Feature View 2: Create Department Form */}
+              {deptSubTab === 'create' && (
+                <div className="max-w-xl mx-auto glass p-6 rounded-3xl border-cyan-500/20 bg-gradient-to-b from-white/[0.02] to-transparent relative overflow-hidden animate-fade-in">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
                       <PlusCircle size={20} />
@@ -566,185 +774,8 @@ export default function AdminDashboard() {
                     </button>
                   </form>
                 </div>
-              </div>
+              )}
 
-              {/* Right Column: Live Departments and Teaching Progress */}
-              <div className="lg:col-span-7 space-y-6">
-                <div className="glass p-6 rounded-3xl border-white/5 space-y-6">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                    <div>
-                      <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                        <Building2 className="text-cyan-400" size={18} />
-                        <span>Departments & Staff Progress</span>
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        Assign department leaders and track teacher syllabus updates.
-                      </p>
-                    </div>
-
-                    <span className="px-2.5 py-1 rounded-full bg-white/5 text-[10px] font-bold text-cyan-400">
-                      Total Departments: {departments.length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-6">
-                    {departments.map((d) => {
-                      const currentHod = users.find(u => u.id === d.hodId);
-                      const currentViceHod = users.find(u => u.id === d.viceHodId);
-                      
-                      // Teachers working in this department
-                      const deptTeachers = users.filter(u => 
-                        u.department?.toLowerCase() === d.name.toLowerCase() && 
-                        (u.role === 'teacher' || u.role === 'subjectteacher' || u.role === 'classteacher')
-                      );
-
-                      return (
-                        <div 
-                          key={d.id} 
-                          className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-cyan-500/20 transition-all space-y-4"
-                        >
-                          {/* Department Heading */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-black text-white">{d.name}</span>
-                                {d.code && (
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 text-cyan-400">
-                                    {d.code}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-[10px] text-slate-500 block mt-0.5">
-                                Department ID: {d.id}
-                              </span>
-                            </div>
-
-                            <span className="text-[10px] text-slate-400 font-medium">
-                              Active Department
-                            </span>
-                          </div>
-
-                          {/* Leader Selection */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/5">
-                            {/* HOD */}
-                            <div className="space-y-1 bg-black/30 p-2.5 rounded-xl border border-white/5">
-                              <label className="text-[10px] font-bold text-fuchsia-400 uppercase block">
-                                Head of Department (HOD)
-                              </label>
-                              <select
-                                value={d.hodId || ''}
-                                onChange={(e) => {
-                                  assignDepartmentLeadership(d.id, e.target.value, d.viceHodId);
-                                  setDepartments(getDepartments());
-                                  setUsers(getUsers());
-                                }}
-                                className="w-full px-2 py-1 rounded bg-black text-xs text-white border border-white/5 focus:outline-none focus:border-fuchsia-400 font-medium"
-                              >
-                                <option value="">⚠️ Select User</option>
-                                {eligibleStaff.map(c => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.name} ({c.role})
-                                  </option>
-                                ))}
-                              </select>
-                              {currentHod && (
-                                <div className="text-[10px] text-slate-400 truncate pt-0.5">
-                                  {currentHod.email}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Vice HOD */}
-                            <div className="space-y-1 bg-black/30 p-2.5 rounded-xl border border-white/5">
-                              <label className="text-[10px] font-bold text-cyan-400 uppercase block">
-                                Vice HOD
-                              </label>
-                              <select
-                                value={d.viceHodId || ''}
-                                onChange={(e) => {
-                                  assignDepartmentLeadership(d.id, d.hodId, e.target.value);
-                                  setDepartments(getDepartments());
-                                  setUsers(getUsers());
-                                }}
-                                className="w-full px-2 py-1 rounded bg-black text-xs text-white border border-white/5 focus:outline-none focus:border-cyan-400 font-medium"
-                              >
-                                <option value="">⚠️ Select User</option>
-                                {eligibleStaff.map(c => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.name} ({c.role})
-                                  </option>
-                                ))}
-                              </select>
-                              {currentViceHod && (
-                                <div className="text-[10px] text-slate-400 truncate pt-0.5">
-                                  {currentViceHod.email}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Teaching Staff List */}
-                          <div className="pt-3 border-t border-white/5 space-y-2.5">
-                            <span className="text-xs font-bold text-slate-300 block flex items-center justify-between">
-                              <span>👨‍🏫 Teaching Staff & Syllabus Progress</span>
-                              <span className="text-[11px] text-cyan-400 font-normal">
-                                {deptTeachers.length} Teacher{deptTeachers.length === 1 ? '' : 's'}
-                              </span>
-                            </span>
-
-                            {deptTeachers.length === 0 ? (
-                              <div className="p-3 text-center rounded-xl bg-white/5 text-xs text-slate-500 font-medium">
-                                No teachers assigned to this department yet.
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                {deptTeachers.map(t => {
-                                  // Teacher's assigned subjects
-                                  const tSubs = subjects.filter(s => s.teacherId === t.id);
-                                  const avgCovered = tSubs.length > 0 
-                                    ? Math.round(tSubs.reduce((acc, curr) => acc + curr.syllabusCoveredPct, 0) / tSubs.length)
-                                    : 75;
-
-                                  return (
-                                    <div key={t.id} className="p-2.5 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between gap-3">
-                                      <div className="min-w-0">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="text-xs font-bold text-white truncate block">{t.name}</span>
-                                          <span className="text-[9px] font-bold px-1.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 shrink-0">
-                                            {t.role === 'classteacher' ? 'Class Teacher' : 'Subject Teacher'}
-                                          </span>
-                                        </div>
-                                        <span className="text-[11px] text-slate-400 block truncate">
-                                          {tSubs.length > 0 ? `Subjects: ${tSubs.map(sub => sub.name).join(', ')}` : 'No subjects assigned'}
-                                        </span>
-                                      </div>
-
-                                      {/* Progress Bar */}
-                                      <div className="w-24 sm:w-32 text-right shrink-0">
-                                        <div className="flex items-center justify-between text-[10px] mb-1">
-                                          <span className="text-slate-500">Syllabus</span>
-                                          <span className="font-bold text-cyan-400">{avgCovered}%</span>
-                                        </div>
-                                        <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
-                                          <div 
-                                            className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full"
-                                            style={{ width: `${avgCovered}%` }}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
@@ -754,16 +785,38 @@ export default function AdminDashboard() {
           {activeTab === 'students' && (
             <div className="space-y-6 animate-fade-in">
               
-              {/* Simple human-friendly Search bar */}
+              {/* Secondary Top Horizontal Sub-Menu */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setStudentSubTab('search')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    studentSubTab === 'search' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Search size={14} />
+                  <span>🔍 Search & View Profiles</span>
+                </button>
+                <button
+                  onClick={() => setStudentSubTab('update')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    studentSubTab === 'update' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <FileText size={14} />
+                  <span>⚙️ Update Student Records</span>
+                </button>
+              </div>
+
+              {/* Search bar inside view */}
               <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="w-full sm:w-auto">
                     <h2 className="text-base font-extrabold text-white flex items-center gap-2">
                       <GraduationCap className="text-cyan-400" size={20} />
-                      <span>Search & View Student Information</span>
+                      <span>Student Profiles Query</span>
                     </h2>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Search for any student to view their attendance, exam grades, and fee records.
+                      Search for any student to inspect overall standings.
                     </p>
                   </div>
 
@@ -814,11 +867,11 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Student Record Card Details */}
-              {selectedStudent ? (
+              {/* Sub-Feature View 1: Detailed View Card */}
+              {studentSubTab === 'search' && selectedStudent && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
                   
-                  {/* Left Side: Profile card */}
+                  {/* Profile info column */}
                   <div className="lg:col-span-5 space-y-6">
                     <div className="glass p-6 rounded-3xl border-cyan-500/20 bg-gradient-to-b from-white/[0.02] to-transparent relative overflow-hidden">
                       <div className="absolute top-0 right-0 bg-cyan-500/10 text-cyan-400 text-[10px] font-bold px-3 py-1 rounded-bl-xl border-b border-cyan-500/20">
@@ -840,7 +893,6 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
-                      {/* Detail list */}
                       <div className="space-y-2 bg-black/40 p-3 rounded-2xl border border-white/5 text-xs">
                         <div className="flex justify-between py-1 border-b border-white/5">
                           <span className="text-slate-500">Department</span>
@@ -856,60 +908,15 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
-                      {/* Quick Edit options for admin test */}
-                      <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-                        <span className="text-[11px] font-bold text-slate-400 block">
-                          Update Student Records (Simulation)
+                      <div className="pt-3 text-center">
+                        <span className="text-[10px] text-slate-500 block">
+                          Switch sub-tab above to "⚙️ Update Student Records" to edit properties.
                         </span>
-                        
-                        <div className="space-y-2.5">
-                          <div>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="text-slate-300 font-medium">Set Attendance Percentage</span>
-                              <span className="font-bold text-cyan-400">{editAttendanceVal}%</span>
-                            </div>
-                            <input 
-                              type="range"
-                              min="50"
-                              max="100"
-                              step="1"
-                              value={editAttendanceVal}
-                              onChange={(e) => setEditAttendanceVal(parseInt(e.target.value))}
-                              className="w-full accent-cyan-400 h-1 bg-white/10 rounded cursor-pointer"
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between pt-1">
-                            <span className="text-xs text-slate-300 font-medium">Set Fee Status</span>
-                            <select
-                              value={editFeeVal}
-                              onChange={(e) => setEditFeeVal(e.target.value as 'Paid' | 'Pending')}
-                              className="bg-black text-xs font-bold text-white border border-white/10 rounded px-2 py-1 focus:outline-none"
-                            >
-                              <option value="Paid">✅ Fees Cleared (Paid)</option>
-                              <option value="Pending">⚠️ Payment Pending</option>
-                            </select>
-                          </div>
-
-                          <button
-                            onClick={() => handleUpdateStudentStats(selectedStudent.id)}
-                            className="w-full py-2 rounded-xl bg-white/5 hover:bg-cyan-500/10 border border-white/10 text-xs font-bold text-cyan-300 transition-all text-center block mt-1"
-                          >
-                            Update Information
-                          </button>
-                        </div>
-
-                        {infoNotice && (
-                          <div className="p-2 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs text-center font-medium animate-fade-in">
-                            {infoNotice}
-                          </div>
-                        )}
                       </div>
-
                     </div>
                   </div>
 
-                  {/* Right Side: Attendance, Results, Fee status tabs */}
+                  {/* Right Side: Standings */}
                   <div className="lg:col-span-7 space-y-6">
                     
                     {/* Attendance Record */}
@@ -957,7 +964,6 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
-                      {/* Mini weekly status blocks */}
                       <div className="bg-black/20 p-2.5 rounded-xl border border-white/5 flex items-center justify-between text-xs">
                         <span className="text-slate-400">Last 10 Days Attendance:</span>
                         <div className="flex gap-1.5">
@@ -1003,17 +1009,6 @@ export default function AdminDashboard() {
                           {selectedStudent.gradesSummary?.charAt(0) || 'A'}
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/5 flex justify-between">
-                          <span className="text-slate-400">Lab Coding Tests</span>
-                          <span className="text-emerald-400 font-bold">Passed successfully</span>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/5 flex justify-between">
-                          <span className="text-slate-400">Code Errors</span>
-                          <span className="text-slate-300 font-bold">None</span>
-                        </div>
-                      </div>
                     </div>
 
                     {/* Fee Status */}
@@ -1048,43 +1043,87 @@ export default function AdminDashboard() {
                           <span className="text-lg font-black text-white block mt-1">
                             Total Due: ₹{selectedStudent.feeAmountDue !== undefined ? selectedStudent.feeAmountDue : 0}
                           </span>
-
-                          <span className="text-xs text-slate-400 block mt-0.5">
-                            {selectedStudent.feeStatus === 'Pending' 
-                              ? 'Fees must be cleared to view end-of-semester report cards.' 
-                              : 'All current institutional fees are paid fully.'}
-                          </span>
                         </div>
 
                         {selectedStudent.feeStatus === 'Pending' ? (
                           <button
-                            onClick={() => {
-                              alert(`Reminder sent to the registered guardian email for ${selectedStudent.name}.`);
-                            }}
-                            className="px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all shrink-0 w-full sm:w-auto"
+                            onClick={() => alert(`Reminder sent to the registered guardian email for ${selectedStudent.name}.`)}
+                            className="px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all shrink-0"
                           >
                             Send Fee Reminder
                           </button>
                         ) : (
                           <button
-                            onClick={() => {
-                              alert(`Downloading payment receipt for ${selectedStudent.name}.`);
-                            }}
-                            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs font-bold transition-all shrink-0 w-full sm:w-auto"
+                            onClick={() => alert(`Downloading payment receipt for ${selectedStudent.name}.`)}
+                            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs font-bold transition-all shrink-0"
                           >
                             Download Receipt
                           </button>
                         )}
                       </div>
-
                     </div>
 
                   </div>
 
                 </div>
-              ) : (
+              )}
+
+              {/* Sub-Feature View 2: Update Student Record Sliders */}
+              {studentSubTab === 'update' && selectedStudent && (
+                <div className="max-w-xl mx-auto glass p-6 rounded-3xl border-white/5 space-y-6 animate-fade-in">
+                  <div className="border-b border-white/5 pb-3">
+                    <h3 className="text-sm font-bold text-white">⚙️ Update Target Student Records</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Modifying tracking constants for: <strong className="text-cyan-300">{selectedStudent.name}</strong></p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span className="text-slate-300 font-medium">Set Attendance Percentage</span>
+                        <span className="font-bold text-cyan-400">{editAttendanceVal}%</span>
+                      </div>
+                      <input 
+                        type="range"
+                        min="50"
+                        max="100"
+                        step="1"
+                        value={editAttendanceVal}
+                        onChange={(e) => setEditAttendanceVal(parseInt(e.target.value))}
+                        className="w-full accent-cyan-400 h-1.5 bg-white/10 rounded-full cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 pt-2">
+                      <span className="text-xs text-slate-300 font-medium block">Set Fee Status</span>
+                      <select
+                        value={editFeeVal}
+                        onChange={(e) => setEditFeeVal(e.target.value as 'Paid' | 'Pending')}
+                        className="w-full bg-black/80 text-xs font-bold text-white border border-white/10 rounded-xl p-2.5 focus:outline-none focus:border-cyan-400"
+                      >
+                        <option value="Paid">✅ Fees Cleared (Paid)</option>
+                        <option value="Pending">⚠️ Payment Pending</option>
+                      </select>
+                    </div>
+
+                    <button
+                      onClick={() => handleUpdateStudentStats(selectedStudent.id)}
+                      className="w-full py-3 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-extrabold text-xs transition-all uppercase tracking-wider block mt-2"
+                    >
+                      Commit Information Changes
+                    </button>
+                  </div>
+
+                  {infoNotice && (
+                    <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs text-center font-bold animate-fade-in">
+                      {infoNotice}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!selectedStudent && (
                 <div className="p-12 text-center rounded-3xl bg-black/20 border border-white/5 text-slate-400 text-xs">
-                  Please search or select a student from the options above to view their records.
+                  Please select a matching student profile from the results sphere above to view or update metrics.
                 </div>
               )}
 
@@ -1092,66 +1131,383 @@ export default function AdminDashboard() {
           )}
 
           {/* ========================================================= */}
-          {/* TAB 3: STAFF & TEACHER ACCOUNTS MATRIX WITH ALLOTMENT VIEW */}
+          {/* TAB 3: STAFF & TEACHER ACCOUNTS MATRIX                    */}
           {/* ========================================================= */}
           {activeTab === 'users' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
+            <div className="space-y-6 animate-fade-in">
               
-              {/* LEFT COLUMN: Create Staff Form & Searchable Accounts List */}
-              <div className="lg:col-span-5 space-y-6">
-                
-                {/* Form to Make Staff, HOD, or Teacher Profile */}
-                <div className="glass p-5 rounded-3xl border-cyan-500/20 bg-gradient-to-b from-white/[0.02] to-transparent">
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0">
-                      <UserPlus size={16} />
+              {/* Secondary Top Horizontal Sub-Menu */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setStaffSubTab('directory')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    staffSubTab === 'directory' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Users size={14} />
+                  <span>👥 Staff Directory & Allotments</span>
+                </button>
+                <button
+                  onClick={() => setStaffSubTab('add')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    staffSubTab === 'add' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <UserPlus size={14} />
+                  <span>➕ Add Staff / Faculty Account</span>
+                </button>
+              </div>
+
+              {/* Sub-Feature View 1: Directory List & Click Preview Pane */}
+              {staffSubTab === 'directory' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
+                  
+                  {/* Filterable Staff List Container */}
+                  <div className="lg:col-span-5 space-y-3">
+                    <div className="glass p-5 rounded-3xl border-white/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
+                          Staff Directory ({staffAndFacultyUsers.length})
+                        </span>
+                        <span className="text-[10px] text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded">
+                          Staff Only View
+                        </span>
+                      </div>
+
+                      {/* Search inside staff list */}
+                      <div className="relative">
+                        <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <input 
+                          type="text"
+                          value={staffSearchQuery}
+                          onChange={e => setStaffSearchQuery(e.target.value)}
+                          placeholder="Search Staff by Name or Role..."
+                          className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/60 border border-white/10 text-xs focus:outline-none focus:border-cyan-400 placeholder:text-slate-600"
+                        />
+                        {staffSearchQuery && (
+                          <button onClick={() => setStaffSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs">
+                            ×
+                          </button>
+                        )}
+                      </div>
+
+                      {staffAndFacultyUsers.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-slate-600 italic">
+                          No staff accounts found matching filter.
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1 custom-scrollbar">
+                          {staffAndFacultyUsers.map(u => {
+                            const isSelected = selectedStaffId === u.id;
+                            return (
+                              <div 
+                                key={u.id}
+                                onClick={() => setSelectedStaffId(u.id)}
+                                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                                  isSelected 
+                                    ? 'bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 border-cyan-500/40 shadow-md' 
+                                    : 'bg-black/30 border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
+                                }`}
+                              >
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-bold text-white truncate block">{u.name}</span>
+                                    <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded shrink-0 capitalize ${
+                                      u.role === 'hod' ? 'bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20' :
+                                      u.role === 'vicehod' ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' :
+                                      u.role === 'classteacher' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' :
+                                      'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
+                                    }`}>
+                                      {u.role === 'vicehod' ? 'Vice HOD' : u.role === 'classteacher' ? 'Class Teacher' : u.role === 'subjectteacher' ? 'Subject Teacher' : u.role}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] text-slate-400 block truncate mt-0.5">
+                                    {u.department || 'General Base'} {u.section ? `• Section ${u.section}` : ''}
+                                  </span>
+                                </div>
+
+                                <ChevronRight size={14} className={`shrink-0 transition-transform ${isSelected ? 'text-cyan-400 translate-x-0.5' : 'text-slate-600'}`} />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* RIGHT PANEL: Live preview panel for allotted capabilities */}
+                  <div className="lg:col-span-7 space-y-6">
+                    {selectedStaff ? (
+                      <div className="glass p-6 rounded-3xl border-white/5 space-y-6 animate-fade-in sticky top-20">
+                        <div className="flex items-start justify-between pb-4 border-b border-white/5 gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500/20 via-cyan-500/20 to-teal-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-300 font-black text-base shrink-0">
+                              👨‍💼
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-widest block">
+                                Staff Allotment Portfolio
+                              </span>
+                              <h3 className="text-base font-black text-white">{selectedStaff.name}</h3>
+                              <span className="text-xs text-slate-400 block">{selectedStaff.email}</span>
+                            </div>
+                          </div>
+
+                          <span className="px-3 py-1 rounded-xl bg-black text-xs font-bold text-white border border-white/5 shrink-0 capitalize">
+                            {selectedStaff.role === 'vicehod' ? 'Vice HOD' : selectedStaff.role === 'classteacher' ? 'Class Teacher' : selectedStaff.role === 'subjectteacher' ? 'Subject Teacher' : selectedStaff.role}
+                          </span>
+                        </div>
+
+                        {(selectedStaff.role === 'hod' || selectedStaff.role === 'vicehod') ? (
+                          <div className="space-y-4 animate-fade-in">
+                            <div className="p-4 rounded-2xl bg-gradient-to-r from-fuchsia-950/20 to-indigo-950/20 border border-fuchsia-500/20 space-y-3">
+                              <span className="text-[10px] font-bold text-fuchsia-300 uppercase block tracking-wider font-mono">
+                                🏛️ Allotted Department Responsibility
+                              </span>
+
+                              {(() => {
+                                const mappedDept = departments.find(d => 
+                                  d.hodId === selectedStaff.id || 
+                                  d.viceHodId === selectedStaff.id || 
+                                  d.name.toLowerCase() === selectedStaff.department?.toLowerCase()
+                                );
+
+                                if (!mappedDept) {
+                                  return (
+                                    <div className="text-xs text-slate-400">
+                                      Currently linked to base domain: <strong className="text-white">{selectedStaff.department || 'Computer Science'}</strong>
+                                    </div>
+                                  );
+                                }
+
+                                const deptSubjects = subjects.filter(s => s.department.toLowerCase() === mappedDept.name.toLowerCase());
+                                const avgDeptProgress = deptSubjects.length > 0 
+                                  ? Math.round(deptSubjects.reduce((acc, curr) => acc + curr.syllabusCoveredPct, 0) / deptSubjects.length)
+                                  : 75;
+
+                                return (
+                                  <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <span className="text-lg font-black text-white block">{mappedDept.name}</span>
+                                        {mappedDept.code && (
+                                          <span className="text-xs font-bold text-slate-400">Code: {mappedDept.code}</span>
+                                        )}
+                                      </div>
+
+                                      <span className="px-2.5 py-1 rounded bg-fuchsia-500/10 text-fuchsia-300 text-[10px] font-bold border border-fuchsia-500/20">
+                                        {mappedDept.hodId === selectedStaff.id ? 'Primary HOD Account' : 'Vice HOD Delegate'}
+                                      </span>
+                                    </div>
+
+                                    <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-2">
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-slate-400">Department Syllabus Average</span>
+                                        <span className="font-bold text-fuchsia-300">{avgDeptProgress}%</span>
+                                      </div>
+                                      <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                                        <div 
+                                          className="bg-gradient-to-r from-fuchsia-400 to-indigo-500 h-full rounded-full" 
+                                          style={{ width: `${avgDeptProgress}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-[10px] text-slate-500 block">
+                                        Governing {deptSubjects.length} specific mapped subjects active across student clusters.
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+
+                            <div className="space-y-2 pt-2">
+                              <span className="text-xs font-bold text-slate-300 block">Assigned Administrative Privileges:</span>
+                              <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                                <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">✅ View live staff delivery logs</div>
+                                <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">✅ Override lab grading buffers</div>
+                                <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">✅ Manage faculty syllabus modules</div>
+                                <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">✅ Dispatch real-time notices</div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-5 animate-fade-in">
+                            <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/20 to-teal-950/20 border border-cyan-500/20 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-cyan-400 uppercase block tracking-wider font-mono">
+                                  🎓 Allotted Class Section Scope
+                                </span>
+                                <span className="text-[10px] text-slate-500 font-mono">Dynamic Binder</span>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
+                                <div>
+                                  <span className="text-xs text-slate-400 block font-medium">Assigned Section:</span>
+                                  <span className="text-base font-black text-white block mt-0.5">
+                                    {selectedStaff.section ? `Section ${selectedStaff.section}` : 'No class section assigned'}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                  <span className="text-[10px] text-slate-500 shrink-0 font-bold">Switch:</span>
+                                  <select
+                                    value={selectedStaff.section || ''}
+                                    onChange={(e) => handleUpdateStaffSection(selectedStaff.id, e.target.value)}
+                                    className="p-2 rounded-xl bg-black border border-white/10 text-xs text-cyan-300 font-bold focus:outline-none w-full sm:w-auto cursor-pointer"
+                                  >
+                                    <option value="">None</option>
+                                    <option value="CS-A">Section CS-A</option>
+                                    <option value="CS-B">Section CS-B</option>
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-300 block flex items-center gap-1.5">
+                                  <BookOpen size={14} className="text-indigo-400" />
+                                  <span>Allotted Subjects Taught</span>
+                                </span>
+
+                                <select
+                                  value=""
+                                  onChange={(e) => {
+                                    const subId = e.target.value;
+                                    if (subId) {
+                                      assignSubjectTeacher(subId, selectedStaff.id, selectedStaff.name);
+                                      setSubjects(getSubjects());
+                                    }
+                                  }}
+                                  className="bg-black/80 text-[10px] text-cyan-300 font-bold border border-white/10 rounded-lg px-2 py-1 focus:outline-none cursor-pointer"
+                                >
+                                  <option value="">➕ Assign Subject</option>
+                                  {subjects.map(sub => (
+                                    <option key={sub.id} value={sub.id}>
+                                      {sub.name} ({sub.code})
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              {(() => {
+                                const allottedSubs = subjects.filter(s => s.teacherId === selectedStaff.id);
+
+                                if (allottedSubs.length === 0) {
+                                  return (
+                                    <div className="p-6 text-center rounded-xl bg-black/30 border border-white/5 text-xs text-slate-500">
+                                      No specific subjects mapped to this teacher's portfolio yet. Select an option from the "Assign Subject" dropdown above to link one instantly.
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div className="space-y-2.5">
+                                    {allottedSubs.map(sub => (
+                                      <div key={sub.id} className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-2 hover:border-white/10 transition-all">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="min-w-0">
+                                            <span className="text-xs font-bold text-white block truncate">{sub.name}</span>
+                                            <span className="text-[10px] text-slate-400 block font-mono">Code: {sub.code} • Dept: {sub.department}</span>
+                                          </div>
+
+                                          <button
+                                            onClick={() => {
+                                              assignSubjectTeacher(sub.id, '', '');
+                                              setSubjects(getSubjects());
+                                            }}
+                                            title="Remove Subject"
+                                            className="text-slate-600 hover:text-red-400 text-xs px-1.5 py-0.5 rounded transition-colors"
+                                          >
+                                            Unassign
+                                          </button>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                          <div className="flex items-center justify-between text-[10px]">
+                                            <span className="text-slate-500 font-medium">Syllabus Completion</span>
+                                            <span className="font-bold text-cyan-400">{sub.syllabusCoveredPct}%</span>
+                                          </div>
+                                          <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                                            <div 
+                                              className="bg-cyan-400 h-full rounded-full" 
+                                              style={{ width: `${sub.syllabusCoveredPct}%` }}
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-12 text-center rounded-3xl bg-black/20 border border-white/5 text-slate-500 text-xs">
+                        Select a staff member from the directory to inspect their specific allotments.
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              )}
+
+              {/* Sub-Feature View 2: Add Staff Account Form */}
+              {staffSubTab === 'add' && (
+                <div className="max-w-xl mx-auto glass p-6 rounded-3xl border-cyan-500/20 bg-gradient-to-b from-white/[0.02] to-transparent animate-fade-in space-y-4">
+                  <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0">
+                      <UserPlus size={20} />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-white">Add Staff / Faculty Account</h3>
-                      <p className="text-[10px] text-slate-400">Creates secure management profile (Admins cannot create students here)</p>
+                      <h3 className="text-base font-bold text-white">Add Staff / Faculty Account</h3>
+                      <p className="text-xs text-slate-400">Creates secure management profiles (Admins cannot create students here)</p>
                     </div>
                   </div>
 
                   {staffSuccessMsg && (
-                    <div className="mb-3 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold leading-tight">
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold leading-tight animate-fade-in">
                       {staffSuccessMsg}
                     </div>
                   )}
 
-                  <form onSubmit={handleCreateStaffProfile} className="space-y-3">
+                  <form onSubmit={handleCreateStaffProfile} className="space-y-4 pt-1">
                     <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">Full Name</label>
                       <input 
                         type="text"
                         required
                         value={newStaffName}
                         onChange={e => setNewStaffName(e.target.value)}
-                        placeholder="Full Name (e.g. Prof. Rakesh V.)"
-                        className="w-full px-3 py-2 rounded-xl bg-black/60 border border-white/10 focus:border-cyan-400 focus:outline-none text-xs"
+                        placeholder="e.g. Prof. Rakesh V."
+                        className="w-full px-3 py-2.5 rounded-xl bg-black/60 border border-white/10 focus:border-cyan-400 focus:outline-none text-xs"
                       />
                     </div>
 
                     <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">Email Address</label>
                       <input 
                         type="email"
                         required
                         value={newStaffEmail}
                         onChange={e => setNewStaffEmail(e.target.value)}
-                        placeholder="Email Address"
-                        className="w-full px-3 py-2 rounded-xl bg-black/60 border border-white/10 focus:border-cyan-400 focus:outline-none text-xs"
+                        placeholder="e.g. rakesh@campuscore.edu"
+                        className="w-full px-3 py-2.5 rounded-xl bg-black/60 border border-white/10 focus:border-cyan-400 focus:outline-none text-xs"
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
                           Designated Role
                         </label>
                         <select
                           value={newStaffRole}
                           onChange={e => setNewStaffRole(e.target.value as UserRole)}
-                          className="w-full p-2 rounded-xl bg-black border border-white/10 text-xs text-cyan-300 font-bold focus:outline-none"
+                          className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-cyan-300 font-bold focus:outline-none cursor-pointer"
                         >
-                          {/* Exclude student and parent */}
                           <option value="teacher">Teacher / Staff</option>
                           <option value="classteacher">Class Teacher</option>
                           <option value="subjectteacher">Subject Teacher</option>
@@ -1161,15 +1517,15 @@ export default function AdminDashboard() {
                       </div>
 
                       <div>
-                        <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">
-                          Department
+                        <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                          Assigned Department
                         </label>
                         <select
                           value={newStaffDept}
                           onChange={e => setNewStaffDept(e.target.value)}
-                          className="w-full p-2 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none truncate"
+                          className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none truncate cursor-pointer"
                         >
-                          <option value="">General Institute</option>
+                          <option value="">General Base Domain</option>
                           {departments.map(d => (
                             <option key={d.id} value={d.name}>{d.name}</option>
                           ))}
@@ -1178,361 +1534,36 @@ export default function AdminDashboard() {
                     </div>
 
                     {(newStaffRole === 'classteacher' || newStaffRole === 'teacher') && (
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">
-                          Assigned Student Section (Optional)
+                      <div className="animate-fade-in pt-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                          Assigned Student Section Scope (Optional)
                         </label>
                         <select
                           value={newStaffSection}
                           onChange={e => setNewStaffSection(e.target.value)}
-                          className="w-full p-2 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none"
+                          className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none cursor-pointer"
                         >
-                          <option value="">No specific section</option>
+                          <option value="">No specific section link</option>
                           <option value="CS-A">Section CS-A</option>
                           <option value="CS-B">Section CS-B</option>
                         </select>
                       </div>
                     )}
 
-                    <button
-                      type="submit"
-                      className="w-full py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-black text-xs uppercase tracking-wider transition-all"
-                    >
-                      Create Account
-                    </button>
-                  </form>
-                </div>
-
-                {/* Filterable Staff List Container */}
-                <div className="glass p-5 rounded-3xl border-white/5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
-                      Staff Directory ({staffAndFacultyUsers.length})
-                    </span>
-                    <span className="text-[10px] text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded">
-                      Staff Only View
-                    </span>
-                  </div>
-
-                  {/* Search inside staff list */}
-                  <div className="relative">
-                    <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                    <input 
-                      type="text"
-                      value={staffSearchQuery}
-                      onChange={e => setStaffSearchQuery(e.target.value)}
-                      placeholder="Search Staff by Name or Role..."
-                      className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/60 border border-white/10 text-xs focus:outline-none focus:border-cyan-400 placeholder:text-slate-600"
-                    />
-                    {staffSearchQuery && (
-                      <button onClick={() => setStaffSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs">
-                        ×
+                    <div className="pt-2 border-t border-white/5">
+                      <button
+                        type="submit"
+                        className="w-full py-3 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-black text-xs uppercase tracking-wider transition-all"
+                      >
+                        Provision Staff Profile
                       </button>
-                    )}
-                  </div>
-
-                  {staffAndFacultyUsers.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-slate-600 italic">
-                      No staff accounts found matching filter.
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar">
-                      {staffAndFacultyUsers.map(u => {
-                        const isSelected = selectedStaffId === u.id;
-                        return (
-                          <div 
-                            key={u.id}
-                            onClick={() => setSelectedStaffId(u.id)}
-                            className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                              isSelected 
-                                ? 'bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 border-cyan-500/40 shadow-md' 
-                                : 'bg-black/30 border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
-                            }`}
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-white truncate block">{u.name}</span>
-                                <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded shrink-0 capitalize ${
-                                  u.role === 'hod' ? 'bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20' :
-                                  u.role === 'vicehod' ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' :
-                                  u.role === 'classteacher' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' :
-                                  'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
-                                }`}>
-                                  {u.role === 'vicehod' ? 'Vice HOD' : u.role === 'classteacher' ? 'Class Teacher' : u.role === 'subjectteacher' ? 'Subject Teacher' : u.role}
-                                </span>
-                              </div>
-                              <span className="text-[10px] text-slate-400 block truncate mt-0.5">
-                                {u.department || 'General Base'} {u.section ? `• Section ${u.section}` : ''}
-                              </span>
-                            </div>
-
-                            <ChevronRight size={14} className={`shrink-0 transition-transform ${isSelected ? 'text-cyan-400 translate-x-0.5' : 'text-slate-600'}`} />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-              </div>
-
-              {/* RIGHT COLUMN: Interactive Authority Panel View */}
-              <div className="lg:col-span-7 space-y-6">
-                
-                {selectedStaff ? (
-                  <div className="glass p-6 rounded-3xl border-white/5 space-y-6 animate-fade-in sticky top-20">
-                    
-                    {/* Header profile inspection */}
-                    <div className="flex items-start justify-between pb-4 border-b border-white/5 gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500/20 via-cyan-500/20 to-teal-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-300 font-black text-base shrink-0">
-                          👨‍💼
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-widest block">
-                            Staff Allotment Portfolio
-                          </span>
-                          <h3 className="text-base font-black text-white">{selectedStaff.name}</h3>
-                          <span className="text-xs text-slate-400 block">{selectedStaff.email}</span>
-                        </div>
-                      </div>
-
-                      <span className="px-3 py-1 rounded-xl bg-black text-xs font-bold text-white border border-white/5 shrink-0 capitalize">
-                        {selectedStaff.role === 'vicehod' ? 'Vice HOD' : selectedStaff.role === 'classteacher' ? 'Class Teacher' : selectedStaff.role === 'subjectteacher' ? 'Subject Teacher' : selectedStaff.role}
+                      <span className="text-[10px] text-slate-500 block text-center mt-2">
+                        Account defaults generated securely with starter password verification.
                       </span>
                     </div>
-
-                    {/* DYNAMIC COMPONENT: HODs Profile vs Teacher Profile Allotments */}
-                    {(selectedStaff.role === 'hod' || selectedStaff.role === 'vicehod') ? (
-                      
-                      // HOD ALLOTTED DEPARTMENT PREVIEW
-                      <div className="space-y-4 animate-fade-in">
-                        <div className="p-4 rounded-2xl bg-gradient-to-r from-fuchsia-950/20 to-indigo-950/20 border border-fuchsia-500/20 space-y-3">
-                          <span className="text-[10px] font-bold text-fuchsia-300 uppercase block tracking-wider font-mono">
-                            🏛️ Allotted Department Responsibility
-                          </span>
-
-                          {(() => {
-                            // Find specific assigned department object
-                            const mappedDept = departments.find(d => 
-                              d.hodId === selectedStaff.id || 
-                              d.viceHodId === selectedStaff.id || 
-                              d.name.toLowerCase() === selectedStaff.department?.toLowerCase()
-                            );
-
-                            if (!mappedDept) {
-                              return (
-                                <div className="text-xs text-slate-400">
-                                  Currently linked to base domain: <strong className="text-white">{selectedStaff.department || 'Computer Science'}</strong>
-                                </div>
-                              );
-                            }
-
-                            // Calculate subject statistics for their allotted department
-                            const deptSubjects = subjects.filter(s => s.department.toLowerCase() === mappedDept.name.toLowerCase());
-                            const avgDeptProgress = deptSubjects.length > 0 
-                              ? Math.round(deptSubjects.reduce((acc, curr) => acc + curr.syllabusCoveredPct, 0) / deptSubjects.length)
-                              : 75;
-
-                            return (
-                              <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <span className="text-lg font-black text-white block">{mappedDept.name}</span>
-                                    {mappedDept.code && (
-                                      <span className="text-xs font-bold text-slate-400">Code: {mappedDept.code}</span>
-                                    )}
-                                  </div>
-
-                                  <span className="px-2.5 py-1 rounded bg-fuchsia-500/10 text-fuchsia-300 text-[10px] font-bold border border-fuchsia-500/20">
-                                    {mappedDept.hodId === selectedStaff.id ? 'Primary HOD Account' : 'Vice HOD Delegate'}
-                                  </span>
-                                </div>
-
-                                {/* Summary progress block */}
-                                <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-2">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="text-slate-400">Department Syllabus Average</span>
-                                    <span className="font-bold text-fuchsia-300">{avgDeptProgress}%</span>
-                                  </div>
-                                  <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
-                                    <div 
-                                      className="bg-gradient-to-r from-fuchsia-400 to-indigo-500 h-full rounded-full" 
-                                      style={{ width: `${avgDeptProgress}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-[10px] text-slate-500 block">
-                                    Governing {deptSubjects.length} specific mapped subjects active across student clusters.
-                                  </span>
-                                </div>
-
-                                {/* Admin Switcher Quick Action */}
-                                <div className="pt-2 flex items-center justify-between text-xs text-slate-400 border-t border-white/5">
-                                  <span>Manage leadership inside the <strong>Departments</strong> tab directly.</span>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
-
-                        {/* Mapped HOD Capabilities list */}
-                        <div className="space-y-2 pt-2">
-                          <span className="text-xs font-bold text-slate-300 block">Assigned Administrative Privileges:</span>
-                          <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
-                            <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
-                              ✅ View live staff delivery logs
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
-                              ✅ Override lab grading buffers
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
-                              ✅ Manage faculty syllabus modules
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
-                              ✅ Dispatch real-time notices
-                            </div>
-                          </div>
-                        </div>
-
-                      </div>
-
-                    ) : (
-
-                      // TEACHER / CLASS TEACHER / SUBJECT TEACHER ALLOTMENTS
-                      <div className="space-y-5 animate-fade-in">
-                        
-                        {/* ALLOTTED CLASS SECTION CARD */}
-                        <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/20 to-teal-950/20 border border-cyan-500/20 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-cyan-400 uppercase block tracking-wider font-mono">
-                              🎓 Allotted Class Section Scope
-                            </span>
-                            <span className="text-[10px] text-slate-500 font-mono">Dynamic Binder</span>
-                          </div>
-
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
-                            <div>
-                              <span className="text-xs text-slate-400 block font-medium">Assigned Section:</span>
-                              <span className="text-base font-black text-white block mt-0.5">
-                                {selectedStaff.section ? `Section ${selectedStaff.section}` : 'No class section assigned'}
-                              </span>
-                            </div>
-
-                            {/* Live selector to instantly switch allotted class section */}
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
-                              <span className="text-[10px] text-slate-500 shrink-0 font-bold">Switch:</span>
-                              <select
-                                value={selectedStaff.section || ''}
-                                onChange={(e) => handleUpdateStaffSection(selectedStaff.id, e.target.value)}
-                                className="p-2 rounded-xl bg-black border border-white/10 text-xs text-cyan-300 font-bold focus:outline-none w-full sm:w-auto cursor-pointer"
-                              >
-                                <option value="">None</option>
-                                <option value="CS-A">Section CS-A</option>
-                                <option value="CS-B">Section CS-B</option>
-                              </select>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* ALLOTTED SUBJECTS MATRIX */}
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-300 block flex items-center gap-1.5">
-                              <BookOpen size={14} className="text-indigo-400" />
-                              <span>Allotted Subjects Taught</span>
-                            </span>
-
-                            {/* Quick Subject assignment dropdown */}
-                            <select
-                              value=""
-                              onChange={(e) => {
-                                const subId = e.target.value;
-                                if (subId) {
-                                  assignSubjectTeacher(subId, selectedStaff.id, selectedStaff.name);
-                                  setSubjects(getSubjects());
-                                }
-                              }}
-                              className="bg-black/80 text-[10px] text-cyan-300 font-bold border border-white/10 rounded-lg px-2 py-1 focus:outline-none cursor-pointer"
-                            >
-                              <option value="">➕ Assign Subject</option>
-                              {subjects.map(sub => (
-                                <option key={sub.id} value={sub.id}>
-                                  {sub.name} ({sub.code})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {(() => {
-                            // Find assigned subject items for this specific teacher
-                            const allottedSubs = subjects.filter(s => s.teacherId === selectedStaff.id);
-
-                            if (allottedSubs.length === 0) {
-                              return (
-                                <div className="p-6 text-center rounded-xl bg-black/30 border border-white/5 text-xs text-slate-500">
-                                  No specific subjects mapped to this teacher's portfolio yet. Select an option from the "Assign Subject" dropdown above to link one instantly.
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <div className="space-y-2.5">
-                                {allottedSubs.map(sub => (
-                                  <div key={sub.id} className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-2 hover:border-white/10 transition-all">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <div className="min-w-0">
-                                        <span className="text-xs font-bold text-white block truncate">{sub.name}</span>
-                                        <span className="text-[10px] text-slate-400 block font-mono">Code: {sub.code} • Dept: {sub.department}</span>
-                                      </div>
-
-                                      {/* Unlink trigger */}
-                                      <button
-                                        onClick={() => {
-                                          assignSubjectTeacher(sub.id, '', '');
-                                          setSubjects(getSubjects());
-                                        }}
-                                        title="Remove Subject"
-                                        className="text-slate-600 hover:text-red-400 text-xs px-1.5 py-0.5 rounded transition-colors"
-                                      >
-                                        Unassign
-                                      </button>
-                                    </div>
-
-                                    {/* Progress indicator */}
-                                    <div className="space-y-1">
-                                      <div className="flex items-center justify-between text-[10px]">
-                                        <span className="text-slate-500 font-medium">Syllabus Completion</span>
-                                        <span className="font-bold text-cyan-400">{sub.syllabusCoveredPct}%</span>
-                                      </div>
-                                      <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
-                                        <div 
-                                          className="bg-cyan-400 h-full rounded-full" 
-                                          style={{ width: `${sub.syllabusCoveredPct}%` }}
-                                        />
-                                      </div>
-                                      <span className="text-[9px] text-slate-600 block pt-0.5">
-                                        {sub.modules.filter(m => m.completed).length} of {sub.modules.length} teaching modules marked complete.
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            );
-                          })()}
-                        </div>
-
-                      </div>
-
-                    )}
-
-                  </div>
-                ) : (
-                  <div className="p-12 text-center rounded-3xl bg-black/20 border border-white/5 text-slate-500 text-xs">
-                    Select a staff or faculty member from the directory list on the left to inspect and manage their allocated class sections and primary departments.
-                  </div>
-                )}
-
-              </div>
+                  </form>
+                </div>
+              )}
 
             </div>
           )}
@@ -1541,28 +1572,155 @@ export default function AdminDashboard() {
           {/* TAB 4: ACADEMIC SUBJECTS & TEACHER ASSIGNMENT             */}
           {/* ========================================================= */}
           {activeTab === 'academics' && (
-            <div className="space-y-8 animate-fade-in">
+            <div className="space-y-6 animate-fade-in">
               
-              {/* Assign Class Teachers Container */}
-              <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
+              {/* Secondary Top Horizontal Sub-Menu */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setAcademicSubTab('subjects')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    academicSubTab === 'subjects' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Layers size={14} />
+                  <span>📚 Manage Subjects Taught</span>
+                </button>
+                <button
+                  onClick={() => setAcademicSubTab('class_teachers')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    academicSubTab === 'class_teachers' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <BookOpen size={14} />
+                  <span>👨‍🏫 Assign Class Teachers</span>
+                </button>
+              </div>
+
+              {/* Sub-Feature View 1: Manage Subjects */}
+              {academicSubTab === 'subjects' && (
+                <div className="glass p-8 rounded-3xl border-white/5 space-y-6 animate-fade-in">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-base font-bold text-white flex items-center gap-2">
+                        <Layers className="text-cyan-400" size={18} />
+                        <span>Manage Subject Master Ledgers</span>
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {selectedDeptFilter === 'all' 
+                          ? 'Showing subjects offered across all departments.' 
+                          : `Showing subjects in department: ${selectedDeptFilter}`}
+                      </p>
+                    </div>
+
+                    <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-300 font-medium shrink-0">
+                      Syllabus Overview
+                    </span>
+                  </div>
+
+                  {filteredSubjects.length === 0 ? (
+                    <div className="p-8 text-center text-xs text-slate-500 rounded-2xl bg-black/30 border border-white/5">
+                      No subjects found for the selected department.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {filteredSubjects.map((s) => {
+                        const selectableFaculty = users.filter(u => u.role === 'subjectteacher' || u.role === 'hod' || u.role === 'vicehod' || u.role === 'teacher');
+                        return (
+                          <div key={s.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 flex flex-col justify-between space-y-4">
+                            <div>
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <span className="text-xs font-bold text-white block">{s.name}</span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 text-cyan-400 shrink-0">
+                                  {s.code}
+                                </span>
+                              </div>
+                              <span className="text-xs text-slate-400 block mb-3">Department: {s.department}</span>
+
+                              {/* Syllabus Completed Slider */}
+                              <div className="space-y-1.5 mb-4">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-slate-400 font-medium">Syllabus Covered</span>
+                                  <span className="font-bold text-cyan-300">{s.syllabusCoveredPct}%</span>
+                                </div>
+                                <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full transition-all"
+                                    style={{ width: `${s.syllabusCoveredPct}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Sub Units list */}
+                              <div className="space-y-1 bg-black/30 p-2.5 rounded-xl border border-white/5">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                                  Modules / Units
+                               </span>
+                                {s.modules.map((m, idx) => (
+                                  <div key={idx} className="flex items-center gap-1.5 text-xs text-slate-300">
+                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.completed ? 'bg-cyan-400' : 'bg-white/10'}`} />
+                                    <span className={`truncate ${m.completed ? 'line-through text-slate-500' : ''}`}>{m.title}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Teacher Linker Control */}
+                            <div className="pt-3 border-t border-white/5 space-y-1.5">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase block">
+                                Assigned Teacher
+                              </label>
+                              <select
+                                value={s.teacherId || ''}
+                                onChange={(e) => {
+                                  const tId = e.target.value;
+                                  const selectedT = selectableFaculty.find(t => t.id === tId);
+                                  if (selectedT) {
+                                    assignSubjectTeacher(s.id, tId, selectedT.name);
+                                    setSubjects(getSubjects());
+                                  }
+                                }}
+                                className="w-full px-2.5 py-1.5 rounded-xl bg-black border border-white/10 text-xs text-slate-300 focus:outline-none focus:border-cyan-400 font-medium cursor-pointer"
+                              >
+                                <option value="">⚠️ Select Teacher</option>
+                                {selectableFaculty.map(t => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-Feature View 2: Assign Class Teachers Container */}
+              {academicSubTab === 'class_teachers' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in max-w-2xl mx-auto">
+                  <div className="border-b border-white/5 pb-3">
                     <h3 className="text-sm font-bold text-white flex items-center gap-2">
                       <Users size={16} className="text-cyan-400" />
-                      <span>Assign Class Teachers</span>
+                      <span>Assign Class Section Supervisors</span>
                     </h3>
-                    <p className="text-xs text-slate-400">
-                      Select which teacher manages each class section.
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Select which key faculty member assumes primary administrative charge of each student section.
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-4 items-center">
+                  <div className="space-y-3 pt-1">
                     {['CS-A', 'CS-B'].map(stream => {
                       const currentTeacher = users.find(u => (u.role === 'teacher' || u.role === 'classteacher') && u.section === stream);
                       const availableTeachers = users.filter(u => u.role === 'teacher' || u.role === 'classteacher' || u.role === 'subjectteacher');
                       return (
-                        <div key={stream} className="flex items-center gap-2 bg-black/40 px-3 py-2 rounded-xl border border-white/5">
-                          <span className="text-xs font-bold text-white">{stream}:</span>
+                        <div key={stream} className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5">
+                          <div>
+                            <span className="text-xs font-bold text-white block">Stream: {stream}</span>
+                            <span className="text-[10px] text-slate-500">Core section mapping parameter</span>
+                          </div>
+
                           <select
                             value={currentTeacher?.id || ''}
                             onChange={(e) => {
@@ -1572,7 +1730,7 @@ export default function AdminDashboard() {
                                 setUsers(getUsers());
                               }
                             }}
-                            className="bg-black text-xs text-cyan-300 font-bold border border-white/10 rounded-lg px-2 py-1 focus:outline-none cursor-pointer"
+                            className="bg-black text-xs text-cyan-300 font-bold border border-white/10 rounded-lg p-2 focus:outline-none cursor-pointer w-48"
                           >
                             <option value="">⚠️ Not Assigned</option>
                             {availableTeachers.map(ct => (
@@ -1586,106 +1744,8 @@ export default function AdminDashboard() {
                     })}
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Subject Management Details */}
-              <div className="glass p-8 rounded-3xl border-white/5 space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-base font-bold text-white flex items-center gap-2">
-                      <Layers className="text-cyan-400" size={18} />
-                      <span>Manage Subjects & Syllabus</span>
-                    </h2>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {selectedDeptFilter === 'all' 
-                        ? 'Showing subjects offered across all departments.' 
-                        : `Showing subjects in department: ${selectedDeptFilter}`}
-                    </p>
-                  </div>
-
-                  <span className="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-300 font-medium shrink-0">
-                    Syllabus Overview
-                  </span>
-                </div>
-
-                {filteredSubjects.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-500 rounded-2xl bg-black/30 border border-white/5">
-                    No subjects found for the selected department.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {filteredSubjects.map((s) => {
-                      const selectableFaculty = users.filter(u => u.role === 'subjectteacher' || u.role === 'hod' || u.role === 'vicehod' || u.role === 'teacher');
-                      return (
-                        <div key={s.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 flex flex-col justify-between space-y-4">
-                          <div>
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <span className="text-xs font-bold text-white block">{s.name}</span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 text-cyan-400 shrink-0">
-                                {s.code}
-                              </span>
-                            </div>
-                            <span className="text-xs text-slate-400 block mb-3">Department: {s.department}</span>
-
-                            {/* Syllabus Completed Slider */}
-                            <div className="space-y-1.5 mb-4">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-400 font-medium">Syllabus Covered</span>
-                                <span className="font-bold text-cyan-300">{s.syllabusCoveredPct}%</span>
-                              </div>
-                              <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full transition-all"
-                                  style={{ width: `${s.syllabusCoveredPct}%` }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Sub Units list */}
-                            <div className="space-y-1 bg-black/30 p-2.5 rounded-xl border border-white/5">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                                Modules / Units
-                              </span>
-                              {s.modules.map((m, idx) => (
-                                <div key={idx} className="flex items-center gap-1.5 text-xs text-slate-300">
-                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.completed ? 'bg-cyan-400' : 'bg-white/10'}`} />
-                                  <span className={`truncate ${m.completed ? 'line-through text-slate-500' : ''}`}>{m.title}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Teacher Linker Control */}
-                          <div className="pt-3 border-t border-white/5 space-y-1.5">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase block">
-                              Assigned Teacher
-                            </label>
-                            <select
-                              value={s.teacherId || ''}
-                              onChange={(e) => {
-                                const tId = e.target.value;
-                                const selectedT = selectableFaculty.find(t => t.id === tId);
-                                if (selectedT) {
-                                  assignSubjectTeacher(s.id, tId, selectedT.name);
-                                  setSubjects(getSubjects());
-                                }
-                              }}
-                              className="w-full px-2.5 py-1.5 rounded-xl bg-black border border-white/10 text-xs text-slate-300 focus:outline-none focus:border-cyan-400 font-medium cursor-pointer"
-                            >
-                              <option value="">⚠️ Select Teacher</option>
-                              {selectableFaculty.map(t => (
-                                <option key={t.id} value={t.id}>
-                                  {t.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
             </div>
           )}
 
