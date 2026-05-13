@@ -10,7 +10,12 @@ import {
   ShieldAlert, 
   Send, 
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  Building2,
+  BookOpen,
+  Sparkles,
+  TrendingUp,
+  FileCheck
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getUsers, getSubjects, getCurrentUser, setCurrentUser, UserRecord, SubjectRecord } from '@/lib/store';
@@ -22,13 +27,22 @@ export default function HodDashboard() {
   const [faculty, setFaculty] = useState<UserRecord[]>([]);
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
   
+  // Primary Navigation tabs (Left Menu)
+  const [activeTab, setActiveTab] = useState<'overview' | 'directives' | 'syllabus' | 'faculty'>('overview');
+  
+  // Secondary Sub-navigation tab states (Top Horizontal Bar)
+  const [overviewSubTab, setOverviewSubTab] = useState<'metrics' | 'guidelines'>('metrics');
+  const [directiveSubTab, setDirectiveSubTab] = useState<'send' | 'history'>('send');
+  const [syllabusSubTab, setSyllabusSubTab] = useState<'tracking' | 'summary'>('tracking');
+  const [facultySubTab, setFacultySubTab] = useState<'list' | 'load'>('list');
+
   // Directive Form state
   const [directiveTitle, setDirectiveTitle] = useState('');
   const [directiveBody, setDirectiveBody] = useState('');
   const [targetScope, setTargetScope] = useState('all');
   const [directives, setDirectives] = useState([
-    { id: 'd1', title: 'Mandatory AST Integration Checkpoint', scope: 'All Subject Faculty', date: '2026-05-12', active: true },
-    { id: 'd2', title: 'Mid-Term Core Grading Deadline Sanction', scope: 'Class Teachers', date: '2026-05-10', active: true }
+    { id: 'd1', title: 'Midterm Evaluation Preparation Checklist', scope: 'All Subject Faculty', date: '2026-05-12', active: true },
+    { id: 'd2', title: 'Final Review Guidelines for Lab Scoring', scope: 'Class Teachers', date: '2026-05-10', active: true }
   ]);
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -45,7 +59,7 @@ export default function HodDashboard() {
     
     // Filter faculty belonging to this department
     setFaculty(allUsers.filter(u => 
-      (u.role === 'subjectteacher' || u.role === 'classteacher') && 
+      (u.role === 'subjectteacher' || u.role === 'classteacher' || u.role === 'teacher') && 
       (!u.department || u.department.toLowerCase() === department.toLowerCase())
     ));
     
@@ -66,277 +80,527 @@ export default function HodDashboard() {
       { 
         id: String(Date.now()), 
         title: directiveTitle, 
-        scope: targetScope === 'all' ? 'All Faculty Nodes' : targetScope === 'ct' ? 'Class Teachers' : 'Subject Faculty', 
+        scope: targetScope === 'all' ? 'All Department Faculty' : targetScope === 'ct' ? 'Class Teachers' : 'Subject Teachers', 
         date: new Date().toISOString().split('T')[0], 
         active: true 
       },
       ...directives
     ]);
     
-    setSuccessMsg(`Directive successfully pushed to real-time notification pipelines for [${targetScope.toUpperCase()}].`);
+    setSuccessMsg(`Announcement sent successfully to [${targetScope === 'all' ? 'All Faculty' : targetScope.toUpperCase()}].`);
     setDirectiveTitle('');
     setDirectiveBody('');
     
+    // Switch to history to view newly pushed directive
+    setDirectiveSubTab('history');
+
     setTimeout(() => setSuccessMsg(''), 6000);
   };
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white selection:bg-fuchsia-500/30 pb-20 relative overflow-x-hidden">
-      {/* Deep Fuchsia/Purple Top Glow Overlay */}
-      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-fuchsia-950/25 via-purple-950/10 to-transparent pointer-events-none" />
+    <div className="min-h-screen bg-[#030712] text-white selection:bg-fuchsia-500/30 pb-20 relative overflow-x-hidden font-sans">
+      {/* Subtle Background Glow Overlay */}
+      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-fuchsia-950/25 via-purple-950/10 to-transparent pointer-events-none blur-3xl" />
 
       {/* Sticky Glassmorphic Header */}
-      <header className="border-b border-white/5 bg-white/[0.01] backdrop-blur-xl sticky top-0 z-50 px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-fuchsia-500 to-purple-500 flex items-center justify-center font-black text-black text-xs shadow-md shadow-fuchsia-500/20">
-            {currentUser?.role === 'vicehod' ? 'VHOD' : 'HOD'}
-          </div>
-          <div>
-            <span className="font-bold tracking-tight text-sm block">
-              {currentUser?.role === 'vicehod' ? 'Department Deputy Supervisory Suite' : 'Department Head Supervisory Suite'}
-            </span>
-            <span className="text-[10px] font-mono text-fuchsia-400 block">Scope Authority: {department}</span>
-          </div>
-        </div>
-
-        <button 
-          onClick={handleLogout}
-          className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-red-500/10 hover:text-red-400 border border-white/5 text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300"
-        >
-          <LogOut size={13} />
-          <span>Terminate Session</span>
-        </button>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 mt-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Column: Metrics & Directive Dispatcher */}
-        <div className="lg:col-span-5 space-y-6">
-          
-          {/* Department Analytics & AST Execution Health */}
-          <div className="glass p-6 rounded-3xl border-fuchsia-500/20 bg-gradient-to-b from-white/[0.02] to-transparent space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <Cpu size={14} className="text-fuchsia-400" />
-              <span>Department Telemetry & Compilation Pipeline</span>
-            </h3>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
-                <span className="text-[10px] text-slate-500 block font-mono">AST PASS RATE</span>
-                <span className="text-xl font-black text-emerald-400 font-mono">98.4%</span>
-              </div>
-              <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
-                <span className="text-[10px] text-slate-500 block font-mono">ACTIVE MODULES</span>
-                <span className="text-xl font-black text-fuchsia-400 font-mono">{subjects.length} Suites</span>
-              </div>
+      <header className="border-b border-white/5 bg-white/[0.01] backdrop-blur-xl sticky top-0 z-50 transition-all">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-fuchsia-400 to-purple-500 flex items-center justify-center font-black text-black text-xs shadow-md shadow-fuchsia-500/20">
+              {currentUser?.role === 'vicehod' ? 'VHOD' : 'HOD'}
             </div>
-
-            <div className="p-3 rounded-xl bg-fuchsia-500/5 border border-fuchsia-500/10 text-xs text-fuchsia-300 leading-relaxed font-medium">
-              📊 Core Micro-C AST Token Trees evaluate directly inside isolated sandbox RAM blocks without network delays.
-            </div>
-          </div>
-
-          {/* Broadcast Directive to Faculty */}
-          <div className="glass p-6 rounded-3xl border-white/5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-fuchsia-500/10 text-fuchsia-400 flex items-center justify-center">
-                <Send size={20} />
-              </div>
-              <div>
-                <h2 className="text-base font-bold">Dispatch Department Directive</h2>
-                <p className="text-xs text-slate-400">Push high-priority orders to faculty interfaces</p>
-              </div>
-            </div>
-
-            {successMsg && (
-              <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold leading-relaxed flex items-start gap-2">
-                <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
-                <span>{successMsg}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleBroadcastDirective} className="space-y-4">
-              <div>
-                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
-                  Directive Title Heading
-                </label>
-                <input 
-                  type="text"
-                  required
-                  value={directiveTitle}
-                  onChange={(e) => setDirectiveTitle(e.target.value)}
-                  placeholder="e.g. Midterm Lab Evaluation Checklist Audit"
-                  className="w-full px-3 py-2.5 rounded-xl bg-black/40 border border-white/10 focus:border-fuchsia-400 focus:outline-none text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
-                  Detailed Advisory Content
-                </label>
-                <textarea 
-                  rows={3}
-                  required
-                  value={directiveBody}
-                  onChange={(e) => setDirectiveBody(e.target.value)}
-                  placeholder="Specify syllabus milestones or AST pass constraints..."
-                  className="w-full p-3 rounded-xl bg-black/40 border border-white/10 focus:border-fuchsia-400 focus:outline-none text-xs resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
-                  Target Broadcast Cohort Scope
-                </label>
-                <select
-                  value={targetScope}
-                  onChange={(e) => setTargetScope(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-black border border-white/10 focus:border-fuchsia-400 focus:outline-none text-xs font-bold text-fuchsia-400"
-                >
-                  <option value="all">📢 Full Department Broadcast</option>
-                  <option value="st">👨‍🏫 Subject Teachers Only</option>
-                  <option value="ct">⭐ Class Teachers Only</option>
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full mt-2 py-3 rounded-xl bg-gradient-to-r from-fuchsia-500 to-purple-600 hover:opacity-90 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-fuchsia-500/10"
-              >
-                Broadcast Advisory Instantly
-              </button>
-            </form>
-          </div>
-
-          {/* Active Broadcasts History Widget */}
-          <div className="glass p-5 rounded-3xl border-white/5 space-y-3">
-            <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider block">
-              Active Institutional Directives
-            </span>
-            <div className="space-y-2">
-              {directives.map(d => (
-                <div key={d.id} className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-start justify-between gap-2">
-                  <div>
-                    <span className="text-xs font-bold text-white block">{d.title}</span>
-                    <span className="text-[9px] text-slate-500 font-mono mt-0.5 block">Scope: {d.scope}</span>
-                  </div>
-                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 shrink-0">
-                    {d.date}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-
-        {/* Right Column: Complete Syllabus Supervision & Faculty Mastery Lists */}
-        <div className="lg:col-span-7 space-y-6">
-          
-          {/* Detailed Module-by-Module Syllabus Trackers */}
-          <div className="glass p-6 rounded-3xl border-fuchsia-500/20 bg-gradient-to-tr from-fuchsia-950/10 via-transparent to-transparent space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-400">
-                  <Layers size={20} />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold">Granular Syllabus Completion Master</h2>
-                  <p className="text-xs text-slate-400">Supervise percentage outputs pushed directly by assigned faculty</p>
-                </div>
-              </div>
-
-              <span className="px-2.5 py-1 rounded-full bg-fuchsia-500/10 text-[10px] font-mono font-bold text-fuchsia-400 border border-fuchsia-500/20">
-                Live DB Sync
+            <div>
+              <span className="font-extrabold tracking-tight text-sm block bg-gradient-to-r from-white via-slate-100 to-fuchsia-200 bg-clip-text text-transparent">
+                {currentUser?.role === 'vicehod' ? 'Vice HOD Portal' : 'Head of Department Portal'}
+              </span>
+              <span className="text-[10px] text-fuchsia-400 block font-semibold">
+                Managing Department: {department}
               </span>
             </div>
+          </div>
 
-            <div className="space-y-5 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
-              {subjects.map(s => (
-                <div key={s.id} className="p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-fuchsia-500/30 transition-all space-y-3">
-                  <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-4">
+            <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 text-[10px] text-slate-400 border border-white/5 font-medium">
+              <Sparkles size={11} className="text-fuchsia-400" />
+              <span>Department Supervisor Access</span>
+            </span>
+
+            <button 
+              onClick={handleLogout}
+              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-red-500/10 hover:text-red-400 border border-white/5 text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300"
+            >
+              <LogOut size={13} />
+              <span>Log Out</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Container Layout with Left Sidebar */}
+      <main className="max-w-7xl mx-auto px-6 mt-8 flex flex-col lg:flex-row gap-8 relative z-10 items-start">
+        
+        {/* Left Navigation Sidebar */}
+        <div className="w-full lg:w-72 shrink-0 p-4 rounded-3xl border border-white/10 bg-[#080d1a]/90 backdrop-blur-2xl shadow-2xl space-y-6 sticky top-20">
+          <div className="px-2 pb-1 border-b border-white/5">
+            <span className="text-[10px] font-bold text-fuchsia-400 uppercase tracking-wider block">
+              Department Control
+            </span>
+            <span className="text-xs text-slate-400 block mt-0.5 font-medium">
+              Academic Oversight
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {/* Overview Button */}
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'overview' 
+                  ? 'bg-gradient-to-r from-fuchsia-500 to-purple-500 text-white shadow-lg shadow-fuchsia-500/20 scale-[1.02]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Building2 size={16} className="shrink-0" />
+              <span className="truncate">Department Overview</span>
+            </button>
+
+            {/* Directives Button */}
+            <button
+              onClick={() => setActiveTab('directives')}
+              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'directives' 
+                  ? 'bg-gradient-to-r from-fuchsia-500 to-purple-500 text-white shadow-lg shadow-fuchsia-500/20 scale-[1.02]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Send size={16} className="shrink-0" />
+              <span className="truncate">Announcements</span>
+            </button>
+
+            {/* Syllabus Tracking */}
+            <button
+              onClick={() => setActiveTab('syllabus')}
+              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'syllabus' 
+                  ? 'bg-gradient-to-r from-fuchsia-500 to-purple-500 text-white shadow-lg shadow-fuchsia-500/20 scale-[1.02]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Layers size={16} className="shrink-0" />
+              <span className="truncate">Syllabus Progress</span>
+            </button>
+
+            {/* Faculty List */}
+            <button
+              onClick={() => setActiveTab('faculty')}
+              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'faculty' 
+                  ? 'bg-gradient-to-r from-fuchsia-500 to-purple-500 text-white shadow-lg shadow-fuchsia-500/20 scale-[1.02]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Users size={16} className="shrink-0" />
+              <span className="truncate">Faculty Registry ({faculty.length})</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right Content Workspace */}
+        <div className="grow min-w-0 w-full space-y-6">
+
+          {/* ========================================================= */}
+          {/* TAB 1: DEPARTMENT OVERVIEW                                */}
+          {/* ========================================================= */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6 animate-fade-in">
+              
+              {/* Secondary Horizontal Menu */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setOverviewSubTab('metrics')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    overviewSubTab === 'metrics' ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <TrendingUp size={14} />
+                  <span>📊 Core Metrics</span>
+                </button>
+                <button
+                  onClick={() => setOverviewSubTab('guidelines')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    overviewSubTab === 'guidelines' ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <FileCheck size={14} />
+                  <span>📋 Operational Guidelines</span>
+                </button>
+              </div>
+
+              {overviewSubTab === 'metrics' && (
+                <div className="glass p-6 rounded-3xl border-fuchsia-500/20 bg-gradient-to-b from-white/[0.02] to-transparent space-y-4 animate-fade-in">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    <Cpu size={14} className="text-fuchsia-400" />
+                    <span>Department Performance Summary</span>
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                      <span className="text-xs text-slate-400 block font-medium">Lab Success Passing Rate</span>
+                      <span className="text-2xl font-black text-emerald-400 mt-1 block">98.4%</span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">Based on automated testing benchmarks</span>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                      <span className="text-xs text-slate-400 block font-medium">Active Subjects Offered</span>
+                      <span className="text-2xl font-black text-fuchsia-400 mt-1 block">{subjects.length} Courses</span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">Assigned across student streams</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-fuchsia-500/5 border border-fuchsia-500/10 text-xs text-fuchsia-300 leading-relaxed font-medium">
+                    📊 Live code checks execute securely inside virtual evaluation systems to track actual progress without configuration delays.
+                  </div>
+                </div>
+              )}
+
+              {overviewSubTab === 'guidelines' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in text-xs text-slate-300">
+                  <h3 className="text-sm font-bold text-white">📋 Institutional Operating Guidelines</h3>
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-xl bg-black/30 border border-white/5">
+                      <strong className="text-fuchsia-300 block mb-1">1. Weekly Progress Review</strong>
+                      Ensure all subject teachers submit completion records through their portals by every Friday afternoon.
+                    </div>
+                    <div className="p-3 rounded-xl bg-black/30 border border-white/5">
+                      <strong className="text-fuchsia-300 block mb-1">2. Class Teacher Supervision</strong>
+                      Class teachers retain primary scope authority to manage leave sanctions and mid-term student assessment records.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 2: ANNOUNCEMENTS DIRECTIVES                           */}
+          {/* ========================================================= */}
+          {activeTab === 'directives' && (
+            <div className="space-y-6 animate-fade-in">
+              
+              {/* Secondary Horizontal Menu */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setDirectiveSubTab('send')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    directiveSubTab === 'send' ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Send size={14} />
+                  <span>📢 Send Announcement</span>
+                </button>
+                <button
+                  onClick={() => setDirectiveSubTab('history')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    directiveSubTab === 'history' ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <FileText size={14} />
+                  <span>📜 Announcement History</span>
+                </button>
+              </div>
+
+              {directiveSubTab === 'send' && (
+                <div className="max-w-xl mx-auto glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in">
+                  <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                    <div className="w-10 h-10 rounded-xl bg-fuchsia-500/10 text-fuchsia-400 flex items-center justify-center shrink-0">
+                      <Send size={20} />
+                    </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-white">{s.name}</span>
-                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-400">
-                          {s.code}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-400 block mt-0.5 font-mono">
-                        Assigned Faculty: <strong className="text-fuchsia-300 font-sans">{s.teacherName || '⚠️ Unassigned'}</strong>
-                      </span>
+                      <h2 className="text-base font-bold text-white">Send Announcement to Faculty</h2>
+                      <p className="text-xs text-slate-400">Instantly share updates with instructors</p>
+                    </div>
+                  </div>
+
+                  {successMsg && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold leading-relaxed flex items-start gap-2 animate-fade-in">
+                      <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+                      <span>{successMsg}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleBroadcastDirective} className="space-y-4 pt-1">
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">
+                        Announcement Title
+                      </label>
+                      <input 
+                        type="text"
+                        required
+                        value={directiveTitle}
+                        onChange={(e) => setDirectiveTitle(e.target.value)}
+                        placeholder="e.g. Mandatory Lab Verification Timeline Update"
+                        className="w-full px-3 py-2.5 rounded-xl bg-black/60 border border-white/10 focus:border-fuchsia-400 focus:outline-none text-xs"
+                      />
                     </div>
 
-                    <span className="text-xs font-mono font-black text-fuchsia-400 bg-fuchsia-500/10 px-2 py-1 rounded border border-fuchsia-500/20">
-                      {s.syllabusCoveredPct}% Covered
-                    </span>
-                  </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">
+                        Message Content
+                      </label>
+                      <textarea 
+                        rows={3}
+                        required
+                        value={directiveBody}
+                        onChange={(e) => setDirectiveBody(e.target.value)}
+                        placeholder="Provide details regarding delivery tracking checks..."
+                        className="w-full p-3 rounded-xl bg-black/60 border border-white/10 focus:border-fuchsia-400 focus:outline-none text-xs resize-none"
+                      />
+                    </div>
 
-                  {/* Coverage Tracking Progress Bar */}
-                  <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
-                    <div 
-                      className="h-full bg-gradient-to-r from-fuchsia-400 to-purple-500 rounded-full transition-all duration-500"
-                      style={{ width: `${s.syllabusCoveredPct}%` }}
-                    />
-                  </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">
+                        Target Audience
+                      </label>
+                      <select
+                        value={targetScope}
+                        onChange={(e) => setTargetScope(e.target.value)}
+                        className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs font-bold text-fuchsia-400 focus:outline-none cursor-pointer"
+                      >
+                        <option value="all">📢 All Department Instructors</option>
+                        <option value="st">👨‍🏫 Subject Teachers Only</option>
+                        <option value="ct">⭐ Class Teachers Only</option>
+                      </select>
+                    </div>
 
-                  {/* Detailed Unit Checks */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-white/5">
-                    {s.modules.map((m, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 text-[10px]">
-                        <span className={`w-3 h-3 rounded flex items-center justify-center shrink-0 text-[8px] font-bold ${
-                          m.completed ? 'bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30' : 'bg-white/5 text-slate-600'
-                        }`}>
-                          {m.completed ? '✓' : ''}
-                        </span>
-                        <span className={`truncate ${m.completed ? 'text-slate-300 font-medium' : 'text-slate-500'}`}>
-                          {m.title}
+                    <button
+                      type="submit"
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-fuchsia-500 to-purple-500 hover:opacity-90 text-white font-extrabold text-xs uppercase tracking-wider transition-all shadow-md"
+                    >
+                      Publish Announcement
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {directiveSubTab === 'history' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in max-w-2xl mx-auto">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block border-b border-white/5 pb-2">
+                    Published Announcements History
+                  </span>
+                  <div className="space-y-3">
+                    {directives.map(d => (
+                      <div key={d.id} className="p-4 rounded-xl bg-black/40 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-bold text-white block">{d.title}</span>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">Audience Scope: {d.scope}</span>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20 shrink-0 w-fit">
+                          {d.date}
                         </span>
                       </div>
                     ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
 
-          {/* Department Faculty Directory Supervision Matrix */}
-          <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users size={16} className="text-slate-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Assigned Department Faculty Registry
-                </h3>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 3: SYLLABUS TRACKING                                  */}
+          {/* ========================================================= */}
+          {activeTab === 'syllabus' && (
+            <div className="space-y-6 animate-fade-in">
+              
+              {/* Secondary Horizontal Menu */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setSyllabusSubTab('tracking')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    syllabusSubTab === 'tracking' ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Layers size={14} />
+                  <span>📚 Course Completion Trackers</span>
+                </button>
+                <button
+                  onClick={() => setSyllabusSubTab('summary')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    syllabusSubTab === 'summary' ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <BookOpen size={14} />
+                  <span>📋 Overview Statement</span>
+                </button>
               </div>
 
-              <span className="text-[10px] font-mono text-slate-500">
-                Total Allocated: {faculty.length}
-              </span>
-            </div>
+              {syllabusSubTab === 'tracking' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-6 animate-fade-in">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+                    <div>
+                      <h2 className="text-base font-bold text-white">Supervise Course Progress</h2>
+                      <p className="text-xs text-slate-400 mt-0.5">Verify updates managed actively by designated instructors</p>
+                    </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {faculty.map(f => (
-                <div key={f.id} className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-white block">{f.name}</span>
-                    <span className="text-[10px] font-mono text-slate-500 block">{f.email}</span>
+                    <span className="px-3 py-1 rounded-full bg-fuchsia-500/10 text-xs text-fuchsia-300 font-bold border border-fuchsia-500/20">
+                      Active Syllabi: {subjects.length}
+                    </span>
                   </div>
-                  <span className={`text-[8px] font-mono font-black uppercase px-2 py-0.5 rounded border ${
-                    f.role === 'classteacher' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-                  }`}>
-                    {f.role === 'classteacher' ? 'Class Master' : 'Subject Faculty'}
-                  </span>
-                </div>
-              ))}
-            </div>
 
-            {faculty.length === 0 && (
-              <div className="p-4 rounded-xl bg-white/5 text-center text-xs text-slate-500">
-                No faculty members explicitly allocated to this specific department domain yet. Use the system provisioning hub to load records.
+                  {subjects.length === 0 ? (
+                    <div className="p-8 text-center text-xs text-slate-500 rounded-xl bg-black/30 border border-white/5">
+                      No matching subjects configured under this department yet.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {subjects.map(s => (
+                        <div key={s.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-fuchsia-500/30 transition-all space-y-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-white">{s.name}</span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 text-slate-400">
+                                  {s.code}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 block mt-1">
+                                Assigned Instructor: <strong className="text-fuchsia-300 font-sans">{s.teacherName || '⚠️ Not Linked'}</strong>
+                              </span>
+                            </div>
+
+                            <span className="text-xs font-bold text-fuchsia-400 bg-fuchsia-500/10 px-2.5 py-1 rounded-lg border border-fuchsia-500/20 shrink-0">
+                              {s.syllabusCoveredPct}% Covered
+                            </span>
+                          </div>
+
+                          {/* Coverage Bar */}
+                          <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
+                            <div 
+                              className="h-full bg-gradient-to-r from-fuchsia-400 to-purple-500 rounded-full transition-all duration-500"
+                              style={{ width: `${s.syllabusCoveredPct}%` }}
+                            />
+                          </div>
+
+                          {/* Unit checklist */}
+                          <div className="space-y-1.5 pt-2 border-t border-white/5 bg-black/30 p-2.5 rounded-xl">
+                            <span className="text-[9px] font-bold text-slate-500 uppercase block mb-1">
+                              Module Units
+                            </span>
+                            {s.modules.map((m, idx) => (
+                              <div key={idx} className="flex items-center gap-2 text-xs">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.completed ? 'bg-fuchsia-400' : 'bg-white/10'}`} />
+                                <span className={`truncate ${m.completed ? 'text-slate-400 line-through' : 'text-slate-300'}`}>
+                                  {m.title}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {syllabusSubTab === 'summary' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in max-w-xl mx-auto">
+                  <h3 className="text-sm font-bold text-white border-b border-white/5 pb-2">📋 Department Syllabus Summary</h3>
+                  <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-3 text-xs text-slate-300">
+                    <div className="flex justify-between py-1 border-b border-white/5">
+                      <span className="text-slate-400">Total Supervised Courses</span>
+                      <span className="font-bold text-white">{subjects.length} Courses</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-white/5">
+                      <span className="text-slate-400">Fully Completed Courses</span>
+                      <span className="font-bold text-emerald-400">
+                        {subjects.filter(s => s.syllabusCoveredPct === 100).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-400">Ongoing Course Modules</span>
+                      <span className="font-bold text-cyan-300">
+                        {subjects.filter(s => s.syllabusCoveredPct < 100).length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 4: FACULTY REGISTRY                                   */}
+          {/* ========================================================= */}
+          {activeTab === 'faculty' && (
+            <div className="space-y-6 animate-fade-in">
+              
+              {/* Secondary Horizontal Menu */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setFacultySubTab('list')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    facultySubTab === 'list' ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Users size={14} />
+                  <span>👥 Assigned Instructors</span>
+                </button>
+                <button
+                  onClick={() => setFacultySubTab('load')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    facultySubTab === 'load' ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Building2 size={14} />
+                  <span>🏢 Delegation Summary</span>
+                </button>
               </div>
-            )}
-          </div>
+
+              {facultySubTab === 'list' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in max-w-2xl mx-auto">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                      Assigned Department Faculty Registry
+                    </h3>
+                    <span className="text-xs font-bold text-fuchsia-400">
+                      Total Allocated: {faculty.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {faculty.map(f => (
+                      <div key={f.id} className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between gap-2 hover:bg-white/[0.02] transition-colors">
+                        <div>
+                          <span className="text-xs font-bold text-white block">{f.name}</span>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">{f.email}</span>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded capitalize shrink-0 ${
+                          f.role === 'classteacher' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
+                        }`}>
+                          {f.role === 'classteacher' ? 'Class Teacher' : f.role === 'subjectteacher' ? 'Subject Teacher' : f.role}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {faculty.length === 0 && (
+                    <div className="p-6 text-center text-xs text-slate-500 italic bg-black/30 rounded-xl">
+                      No faculty members explicitly allocated to this department yet. Manage records using the central Administration Portal.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {facultySubTab === 'load' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in max-w-xl mx-auto text-xs text-slate-400">
+                  <h3 className="text-sm font-bold text-white">🏢 Faculty Responsibilities Overview</h3>
+                  <p>Instructors configured inside this designated module space maintain real-time evaluation authority for student solution files. Mappings stay strictly persistent locally.</p>
+                </div>
+              )}
+
+            </div>
+          )}
 
         </div>
 

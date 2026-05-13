@@ -12,7 +12,10 @@ import {
   Cpu, 
   Calendar,
   Layers,
-  Receipt
+  Receipt,
+  Sparkles,
+  TrendingUp,
+  HelpCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -22,9 +25,17 @@ export default function StudentDashboard() {
   const router = useRouter();
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
+  
+  // Primary Navigation tabs (Left Menu)
+  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'syllabus'>('workspace');
+  
+  // Secondary Sub-navigation tab states (Top Horizontal Bar)
+  const [workspaceSubTab, setWorkspaceSubTab] = useState<'metrics' | 'ask'>('metrics');
+  const [syllabusSubTab, setSyllabusSubTab] = useState<'tracking' | 'receipt'>('tracking');
+
   const [doubtText, setDoubt] = useState('');
   const [doubtsLog, setLog] = useState([
-    { q: 'How does the Pratt Parser handle infix precedences?', ans: 'Prof. Vikram: Check ast.go map values for literal bounds.' },
+    { q: 'How does operator precedence function for mixed brackets?', ans: 'Prof. Vikram: Check module configuration values for expression priority.' },
   ]);
 
   useEffect(() => {
@@ -41,271 +52,399 @@ export default function StudentDashboard() {
   const handleAskDoubt = (e: React.FormEvent) => {
     e.preventDefault();
     if (!doubtText) return;
-    setLog([{ q: doubtText, ans: 'Pending Faculty resolution review...' }, ...doubtsLog]);
+    setLog([{ q: doubtText, ans: 'Pending instructor resolution queue...' }, ...doubtsLog]);
     setDoubt('');
+    // Auto switch sub tab view to observe question log
+    setWorkspaceSubTab('ask');
   };
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white selection:bg-cyan-500/30 pb-20">
-      {/* Glow overlay */}
-      <div className="absolute top-0 left-0 w-full h-[400px] bg-gradient-to-b from-cyan-950/20 via-transparent to-transparent pointer-events-none" />
+    <div className="min-h-screen bg-[#030712] text-white selection:bg-cyan-500/30 pb-20 relative overflow-x-hidden font-sans">
+      {/* Subtle Background Glow Overlay */}
+      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-cyan-950/20 via-transparent to-transparent pointer-events-none blur-3xl" />
 
-      {/* Header */}
-      <header className="border-b border-white/5 bg-white/[0.01] backdrop-blur-xl sticky top-0 z-50 px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500 flex items-center justify-center font-black text-black text-xs">
-            👨‍🎓 STU
-          </div>
-          <div>
-            <span className="font-bold tracking-tight text-sm block">Student Workspace Hub</span>
-            <span className="text-[10px] font-mono text-cyan-400 block">Active Node: {currentUser?.name || 'Aarav Nikam'}</span>
-          </div>
-        </div>
-
-        <button 
-          onClick={handleLogout}
-          className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-red-500/10 hover:text-red-400 border border-white/5 text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300"
-        >
-          <LogOut size={13} />
-          <span>Terminate Session</span>
-        </button>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 mt-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Column: Metrics & Active Laboratory Launchpad */}
-        <div className="lg:col-span-7 space-y-6">
-          
-          {/* Quick Stats banner */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="glass p-4 rounded-2xl border-white/5">
-              <span className="text-[10px] text-slate-400 block uppercase font-mono">Attendance</span>
-              <span className="text-2xl font-black text-emerald-400">92%</span>
-              <span className="text-[9px] text-slate-500 block mt-1">Section CT Logs</span>
+      {/* Header Container Bar */}
+      <header className="border-b border-white/5 bg-white/[0.01] backdrop-blur-xl sticky top-0 z-50 transition-all">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-400 to-indigo-500 flex items-center justify-center font-black text-black text-xs shadow-md shadow-cyan-500/20">
+              STU
             </div>
-            <div className="glass p-4 rounded-2xl border-white/5">
-              <span className="text-[10px] text-slate-400 block uppercase font-mono">Completed Labs</span>
-              <span className="text-2xl font-black text-cyan-400">14/15</span>
-              <span className="text-[9px] text-slate-500 block mt-1">Micro C Sandbox</span>
-            </div>
-            <div className="glass p-4 rounded-2xl border-white/5">
-              <span className="text-[10px] text-slate-400 block uppercase font-mono">GPA Estimate</span>
-              <span className="text-2xl font-black text-indigo-400">9.4</span>
-              <span className="text-[9px] text-slate-500 block mt-1">Tier-1 Rank</span>
-            </div>
-          </div>
-
-          {/* Code Execution Launchpad */}
-          <div className="glass p-8 rounded-3xl border-cyan-500/20 relative overflow-hidden">
-            <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
-            
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-[10px] font-mono font-bold uppercase tracking-wider block w-max mb-3">
-                  ⚡ Auto-Grading Engine Integration
-                </span>
-                <h2 className="text-2xl font-extrabold tracking-tight">Micro C IDE Sandbox</h2>
-                <p className="text-xs text-slate-400 mt-1 max-w-md leading-relaxed">
-                  Step directly into the Monaco editor framework. Write C arrays, loops, or standard algorithms to hit custom AST evaluator validation pipelines.
-                </p>
-              </div>
-
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0">
-                <Code2 size={24} />
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-xs text-slate-400 mb-6 space-y-1">
-              <div className="text-white font-bold">// Today's Assigned Suite:</div>
-              <div className="text-cyan-400">#104: Recursive Node Tree Allocation Bounds</div>
-            </div>
-
-            <Link
-              href="/problems"
-              className="w-full py-4 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-black text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-400/10"
-            >
-              <span>Launch IDE Testbed Interface</span>
-              <ArrowRight size={18} />
-            </Link>
-          </div>
-
-          {/* Active resources hub */}
-          <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <BookOpen size={14} className="text-cyan-400" />
-              <span>Syllabus & Lecture References</span>
-            </h3>
-
-            <div className="space-y-2">
-              <div className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
-                <div className="flex items-center gap-3">
-                  <BookOpen size={16} className="text-slate-500" />
-                  <span className="text-xs font-bold text-slate-200">Pratt_Parser_Theory_Guide.pdf</span>
-                </div>
-                <span className="text-[10px] font-mono text-cyan-400 hover:underline cursor-pointer">Download</span>
-              </div>
-              <div className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
-                <div className="flex items-center gap-3">
-                  <BookOpen size={16} className="text-slate-500" />
-                  <span className="text-xs font-bold text-slate-200">C_Memory_Allocation_Cheatsheet.md</span>
-                </div>
-                <span className="text-[10px] font-mono text-cyan-400 hover:underline cursor-pointer">Download</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Right Column: Faculty Chat Portal */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-300">
-                <MessageSquare size={16} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold">Faculty Doubt Channel</h3>
-                <p className="text-[10px] text-slate-400">Directly bypass queues to hit Subject Faculty</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleAskDoubt} className="space-y-3">
-              <textarea
-                required
-                rows={3}
-                value={doubtText}
-                onChange={(e) => setDoubt(e.target.value)}
-                placeholder="Ask about pointers, division errors, or memory buffer bounds..."
-                className="w-full p-3 rounded-xl bg-black/50 border border-white/10 focus:border-cyan-400 focus:outline-none text-xs leading-relaxed resize-none"
-              />
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all"
-              >
-                Submit Doubt Inquiry
-              </button>
-            </form>
-
-            <div className="pt-4 border-t border-white/5 space-y-3">
-              <span className="text-[10px] text-slate-500 font-mono block uppercase">Resolved Pipeline Log</span>
-              
-              <div className="space-y-2.5">
-                {doubtsLog.map((log, i) => (
-                  <div key={i} className="p-3 rounded-xl bg-black/30 border border-white/5 space-y-1">
-                    <span className="text-xs font-bold text-white block">Q: {log.q}</span>
-                    <span className="text-[11px] font-mono text-cyan-400 block bg-cyan-500/5 p-2 rounded border border-cyan-500/10">
-                      {log.ans}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Simple premium banner */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/20 to-transparent border border-cyan-500/10 text-xs text-slate-400 leading-relaxed">
-            🎓 Students authenticate against their section roll numbers to automatically feed results to class teacher ledgers.
-          </div>
-        </div>
-
-        {/* Full-width bottom space: Synchronized Live Tracked Syllabus Progression & Automated Clearance Receipt */}
-        <div className="lg:col-span-12 space-y-8">
-          
-          {/* Active Syllabus Modules Stream */}
-          <div className="glass p-8 rounded-3xl border-cyan-500/20 bg-gradient-to-r from-cyan-950/10 via-transparent to-indigo-950/10 space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-extrabold tracking-tight flex items-center gap-2">
-                  <Layers className="text-cyan-400" size={20} />
-                  <span>Real-Time Tracked Course Syllabus Progressions</span>
-                </h2>
-                <p className="text-xs text-slate-400 mt-1">
-                  Continuously synchronized state directly mapped from faculty curriculum update streams.
-                </p>
-              </div>
-
-              <span className="px-3 py-1 rounded-full bg-cyan-500/10 text-[10px] font-mono font-bold text-cyan-400 border border-cyan-500/20">
-                Active Enrolled Curriculums: {subjects.length}
+            <div>
+              <span className="font-extrabold tracking-tight text-sm block bg-gradient-to-r from-white via-slate-100 to-cyan-200 bg-clip-text text-transparent">
+                Student Portal
+              </span>
+              <span className="text-[10px] text-cyan-400 block font-semibold">
+                Logged in as: {currentUser?.name || 'Aarav Nikam'}
               </span>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {subjects.map(s => (
-                <div key={s.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-cyan-500/30 transition-all flex flex-col justify-between space-y-4">
-                  <div>
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="text-xs font-black text-white block">{s.name}</span>
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/5 text-cyan-400 shrink-0">
-                        {s.code}
-                      </span>
-                    </div>
-
-                    <span className="text-[10px] text-slate-400 block mb-3 font-mono">
-                      Faculty Delivery: <strong className="text-cyan-300 font-sans">{s.teacherName || 'Allocated Pool'}</strong>
-                    </span>
-
-                    {/* Progress slider feedback */}
-                    <div className="space-y-1.5 mb-4">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-400 font-medium">Curriculum Delivered</span>
-                        <span className="font-mono font-black text-cyan-300">{s.syllabusCoveredPct}%</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
-                        <div 
-                          className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full transition-all duration-500"
-                          style={{ width: `${s.syllabusCoveredPct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Sub-item state lists */}
-                    <div className="space-y-1.5 bg-black/30 p-2.5 rounded-xl border border-white/5">
-                      <span className="text-[9px] font-mono font-bold text-slate-500 uppercase block mb-1">
-                        Curriculum Delivery Sub-Units
-                      </span>
-                      {s.modules.map((m, idx) => (
-                        <div key={idx} className="flex items-center gap-1.5 text-[10px] text-slate-300">
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.completed ? 'bg-cyan-400 shadow-sm shadow-cyan-400/50' : 'bg-white/10'}`} />
-                          <span className={`truncate ${m.completed ? 'line-through text-slate-500' : ''}`}>{m.title}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-white/5 text-[9px] font-mono text-slate-500 text-right">
-                    Last refresh trace: {s.lastUpdated || 'Instant DB Load'}
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* Printable Automated Clearance & Dues Statement Component */}
-          <div className="glass p-6 rounded-3xl border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gradient-to-r from-white/[0.02] via-transparent to-white/[0.01]">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
-                <Receipt size={20} />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                  Fiscal Dues & Dynamic Clearance Receipt Parser
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Generate authenticated institutional PDF copies verifying clear academic tracks.
-                </p>
-              </div>
-            </div>
+          <div className="flex items-center gap-4">
+            <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 text-[10px] text-slate-400 border border-white/5 font-medium">
+              <Sparkles size={11} className="text-cyan-400" />
+              <span>Academic Account Access</span>
+            </span>
 
-            <button
-              onClick={() => {
-                window.print();
-              }}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 text-black font-black text-xs uppercase tracking-wider transition-all shrink-0 flex items-center gap-2"
+            <button 
+              onClick={handleLogout}
+              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-red-500/10 hover:text-red-400 border border-white/5 text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300"
             >
-              <span>Trigger PDF Direct Receipt</span>
-              <ArrowRight size={13} />
+              <LogOut size={13} />
+              <span>Log Out</span>
             </button>
           </div>
+        </div>
+      </header>
+
+      {/* Main Framework Container layout */}
+      <main className="max-w-7xl mx-auto px-6 mt-8 flex flex-col lg:flex-row gap-8 relative z-10 items-start">
+        
+        {/* Left Vertical Menu Switcher Sidebar */}
+        <div className="w-full lg:w-72 shrink-0 p-4 rounded-3xl border border-white/10 bg-[#080d1a]/90 backdrop-blur-2xl shadow-2xl space-y-6 sticky top-20">
+          <div className="px-2 pb-1 border-b border-white/5">
+            <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
+              Student Space
+            </span>
+            <span className="text-xs text-slate-400 block mt-0.5 font-medium">
+              Study Resource Area
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {/* Workspace Overview */}
+            <button
+              onClick={() => setActiveTab('workspace')}
+              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'workspace' 
+                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <TrendingUp size={16} className="shrink-0" />
+              <span className="truncate">Student Workspace</span>
+            </button>
+
+            {/* IDE Launchpad */}
+            <button
+              onClick={() => setActiveTab('ide')}
+              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'ide' 
+                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Code2 size={16} className="shrink-0" />
+              <span className="truncate">Coding Sandbox IDE</span>
+            </button>
+
+            {/* Syllabus Overview */}
+            <button
+              onClick={() => setActiveTab('syllabus')}
+              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'syllabus' 
+                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Layers size={16} className="shrink-0" />
+              <span className="truncate">Syllabus Status</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right Content Panels */}
+        <div className="grow min-w-0 w-full space-y-6">
+
+          {/* ========================================================= */}
+          {/* TAB 1: STUDENT WORKSPACE                                  */}
+          {/* ========================================================= */}
+          {activeTab === 'workspace' && (
+            <div className="space-y-6 animate-fade-in">
+              
+              {/* Secondary Horizontal Menu Bar */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setWorkspaceSubTab('metrics')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    workspaceSubTab === 'metrics' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <TrendingUp size={14} />
+                  <span>📈 Quick Metrics</span>
+                </button>
+                <button
+                  onClick={() => setWorkspaceSubTab('ask')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    workspaceSubTab === 'ask' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <HelpCircle size={14} />
+                  <span>💬 Ask Questions to Faculty</span>
+                </button>
+              </div>
+
+              {workspaceSubTab === 'metrics' && (
+                <div className="space-y-6 animate-fade-in">
+                  {/* Quick Stat Blocks */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="glass p-5 rounded-3xl border-white/5">
+                      <span className="text-xs text-slate-400 block font-medium">Attendance Rate</span>
+                      <span className="text-3xl font-black text-emerald-400 mt-1 block">92%</span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">Verified standing</span>
+                    </div>
+                    <div className="glass p-5 rounded-3xl border-white/5">
+                      <span className="text-xs text-slate-400 block font-medium">Completed Lab Work</span>
+                      <span className="text-3xl font-black text-cyan-400 mt-1 block">14/15</span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">Code execution passes</span>
+                    </div>
+                    <div className="glass p-5 rounded-3xl border-white/5">
+                      <span className="text-xs text-slate-400 block font-medium">Estimated Average</span>
+                      <span className="text-3xl font-black text-indigo-400 mt-1 block">9.4 GPA</span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">Excellent Rank</span>
+                    </div>
+                  </div>
+
+                  {/* Syllabus downloads references */}
+                  <div className="glass p-6 rounded-3xl border-white/5 space-y-4 max-w-xl">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                      <BookOpen size={14} className="text-cyan-400" />
+                      <span>Syllabus & Lecture Handouts</span>
+                    </h3>
+
+                    <div className="space-y-2.5">
+                      <div className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
+                        <div className="flex items-center gap-3">
+                          <BookOpen size={16} className="text-slate-500" />
+                          <span className="text-xs font-bold text-white">Programming_Logic_Guide.pdf</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-cyan-400 hover:underline cursor-pointer">Download</span>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
+                        <div className="flex items-center gap-3">
+                          <BookOpen size={16} className="text-slate-500" />
+                          <span className="text-xs font-bold text-white">Algorithms_And_Arrays_Review.md</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-cyan-400 hover:underline cursor-pointer">Download</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {workspaceSubTab === 'ask' && (
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 animate-fade-in">
+                  {/* Left Form widget */}
+                  <div className="md:col-span-5 space-y-4">
+                    <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <MessageSquare size={14} className="text-cyan-400" />
+                        <span>Submit Question Inquiry</span>
+                      </h3>
+
+                      <form onSubmit={handleAskDoubt} className="space-y-3 pt-1">
+                        <div>
+                          <textarea
+                            required
+                            rows={3}
+                            value={doubtText}
+                            onChange={(e) => setDoubt(e.target.value)}
+                            placeholder="Ask instructors about coding tasks, logic errors, or syllabus expectations..."
+                            className="w-full p-3 rounded-xl bg-black border border-white/10 focus:border-cyan-400 focus:outline-none text-xs leading-relaxed resize-none text-white"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-500 hover:opacity-90 text-black font-extrabold text-xs uppercase tracking-wider transition-all block mt-2"
+                        >
+                          Submit Question directly
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+
+                  {/* Logged responses history */}
+                  <div className="md:col-span-7 space-y-4">
+                    <div className="glass p-6 rounded-3xl border-white/5 space-y-3">
+                      <span className="text-xs font-bold text-slate-300 uppercase block tracking-wider border-b border-white/5 pb-2">
+                        Resolved Questions Pipeline
+                      </span>
+                      <div className="space-y-2.5">
+                        {doubtsLog.map((log, i) => (
+                          <div key={i} className="p-3 rounded-2xl bg-black/40 border border-white/5 space-y-1.5">
+                            <span className="text-xs font-bold text-white block">Q: {log.q}</span>
+                            <span className="text-[11px] text-cyan-300 block bg-cyan-500/5 p-2.5 rounded-xl border border-cyan-500/10">
+                              {log.ans}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 2: CODING SANDBOX IDE                                 */}
+          {/* ========================================================= */}
+          {activeTab === 'ide' && (
+            <div className="glass p-8 rounded-3xl border-cyan-500/20 relative overflow-hidden animate-fade-in max-w-3xl mx-auto space-y-6">
+              <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
+              
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-300 text-[10px] font-bold uppercase tracking-wider block w-max mb-3 border border-cyan-500/20">
+                    ⚡ Integrated Coding Lab
+                  </span>
+                  <h2 className="text-xl font-black text-white">Interactive Coding Lab Workspace</h2>
+                  <p className="text-xs text-slate-400 mt-1 max-w-md leading-relaxed">
+                    Write answers using standard programming constructs. The built-in testing system evaluates your logic instantly for fast review.
+                  </p>
+                </div>
+
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-500/20">
+                  <Code2 size={24} />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-xs text-slate-400 space-y-1">
+                <div className="text-white font-bold">// Active Lab Assignment:</div>
+                <div className="text-cyan-300">Assignment #104: Iterative Searching Logic</div>
+              </div>
+
+              <Link
+                href="/problems"
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-500 hover:opacity-90 text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md block text-center"
+              >
+                <span>Launch Interactive Coding IDE</span>
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 3: SYLLABUS OVERVIEW                                  */}
+          {/* ========================================================= */}
+          {activeTab === 'syllabus' && (
+            <div className="space-y-6 animate-fade-in">
+              
+              {/* Secondary Horizontal Menu Switcher */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setSyllabusSubTab('tracking')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    syllabusSubTab === 'tracking' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Layers size={14} />
+                  <span>📖 Active Courses Mapped</span>
+                </button>
+                <button
+                  onClick={() => setSyllabusSubTab('receipt')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    syllabusSubTab === 'receipt' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Receipt size={14} />
+                  <span>📜 Download Fee Clearance</span>
+                </button>
+              </div>
+
+              {syllabusSubTab === 'tracking' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-6 animate-fade-in">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+                    <div>
+                      <h2 className="text-base font-bold text-white">Enrolled Syllabus Courses Progress</h2>
+                      <p className="text-xs text-slate-400 mt-0.5">Real-time status synced continuously with teacher delivery schedules</p>
+                    </div>
+
+                    <span className="px-3 py-1 rounded-full bg-cyan-500/10 text-xs text-cyan-300 font-bold border border-cyan-500/20">
+                      Enrolled Count: {subjects.length} Courses
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {subjects.map(s => (
+                      <div key={s.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-cyan-500/30 transition-all flex flex-col justify-between space-y-4">
+                        <div>
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <span className="text-xs font-black text-white block">{s.name}</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 text-cyan-300 shrink-0">
+                              {s.code}
+                            </span>
+                          </div>
+
+                          <span className="text-[10px] text-slate-400 block mb-3">
+                            Instructor Authority: <strong className="text-cyan-300 font-sans">{s.teacherName || 'Allocated Staff'}</strong>
+                          </span>
+
+                          {/* Progress Coverage Indicator */}
+                          <div className="space-y-1.5 mb-4">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-slate-400 font-medium">Syllabus Delivered</span>
+                              <span className="font-bold text-cyan-300">{s.syllabusCoveredPct}%</span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
+                              <div 
+                                className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full transition-all duration-500"
+                                style={{ width: `${s.syllabusCoveredPct}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Module subunit breakdown */}
+                          <div className="space-y-1.5 bg-black/30 p-2.5 rounded-xl border border-white/5">
+                            <span className="text-[9px] font-bold text-slate-500 uppercase block mb-1">
+                              Delivered Sub-Units
+                            </span>
+                            {s.modules.map((m, idx) => (
+                              <div key={idx} className="flex items-center gap-2 text-xs">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.completed ? 'bg-cyan-400' : 'bg-white/10'}`} />
+                                <span className={`truncate ${m.completed ? 'text-slate-400 line-through' : 'text-slate-300'}`}>{m.title}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {syllabusSubTab === 'receipt' && (
+                <div className="glass p-6 rounded-3xl border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 max-w-xl mx-auto animate-fade-in bg-gradient-to-r from-white/[0.02] via-transparent to-white/[0.01]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+                      <Receipt size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                        Download Institutional Fee Statement
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Generate official documents verifying status for local submission.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      window.print();
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 text-black font-extrabold text-xs uppercase tracking-wider transition-all shrink-0 flex items-center gap-2"
+                  >
+                    <span>Print Receipt</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+              )}
+
+            </div>
+          )}
 
         </div>
 
