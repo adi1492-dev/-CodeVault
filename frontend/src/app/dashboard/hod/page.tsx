@@ -74,18 +74,21 @@ export default function HodDashboard() {
     const allUsers = getUsers();
     const allSubs = getSubjects();
     
-    // Filter faculty belonging to this department AND active year scope (or multi-year array)
-    setFaculty(allUsers.filter(u => 
-      (u.role === 'subjectteacher' || u.role === 'classteacher' || u.role === 'teacher') && 
-      (!u.department || u.department.toLowerCase() === department.toLowerCase()) &&
-      (!u.academicYear || u.academicYear === currentYearScope || u.academicYears?.includes(currentYearScope))
-    ));
-    
     // Filter subjects mapped to this department AND year scope
-    setSubjects(allSubs.filter(s => 
+    const deptYearSubjects = allSubs.filter(s => 
       s.department.toLowerCase() === department.toLowerCase() &&
       (!s.academicYear || s.academicYear === currentYearScope)
-    ));
+    );
+    setSubjects(deptYearSubjects);
+
+    // Filter faculty belonging to this department/year OR actively teaching any subject in this department/year tier
+    const activeTeacherIds = new Set(deptYearSubjects.map(s => s.teacherId).filter(Boolean));
+    setFaculty(allUsers.filter(u => {
+      if (u.role !== 'subjectteacher' && u.role !== 'classteacher' && u.role !== 'teacher') return false;
+      const matchesDept = !u.department || u.department.toLowerCase() === department.toLowerCase();
+      const matchesYear = !u.academicYear || u.academicYear === currentYearScope || u.academicYears?.includes(currentYearScope);
+      return (matchesDept && matchesYear) || activeTeacherIds.has(u.id);
+    }));
   }, [department]);
 
   const handleLogout = () => {
@@ -628,20 +631,59 @@ export default function HodDashboard() {
                     </span>
                   </div>
 
-                  <div className="space-y-3">
-                    {faculty.map(f => (
-                      <div key={f.id} className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between gap-2 hover:bg-white/[0.02] transition-colors">
-                        <div>
-                          <span className="text-xs font-bold text-white block">{f.name}</span>
-                          <span className="text-[10px] text-slate-400 block mt-0.5">{f.email}</span>
+                  <div className="space-y-4">
+                    {faculty.map(f => {
+                      // Filter subjects taught by this teacher strictly within the HOD's loaded year scope tier
+                      const teacherSubjects = subjects.filter(s => s.teacherId === f.id);
+                      return (
+                        <div key={f.id} className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-3 hover:border-white/10 transition-colors">
+                          <div className="flex items-start justify-between gap-2 border-b border-white/5 pb-2.5">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-white block">{f.name}</span>
+                                {f.academicYears && f.academicYears.length > 1 && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20">
+                                    Cross-Year Faculty
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">{f.email}</span>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded capitalize shrink-0 ${
+                              f.role === 'classteacher' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
+                            }`}>
+                              {f.role === 'classteacher' ? 'Class Teacher' : f.role === 'subjectteacher' ? 'Subject Teacher' : f.role}
+                            </span>
+                          </div>
+
+                          {/* Isolated Teaching Data Section */}
+                          <div className="space-y-1.5 pt-0.5">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                              Active Teaching Data ({assignedYearScope} Tier Only)
+                            </span>
+                            {teacherSubjects.length === 0 ? (
+                              <span className="text-[10px] text-slate-500 italic block">
+                                No specific courses allotted to this instructor under the {assignedYearScope} ledger.
+                              </span>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                {teacherSubjects.map(sub => (
+                                  <div key={sub.id} className="p-2 rounded-xl bg-black/50 border border-white/5 space-y-1">
+                                    <div className="flex items-center justify-between text-[10px]">
+                                      <span className="font-bold text-slate-200 truncate">{sub.name}</span>
+                                      <span className="text-fuchsia-400 font-mono font-bold shrink-0">{sub.syllabusCoveredPct}%</span>
+                                    </div>
+                                    <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                      <div className="h-full bg-fuchsia-400 rounded-full" style={{ width: `${sub.syllabusCoveredPct}%` }} />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded capitalize shrink-0 ${
-                          f.role === 'classteacher' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' : 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
-                        }`}>
-                          {f.role === 'classteacher' ? 'Class Teacher' : f.role === 'subjectteacher' ? 'Subject Teacher' : f.role}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {faculty.length === 0 && (

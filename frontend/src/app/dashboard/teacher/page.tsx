@@ -171,7 +171,12 @@ export default function UnifiedTeacherDashboard() {
     setClassSubTab('announcements');
   };
 
-  const mySubjects = subjects.filter(s => s.teacherId === currentUser?.id || s.teacherName?.includes('Vikram') || s.department === department);
+  const mySubjects = subjects.filter(s => {
+    if (currentUser?.id) {
+      return s.teacherId === currentUser.id;
+    }
+    return s.teacherName?.toLowerCase().includes('vikram') || s.department === department;
+  });
   const activeDisplaySubs = mySubjects.length > 0 ? mySubjects : subjects;
 
   return (
@@ -315,7 +320,9 @@ export default function UnifiedTeacherDashboard() {
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <span className="text-xs font-black text-white block">{sub.name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">Streams: {sub.sections.join(', ')}</span>
+                            <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">
+                              Streams: {sub.sections.join(', ')} • Tier: <strong className="text-indigo-300 font-sans">{sub.academicYear || '1st Year'}</strong>
+                            </span>
                           </div>
                           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/5 text-indigo-400 shrink-0">
                             {sub.code}

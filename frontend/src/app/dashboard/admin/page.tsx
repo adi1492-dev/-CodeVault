@@ -1487,7 +1487,9 @@ export default function AdminDashboard() {
                                         <div className="flex items-center justify-between gap-2">
                                           <div className="min-w-0">
                                             <span className="text-xs font-bold text-white block truncate">{sub.name}</span>
-                                            <span className="text-[10px] text-slate-400 block font-mono">Code: {sub.code} • Dept: {sub.department}</span>
+                                            <span className="text-[10px] text-slate-400 block font-mono">
+                                              Code: {sub.code} • Dept: {sub.department} • Tier: <strong className="text-cyan-300 font-sans">{sub.academicYear || '1st Year'}</strong>
+                                            </span>
                                           </div>
 
                                           <button
