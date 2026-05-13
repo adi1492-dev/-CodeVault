@@ -99,6 +99,8 @@ export default function Home() {
 
     let searchEmail = role;
     if (pass === 'admin123') searchEmail = 'admin@campuscore.edu';
+    if (pass === 'section123') searchEmail = 'section@campuscore.edu';
+    if (pass === 'warden123') searchEmail = 'warden@campuscore.edu';
     if (pass === 'hod123') searchEmail = 'hod@campuscore.edu';
     if (pass === 'teacher123') searchEmail = 'teacher@campuscore.edu';
     if (pass === 'classteacher123') searchEmail = 'ct@campuscore.edu';
@@ -112,7 +114,11 @@ export default function Home() {
     if (!finalUser) {
       const cleanPass = pass.toLowerCase().trim();
       const cleanUser = role.toLowerCase().trim();
-      if (cleanPass.includes('admin') || cleanUser.includes('admin')) {
+      if (cleanPass.includes('section') || cleanUser.includes('section')) {
+        finalUser = { id: 'sec-admin', name: 'Mr. Satish K. (Students Section)', email: 'section@campuscore.edu', role: 'studentsection' };
+      } else if (cleanPass.includes('warden') || cleanUser.includes('warden')) {
+        finalUser = { id: 'warden-1', name: 'Capt. R. K. Dogra (Hostel Warden)', email: 'warden@campuscore.edu', role: 'warden' };
+      } else if (cleanPass.includes('admin') || cleanUser.includes('admin')) {
         finalUser = { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin' };
       } else if (cleanPass.includes('hod') || cleanUser.includes('hod')) {
         finalUser = { id: 'hod1', name: 'Prof. Meenakshi S.', email: 'hod@campuscore.edu', role: 'hod', department: 'Computer Science' };
@@ -130,6 +136,8 @@ export default function Home() {
       setLoading(false);
       switch (finalUser.role) {
         case 'admin': window.location.href = '/dashboard/admin'; break;
+        case 'studentsection': window.location.href = '/dashboard/studentsection'; break;
+        case 'warden': window.location.href = '/dashboard/warden'; break;
         case 'hod':
         case 'vicehod': window.location.href = '/dashboard/hod'; break;
         case 'teacher':
@@ -218,7 +226,7 @@ export default function Home() {
           {/* Quick Metrics */}
           <div className="grid grid-cols-3 gap-6 pt-12 mt-12 border-t border-white/5 max-w-lg mx-auto lg:mx-0">
             <div>
-              <div className="text-3xl font-black text-white">5</div>
+              <div className="text-3xl font-black text-white">7</div>
               <div className="text-xs text-slate-500 font-medium mt-1">Distinct Profiles</div>
             </div>
             <div>

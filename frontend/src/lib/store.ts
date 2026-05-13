@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'hod' | 'vicehod' | 'classteacher' | 'subjectteacher' | 'teacher' | 'student' | 'parent';
+export type UserRole = 'admin' | 'hod' | 'vicehod' | 'classteacher' | 'subjectteacher' | 'teacher' | 'student' | 'parent' | 'studentsection' | 'warden';
 
 
 export interface UserRecord {
@@ -22,6 +22,8 @@ export interface UserRecord {
 
 const INITIAL_USERS: UserRecord[] = [
   { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin', password: 'admin123' },
+  { id: 'sec-admin', name: 'Mr. Satish K. (Students Section)', email: 'section@campuscore.edu', role: 'studentsection', password: 'section123' },
+  { id: 'warden-1', name: 'Capt. R. K. Dogra (Hostel Warden)', email: 'warden@campuscore.edu', role: 'warden', password: 'warden123' },
   { id: 'hod1', name: 'Prof. Meenakshi S.', email: 'hod@campuscore.edu', role: 'hod', department: 'Computer Science', academicYear: '1st Year', password: 'hod123' },
   { id: 'teacher1', name: 'Dr. Vikram Anjali (Unified Faculty)', email: 'teacher@campuscore.edu', role: 'teacher', department: 'Computer Science', section: 'CS-A', academicYear: '1st Year', academicYears: ['1st Year', '2nd Year'], password: 'teacher123', assignedSubjects: ['CS301', 'CS402', 'CS305'] },
   { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A', academicYear: '1st Year', password: 'classteacher123', assignedSubjects: ['CS305'] },
@@ -82,6 +84,8 @@ export function authenticateUser(emailOrRole: string, pass: string): UserRecord 
     subjectteacher: 'subjectteacher123',
     student: 'student123',
     parent: 'parent123',
+    studentsection: 'section123',
+    warden: 'warden123',
   };
 
   // Direct email matching allowing their custom password, their original stored password, or the helper shortcut password
@@ -101,7 +105,9 @@ export function authenticateUser(emailOrRole: string, pass: string): UserRecord 
     'classteacher': 'classteacher',
     'subjectteacher': 'subjectteacher',
     'student': 'student',
-    'parent': 'parent'
+    'parent': 'parent',
+    'studentsection': 'studentsection',
+    'warden': 'warden'
   };
 
   if (roleMap[cleanStr]) {
