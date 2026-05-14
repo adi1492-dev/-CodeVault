@@ -13,7 +13,9 @@ import {
   DoorOpen,
   Send,
   AlertTriangle,
-  FileText
+  FileText,
+  Wrench,
+  Coffee
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getUsers, getCurrentUser, setCurrentUser, UserRecord } from '@/lib/store';
@@ -24,7 +26,7 @@ export default function WardenDashboard() {
   const [students, setStudents] = useState<UserRecord[]>([]);
   
   // Left Navigation Menu
-  const [activeTab, setActiveTab] = useState<'rooms' | 'passes' | 'visitors' | 'directives'>('rooms');
+  const [activeTab, setActiveTab] = useState<'rooms' | 'passes' | 'visitors' | 'directives' | 'mess' | 'maintenance'>('rooms');
   
   // Top Secondary Menu switchers
   const [roomSubTab, setRoomSubTab] = useState<'matrix' | 'status'>('matrix');
@@ -196,6 +198,33 @@ export default function WardenDashboard() {
               <div className="flex items-center gap-2.5">
                 <ShieldAlert size={16} className={activeTab === 'directives' ? 'text-rose-400' : ''} />
                 <span>Dispatch Directives</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('mess')}
+              className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-between ${
+                activeTab === 'mess' 
+                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20 shadow-sm' 
+                  : 'text-slate-400 hover:bg-white/[0.02] hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Coffee size={16} className={activeTab === 'mess' ? 'text-rose-400' : ''} />
+                <span>Mess Management</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('maintenance')}
+              className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-between ${
+                activeTab === 'maintenance' 
+                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20 shadow-sm' 
+                  : 'text-slate-400 hover:bg-white/[0.02] hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Wrench size={16} className={activeTab === 'maintenance' ? 'text-rose-400' : ''} />
+                <span>Maintenance</span>
               </div>
             </button>
           </div>
@@ -462,6 +491,46 @@ export default function WardenDashboard() {
                     <span className="text-[10px] text-slate-500 font-mono">{d.date}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: MESS MANAGEMENT */}
+          {activeTab === 'mess' && (
+            <div className="glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in max-w-xl mx-auto">
+              <div className="border-b border-white/5 pb-3">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Coffee size={16} className="text-rose-400" />
+                  <span>Mess Management System</span>
+                </h3>
+              </div>
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl bg-black/40 border border-white/5 text-sm">
+                  <span className="font-bold text-rose-300">Today's Menu (Block A)</span>
+                  <div className="mt-2 text-xs text-slate-300">Breakfast: Poha, Tea<br/>Lunch: Rajma Chawal<br/>Dinner: Dal Tadka, Roti</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: MAINTENANCE */}
+          {activeTab === 'maintenance' && (
+            <div className="glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in max-w-xl mx-auto">
+              <div className="border-b border-white/5 pb-3">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Wrench size={16} className="text-rose-400" />
+                  <span>Hostel Maintenance Log</span>
+                </h3>
+              </div>
+              <div className="space-y-3">
+                <div className="p-3 rounded-xl bg-black/30 border border-white/5 flex justify-between text-xs">
+                  <span>Room 101 - Fan not working</span>
+                  <span className="text-rose-400 font-bold">Open</span>
+                </div>
+                <div className="p-3 rounded-xl bg-black/30 border border-white/5 flex justify-between text-xs">
+                  <span>Room 205 - Leaking tap</span>
+                  <span className="text-amber-400 font-bold">In Progress</span>
+                </div>
               </div>
             </div>
           )}

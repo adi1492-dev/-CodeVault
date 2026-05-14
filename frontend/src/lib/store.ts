@@ -39,6 +39,7 @@ export interface UserRecord {
   documentStatus?: { name: string; submitted: boolean }[];
   leaveBalance?: number;
   semesterNo?: number;
+  canteenWalletBalance?: number;
 }
 
 const INITIAL_USERS: UserRecord[] = [

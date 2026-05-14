@@ -15,7 +15,8 @@ import {
   Sparkles,
   TrendingUp,
   Receipt,
-  MessageSquare
+  MessageSquare,
+  Coffee
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser, setCurrentUser, getUsers, saveUsers, getSubjects, UserRecord, SubjectRecord } from '@/lib/store';
@@ -25,7 +26,7 @@ export default function ParentDashboard() {
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
   const [ward, setWard] = useState<UserRecord | null>(null);
   
-  const [activeTab, setActiveTab] = useState<'ward' | 'fees' | 'appointments' | 'syllabus'>('ward');
+  const [activeTab, setActiveTab] = useState<'ward' | 'fees' | 'appointments' | 'syllabus' | 'canteen'>('ward');
   const [feeSubTab, setFeeSubTab] = useState<'pay' | 'history'>('pay');
   const [apptSubTab, setApptSubTab] = useState<'schedule' | 'circulars'>('schedule');
 
@@ -181,6 +182,19 @@ export default function ParentDashboard() {
             >
               <Layers size={16} className="shrink-0" />
               <span className="truncate">Syllabus Overview</span>
+            </button>
+
+            {/* Canteen Wallet */}
+            <button
+              onClick={() => setActiveTab('canteen')}
+              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'canteen' 
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-extrabold shadow-lg shadow-emerald-500/20 scale-[1.02]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Coffee size={16} className="shrink-0" />
+              <span className="truncate">Canteen Wallet</span>
             </button>
           </div>
         </div>
@@ -496,6 +510,52 @@ export default function ParentDashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 5: CANTEEN WALLET                                     */}
+          {/* ========================================================= */}
+          {activeTab === 'canteen' && (
+            <div className="glass p-6 rounded-3xl border-white/5 space-y-6 animate-fade-in">
+              <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                  <Coffee size={24} />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-white">Canteen Prepaid Wallet</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Manage dietary funds for {ward?.name || 'your ward'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 bg-black/40 rounded-2xl border border-white/5">
+                  <h3 className="text-sm font-bold text-slate-300 mb-2">Current Balance</h3>
+                  <div className="text-4xl font-black text-emerald-400 mb-4">₹{(ward?.canteenWalletBalance ?? 0).toLocaleString()}</div>
+                  <div className="flex gap-2">
+                    <input type="number" placeholder="Amount" className="w-24 p-2 rounded bg-black border border-white/10 text-xs text-white" />
+                    <button className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-black text-xs font-bold rounded">Recharge</button>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-black/40 rounded-2xl border border-white/5">
+                  <h3 className="text-sm font-bold text-slate-300 mb-3">Recent Transactions</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs p-2 bg-white/5 rounded">
+                      <span>Veg Biryani</span>
+                      <span className="text-red-400">-₹60</span>
+                    </div>
+                    <div className="flex justify-between text-xs p-2 bg-white/5 rounded">
+                      <span>Cold Coffee</span>
+                      <span className="text-red-400">-₹45</span>
+                    </div>
+                    <div className="flex justify-between text-xs p-2 bg-white/5 rounded">
+                      <span>Recharge (UPI)</span>
+                      <span className="text-emerald-400">+₹500</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

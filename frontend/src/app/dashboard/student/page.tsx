@@ -15,7 +15,8 @@ import {
   Receipt,
   Sparkles,
   TrendingUp,
-  HelpCircle
+  HelpCircle,
+  Coffee
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -27,7 +28,7 @@ export default function StudentDashboard() {
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
   
   // Primary Navigation tabs (Left Menu)
-  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'syllabus'>('workspace');
+  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'syllabus' | 'canteen'>('workspace');
   
   // Secondary Sub-navigation tab states (Top Horizontal Bar)
   const [workspaceSubTab, setWorkspaceSubTab] = useState<'metrics' | 'ask'>('metrics');
@@ -149,6 +150,19 @@ export default function StudentDashboard() {
             >
               <Layers size={16} className="shrink-0" />
               <span className="truncate">Syllabus Status</span>
+            </button>
+
+            {/* Canteen */}
+            <button
+              onClick={() => setActiveTab('canteen')}
+              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'canteen' 
+                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Coffee size={16} className="shrink-0" />
+              <span className="truncate">Canteen Order</span>
             </button>
           </div>
         </div>
@@ -448,6 +462,43 @@ export default function StudentDashboard() {
                 </div>
               )}
 
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 4: CANTEEN                                            */}
+          {/* ========================================================= */}
+          {activeTab === 'canteen' && (
+            <div className="glass p-8 rounded-3xl border-cyan-500/20 relative overflow-hidden animate-fade-in max-w-3xl mx-auto space-y-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-white">Canteen Menu</h2>
+                  <p className="text-xs text-slate-400 mt-1 max-w-md leading-relaxed">
+                    Order food directly from the canteen using your wallet balance.
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-500/20">
+                  <Coffee size={24} />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2">
+                <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2 mb-2">
+                  <span>Veg Biryani</span>
+                  <span className="text-emerald-400 font-bold">₹60</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span>Cold Coffee</span>
+                  <span className="text-emerald-400 font-bold">₹45</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => alert('Added to cart & placed order!')}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-500 hover:opacity-90 text-black font-extrabold text-xs uppercase tracking-wider transition-all block text-center"
+              >
+                Place Example Order
+              </button>
             </div>
           )}
 

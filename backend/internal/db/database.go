@@ -41,6 +41,19 @@ func InitDB() {
 		&models.TestCase{},
 		&models.Submission{},
 		&models.TestResult{},
+		&models.CanteenItem{},
+		&models.CanteenOrder{},
+		&models.CanteenWalletTransaction{},
+		&models.Assignment{},
+		&models.AcademicSubmission{},
+		&models.TimetableSlot{},
+		&models.LeaveApplication{},
+		&models.AttendanceRecord{},
+		&models.FeeTransaction{},
+		&models.Announcement{},
+		&models.LibraryLoan{},
+		&models.GatePass{},
+		&models.MaintenanceComplaint{},
 	)
 
 	if err != nil {
