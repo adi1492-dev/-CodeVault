@@ -25,6 +25,7 @@ func main() {
 
 	// Setup Routes
 	routes.SetupRoutes(app)
+	routes.SetupWebSocketRoutes(app)
 
 	// Start Server
 	log.Fatal(app.Listen(":8080"))

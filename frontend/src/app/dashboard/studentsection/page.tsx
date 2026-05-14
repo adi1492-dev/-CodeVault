@@ -1,10 +1,19 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Users, LogOut, Search, GraduationCap, CreditCard, CalendarCheck, FileText, UserCheck, ChevronRight, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { 
+  Users, LogOut, Search, GraduationCap, CreditCard, CalendarCheck, 
+  FileText, UserCheck, ChevronRight, CheckCircle2, XCircle, AlertTriangle,
+  LayoutDashboard, ShieldAlert, FileBadge, Lock, EyeOff, Clock, CheckCircle
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getUsers, saveUsers, getCurrentUser, setCurrentUser, UserRecord } from '@/lib/store';
+import { 
+  getUsers, saveUsers, getCurrentUser, setCurrentUser, 
+  UserRecord, getGrievances, saveGrievances, decryptGrievance, 
+  mintCertificate, GrievanceRecord 
+} from '@/lib/store';
 
 const NAV = [
+  { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
   { id: 'directory', label: 'Student Directory', icon: Users },
   { id: 'academics', label: 'Academics & Grades', icon: GraduationCap },
   { id: 'fees', label: 'Fee Management', icon: CreditCard },
@@ -18,7 +27,7 @@ export default function StudentSectionDashboard() {
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
   const [students, setStudents] = useState<UserRecord[]>([]);
   const [selected, setSelected] = useState<UserRecord | null>(null);
-  const [activeTab, setActiveTab] = useState('directory');
+  const [activeTab, setActiveTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [filterYear, setFilterYear] = useState('all');
   const [msg, setMsg] = useState('');
@@ -36,9 +45,31 @@ export default function StudentSectionDashboard() {
     { id: 'c2', name: 'Aarav Nikam', roll: 'CS2026-001', type: 'Library Fine Clearance', status: 'Approved', date: '2026-05-10' },
   ]);
 
+  const [grievances, setGrievances] = useState<GrievanceRecord[]>([]);
+  const [certQueue, setCertQueue] = useState([
+    { id: 'q1', studentId: '4', name: 'Rahul S.', type: 'Bonafide Certificate', status: 'Approved', tx: '0x88f1...33d1' },
+    { id: 'q2', studentId: 'student2', name: 'Priya P.', type: 'Transfer Certificate (TC)', status: 'Processing', tx: '' },
+    { id: 'q3', studentId: 'student3', name: 'Arjun S.', type: 'Character & Conduct Certificate', status: 'Pending', tx: '' },
+    { id: 'q4', studentId: 'std_5', name: 'Sneha R.', type: 'Migration Certificate', status: 'Approved', tx: '0x1a92...e44b' },
+  ]);
+
   useEffect(() => {
     const u = getCurrentUser(); if (u) setCurrent(u);
     refreshStudents();
+
+    // Pre-seed Grievances if empty to replicate high-fidelity poster state
+    const loaded = getGrievances();
+    if (loaded.length === 0) {
+      const mockG: GrievanceRecord[] = [
+        { id: 'g1', encryptedMessage: '0x3f8a9e...2c1b (AES-256 Block-Cipher)', timestamp: '10 mins ago', status: 'Encrypted', decryptedMessage: 'Suspicious unauthorized activity observed near Block C corridor after 10 PM.' },
+        { id: 'g2', encryptedMessage: '0x7b4c1a...9f0e (AES-256 Block-Cipher)', timestamp: '1 hour ago', status: 'Encrypted', decryptedMessage: 'Loud music and verbal disturbance reported from the first-year boys hostel wing.' },
+        { id: 'g3', encryptedMessage: '0x1e2d3c...4b5a (AES-256 Block-Cipher)', timestamp: '3 hours ago', status: 'Encrypted', decryptedMessage: 'Unfair evaluation parameters during practical turn-ins reported anonymously.' },
+      ];
+      saveGrievances(mockG);
+      setGrievances(mockG);
+    } else {
+      setGrievances(loaded);
+    }
   }, []);
 
   const refreshStudents = () => {
@@ -153,7 +184,7 @@ export default function StudentSectionDashboard() {
   const pct = (n?: number) => `${n ?? 0}%`;
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white font-sans pb-16">
+    <div className="min-h-screen bg-[#190019] text-[#FBE4D8] selection:bg-[#854F6C] selection:text-[#FFDFC3] font-sans pb-16">
       <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-purple-950/20 to-transparent pointer-events-none" />
 
       {/* Header */}
@@ -188,6 +219,149 @@ export default function StudentSectionDashboard() {
         {/* Main */}
         <div className="col-span-12 lg:col-span-10 space-y-5">
           {msg && <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2"><CheckCircle2 size={14} />{msg}</div>}
+
+          {/* OVERVIEW */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Premium Stat Row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
+                  <span className="text-[10px] uppercase font-extrabold text-slate-400 block">Total Enrollment</span>
+                  <span className="text-xl font-black text-white block">1,247 Students</span>
+                  <span className="text-[9px] text-emerald-400 font-bold block">↑ +18 this semester</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
+                  <span className="text-[10px] uppercase font-extrabold text-slate-400 block">Avg Attendance</span>
+                  <span className="text-xl font-black text-purple-400 block">94.2% Overall</span>
+                  <span className="text-[9px] text-purple-300 block">Section KPI verified</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
+                  <span className="text-[10px] uppercase font-extrabold text-slate-400 block">Certificates Queue</span>
+                  <span className="text-xl font-black text-cyan-400 block">38 Pending</span>
+                  <span className="text-[9px] text-cyan-500 block">Web3 Signature Required</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
+                  <span className="text-[10px] uppercase font-extrabold text-slate-400 block">Grievance Route</span>
+                  <span className="text-xl font-black text-rose-400 block">{grievances.length} Active</span>
+                  <span className="text-[9px] text-rose-500 block">AES-256 GCM Protected</span>
+                </div>
+              </div>
+
+              {/* Multi-Column Control Center Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Panel 1: Encrypted Anonymous Reports */}
+                <div className="glass p-5 rounded-3xl border-rose-500/20 space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <ShieldAlert size={18} className="text-rose-400" />
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">Recent Anonymous Reports</h3>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold">
+                      Zero-Knowledge Proxy
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {grievances.map((g, idx) => (
+                      <div key={g.id || idx} className="p-3 rounded-xl bg-black/60 border border-white/5 space-y-2 text-left">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] text-slate-500 font-mono block truncate max-w-[200px]">
+                            Hash: {g.encryptedMessage}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${g.status === 'Decrypted' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                            {g.status}
+                          </span>
+                        </div>
+
+                        {g.status === 'Decrypted' ? (
+                          <div className="p-2 rounded-lg bg-white/5 text-xs text-slate-200 font-sans border-l-2 border-emerald-400">
+                            {g.decryptedMessage || 'No plaintext context attached.'}
+                          </div>
+                        ) : (
+                          <div className="p-2 rounded-lg bg-rose-500/5 text-[11px] text-rose-300 font-mono flex items-center gap-2">
+                            <Lock size={12} className="shrink-0 text-rose-400" />
+                            <span className="truncate">Payload AES Encrypted. Strip Key required.</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                          <span className="text-[9px] text-slate-500 flex items-center gap-1">
+                            <Clock size={10} /> {g.timestamp || 'Just now'}
+                          </span>
+                          {g.status !== 'Decrypted' && (
+                            <button
+                              onClick={() => {
+                                decryptGrievance(g.id);
+                                setGrievances(getGrievances());
+                                flash('Cryptographic lock stripped. Displaying original payload.');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-[9px] transition-all cursor-pointer"
+                            >
+                              🔓 Decrypt Key
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Panel 2: Certificate Queue */}
+                <div className="glass p-5 rounded-3xl border-cyan-500/20 space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <FileBadge size={18} className="text-cyan-400" />
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">Certificate Verification Queue</h3>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">
+                      Polygon Gateway
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {certQueue.map(item => (
+                      <div key={item.id} className="p-3 rounded-xl bg-black/60 border border-white/5 space-y-2 text-left">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-white block">{item.name}</span>
+                            <span className="text-[10px] text-slate-400 block">{item.type}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                            item.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            item.status === 'Processing' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 animate-pulse' :
+                            'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </div>
+
+                        {item.tx ? (
+                          <div className="text-[9px] text-green-400 font-mono truncate pt-1 border-t border-white/5">
+                            Tx: {item.tx}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                            <span className="text-[9px] text-slate-500">Awaiting dean authorization</span>
+                            <button
+                              onClick={() => {
+                                const hash = '0x' + Math.random().toString(16).substr(2, 40);
+                                mintCertificate(item.studentId, item.type, hash);
+                                setCertQueue(q => q.map(x => x.id === item.id ? { ...x, status: 'Approved', tx: hash } : x));
+                                flash(`Certificate generated & bound for ${item.name}!`);
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-[9px] transition-all cursor-pointer"
+                            >
+                              ✨ Mint Signature
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* DIRECTORY */}
           {activeTab === 'directory' && (
@@ -477,6 +651,31 @@ export default function StudentSectionDashboard() {
           {!selected && activeTab !== 'directory' && activeTab !== 'enrollment' && (
             <div className="p-8 text-center text-xs text-slate-500 italic bg-black/20 rounded-2xl border border-white/5">Select a student from the Directory tab first.</div>
           )}
+        </div>
+      </div>
+
+      {/* Exquisite ERP Base Trust Badging Array matching Reference Mockup Image 3 */}
+      <div className="max-w-6xl mx-auto px-4 pt-12 mt-8 border-t border-[#522B5B]/40">
+        <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+          <div className="px-5 py-2.5 rounded-full bg-[#2B124C]/60 border border-[#854F6C]/40 text-[#FEA38E] font-bold flex items-center gap-2 shadow-lg backdrop-blur-md">
+            <Lock size={14} className="text-[#FFDFC3]" />
+            <span>AES-256 Encrypted</span>
+          </div>
+
+          <div className="px-5 py-2.5 rounded-full bg-[#2B124C]/60 border border-[#854F6C]/40 text-[#FBE4D8] font-bold flex items-center gap-2 shadow-lg backdrop-blur-md">
+            <UserCheck size={14} className="text-[#FBA2AB]" />
+            <span>Role-Based Access</span>
+          </div>
+
+          <div className="px-5 py-2.5 rounded-full bg-[#2B124C]/60 border border-[#854F6C]/40 text-[#FFDFC3] font-bold flex items-center gap-2 shadow-lg backdrop-blur-md">
+            <FileBadge size={14} className="text-[#F6E6D0]" />
+            <span>Full Audit Trail</span>
+          </div>
+
+          <div className="px-5 py-2.5 rounded-full bg-[#2B124C]/60 border border-[#854F6C]/40 text-[#F3B5A0] font-bold flex items-center gap-2 shadow-lg backdrop-blur-md">
+            <EyeOff size={14} className="text-[#FEA38E]" />
+            <span>Zero-Knowledge Anon Layer</span>
+          </div>
         </div>
       </div>
     </div>

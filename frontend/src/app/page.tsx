@@ -15,7 +15,18 @@ import {
   Sparkles, 
   UserCheck,
   Building2,
-  Home as HomeIcon
+  Home as HomeIcon,
+  Bus,
+  Infinity,
+  Smartphone,
+  Check,
+  Layers,
+  Wifi,
+  BatteryMedium,
+  Loader2,
+  EyeOff,
+  Utensils,
+  Award
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { authenticateUser, setCurrentUser, UserRecord } from '@/lib/store';
@@ -35,6 +46,7 @@ export default function Home() {
     // Map helper passwords directly to roles if user entered them directly
     let searchEmail = emailOrRole;
     if (password === 'admin123') searchEmail = 'admin@campuscore.edu';
+    if (password === 'canteen123') searchEmail = 'canteenadmin@campuscore.edu';
     if (password === 'classteacher123') searchEmail = 'ct@campuscore.edu';
     if (password === 'subjectteacher123') searchEmail = 'st@campuscore.edu';
     if (password === 'student123') searchEmail = 'student@campuscore.edu';
@@ -50,7 +62,9 @@ export default function Home() {
       const cleanPass = password.toLowerCase().trim();
       const cleanUser = emailOrRole.toLowerCase().trim();
       
-      if (cleanPass.includes('admin') || cleanUser.includes('admin')) {
+      if (cleanPass.includes('canteen') || cleanUser.includes('canteen')) {
+        finalUser = { id: 'canteen-admin', name: 'Mr. Santosh P.', email: 'canteenadmin@campuscore.edu', role: 'canteenadmin' };
+      } else if (cleanPass.includes('admin') || cleanUser.includes('admin')) {
         finalUser = { id: '1', name: 'Dr. Ramesh S.', email: 'admin@campuscore.edu', role: 'admin' };
       } else if (cleanPass.includes('classteacher') || cleanUser.includes('classteacher')) {
         finalUser = { id: '2', name: 'Prof. Anjali M.', email: 'ct@campuscore.edu', role: 'classteacher', section: 'CS-A' };
@@ -70,6 +84,9 @@ export default function Home() {
       switch (finalUser.role) {
         case 'admin':
           window.location.href = '/dashboard/admin';
+          break;
+        case 'canteenadmin':
+          window.location.href = '/dashboard/canteenadmin';
           break;
         case 'hod':
         case 'vicehod':
@@ -101,6 +118,7 @@ export default function Home() {
 
     let searchEmail = role;
     if (pass === 'admin123') searchEmail = 'admin@campuscore.edu';
+    if (pass === 'canteen123') searchEmail = 'canteenadmin@campuscore.edu';
     if (pass === 'section123') searchEmail = 'section@campuscore.edu';
     if (pass === 'warden123') searchEmail = 'warden@campuscore.edu';
     if (pass === 'hod123') searchEmail = 'hod@campuscore.edu';
@@ -116,7 +134,9 @@ export default function Home() {
     if (!finalUser) {
       const cleanPass = pass.toLowerCase().trim();
       const cleanUser = role.toLowerCase().trim();
-      if (cleanPass.includes('section') || cleanUser.includes('section')) {
+      if (cleanPass.includes('canteen') || cleanUser.includes('canteen')) {
+        finalUser = { id: 'canteen-admin', name: 'Mr. Santosh P. (Canteen Fulfillment)', email: 'canteenadmin@campuscore.edu', role: 'canteenadmin' };
+      } else if (cleanPass.includes('section') || cleanUser.includes('section')) {
         finalUser = { id: 'sec-admin', name: 'Mr. Satish K. (Students Section)', email: 'section@campuscore.edu', role: 'studentsection' };
       } else if (cleanPass.includes('warden') || cleanUser.includes('warden')) {
         finalUser = { id: 'warden-1', name: 'Capt. R. K. Dogra (Hostel Warden)', email: 'warden@campuscore.edu', role: 'warden' };
@@ -138,6 +158,7 @@ export default function Home() {
       setLoading(false);
       switch (finalUser.role) {
         case 'admin': window.location.href = '/dashboard/admin'; break;
+        case 'canteenadmin': window.location.href = '/dashboard/canteenadmin'; break;
         case 'studentsection': window.location.href = '/dashboard/studentsection'; break;
         case 'warden': window.location.href = '/dashboard/warden'; break;
         case 'hod':
@@ -155,7 +176,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-[#030712] text-white selection:bg-cyan-500/30 relative overflow-x-hidden">
+    <main className="min-h-screen bg-[#190019] text-[#FBE4D8] selection:bg-[#854F6C] selection:text-[#FFDFC3] relative overflow-x-hidden">
       {/* Background glowing rings */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-indigo-950/10 to-transparent pointer-events-none blur-3xl" />
       
@@ -272,6 +293,13 @@ export default function Home() {
                 </button>
                 <button 
                   type="button" 
+                  onClick={() => handleQuickFill('canteenadmin@campuscore.edu', 'canteen123')}
+                  className="text-xs px-2.5 py-1 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-300 font-bold transition-all"
+                >
+                  🍔 Canteen Admin
+                </button>
+                <button 
+                  type="button" 
                   onClick={() => handleQuickFill('section@campuscore.edu', 'section123')}
                   className="text-xs px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 text-slate-300 font-medium transition-all"
                 >
@@ -376,6 +404,244 @@ export default function Home() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ========================================== */}
+      {/* MOCKUP REFERENCE IMAGE 1: SMART CAMPUS FEATURES */}
+      {/* ========================================== */}
+      <section className="py-20 px-6 max-w-6xl mx-auto text-center space-y-12 relative z-10 border-t border-[#522B5B]/30 mt-12">
+        <div className="space-y-2">
+          <span className="text-[10px] uppercase font-mono tracking-widest text-[#FEA38E] font-extrabold block">
+            BEYOND THE BASICS
+          </span>
+          <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[#FBE4D8] font-serif">
+            Smart Campus Features
+          </h2>
+        </div>
+
+        {/* Feature 4-Box Stack */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
+          <div className="p-6 rounded-3xl bg-[#2B124C]/80 border border-[#522B5B] space-y-3 shadow-xl backdrop-blur-md hover:border-[#FEA38E] transition-all">
+            <Utensils size={24} className="text-[#FEA38E]" />
+            <h3 className="text-base font-bold text-[#FFDFC3]">Canteen Pre-Order</h3>
+            <p className="text-xs text-[#DFB6B2] leading-relaxed">
+              Browse, pay, pickup. Skip every queue.
+            </p>
+          </div>
+
+          <div className="p-6 rounded-3xl bg-[#2B124C]/80 border border-[#522B5B] space-y-3 shadow-xl backdrop-blur-md hover:border-[#FEA38E] transition-all">
+            <Bus size={24} className="text-[#FBA2AB]" />
+            <h3 className="text-base font-bold text-[#FFDFC3]">Live Bus Tracking</h3>
+            <p className="text-xs text-[#DFB6B2] leading-relaxed">
+              GPS on map. Real ETA. Parent view.
+            </p>
+          </div>
+
+          <div className="p-6 rounded-3xl bg-[#2B124C]/80 border border-[#522B5B] space-y-3 shadow-xl backdrop-blur-md hover:border-[#FEA38E] transition-all">
+            <Cpu size={24} className="text-[#F6E6D0]" />
+            <h3 className="text-base font-bold text-[#FFDFC3]">Custom Compiler</h3>
+            <p className="text-xs text-[#DFB6B2] leading-relaxed">
+              15+ languages. Practice problems built in.
+            </p>
+          </div>
+
+          <div className="p-6 rounded-3xl bg-[#2B124C]/80 border border-[#522B5B] space-y-3 shadow-xl backdrop-blur-md hover:border-[#FEA38E] transition-all">
+            <Award size={24} className="text-[#F3B5A0]" />
+            <h3 className="text-base font-bold text-[#FFDFC3]">Result Declaration</h3>
+            <p className="text-xs text-[#DFB6B2] leading-relaxed">
+              Teacher declares. Instant for all.
+            </p>
+          </div>
+        </div>
+
+        {/* Tech Badges Row */}
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+          {['React', 'Node.js', 'PostgreSQL', 'Redis', 'WebSocket', 'AES-256', 'AWS', 'Docker'].map((tech) => (
+            <span key={tech} className="px-4 py-2 rounded-xl bg-[#190019] border border-[#854F6C]/60 text-[#FBE4D8] text-xs font-mono font-medium shadow-md">
+              ⚙️ {tech}
+            </span>
+          ))}
+        </div>
+
+        {/* Core Architecture Trust Pills */}
+        <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+          {['E2E Encryption', 'Role-Based Access', 'Audit Trails', 'Zero-Knowledge Anon'].map((pill) => (
+            <div key={pill} className="px-5 py-3 rounded-2xl bg-[#2B124C]/40 border border-[#522B5B] text-[#FFDFC3] text-xs font-bold flex items-center gap-2">
+              <ShieldCheck size={14} className="text-[#FEA38E]" />
+              <span>{pill}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Big Branding Footer Display */}
+        <div className="pt-8 space-y-1">
+          <h1 className="text-5xl sm:text-7xl font-black tracking-tight text-[#FEA38E] drop-shadow-lg font-serif">
+            Campus Core
+          </h1>
+          <p className="text-sm sm:text-base text-[#F6E6D0] tracking-wide font-light">
+            Transforming the Campus Experience
+          </p>
+        </div>
+      </section>
+
+
+      {/* ========================================== */}
+      {/* MOCKUP REFERENCE IMAGE 2: ANONYMOUS REPORTING & CERTIFICATES */}
+      {/* ========================================== */}
+      <section className="py-20 px-6 max-w-5xl mx-auto text-center space-y-12 relative z-10 border-t border-[#522B5B]/30">
+        <div className="space-y-2">
+          <span className="text-[10px] uppercase font-mono tracking-widest text-[#FBA2AB] font-extrabold block">
+            SHOWSTOPPER FEATURES
+          </span>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-[#FBE4D8]">
+            Anonymous Reporting & Certificate Distribution
+          </h2>
+        </div>
+
+        {/* Smartphone Frames Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center justify-center max-w-3xl mx-auto">
+          
+          {/* Left Smartphone: Anonymous Reporting */}
+          <div className="space-y-3 text-center">
+            <span className="text-xs font-black tracking-wider text-[#FEA38E] uppercase flex items-center justify-center gap-1">
+              <EyeOff size={14} /> ANONYMOUS REPORTING
+            </span>
+
+            <div className="mx-auto w-72 h-[460px] rounded-[3rem] bg-[#190019] border-4 border-[#522B5B] p-4 relative shadow-2xl flex flex-col justify-between overflow-hidden">
+              {/* Phone Status Bar */}
+              <div className="flex justify-between items-center text-[10px] text-[#DFB6B2] px-2 pt-1 font-mono">
+                <span>11:30</span>
+                <div className="flex items-center gap-1">
+                  <Wifi size={10} />
+                  <BatteryMedium size={10} className="rotate-90" />
+                </div>
+              </div>
+
+              {/* Internal phone display layout overlay */}
+              <div className="flex-1 flex flex-col justify-end pb-4 space-y-2 text-left">
+                <span className="text-xs font-bold text-[#FBE4D8] px-1">Admin View</span>
+                
+                <div className="p-4 rounded-2xl bg-[#2B124C] border border-[#854F6C] space-y-3 shadow-inner">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#FBA2AB]">
+                    <EyeOff size={12} />
+                    <span>Anonymous Report #47</span>
+                  </div>
+
+                  <div className="h-16 rounded-xl bg-[#190019]/80 border border-[#522B5B] flex items-center justify-center text-[#DFB6B2]">
+                    <EyeOff size={20} className="opacity-40" />
+                  </div>
+
+                  <div className="space-y-1 text-[11px] font-mono">
+                    <div className="text-[#FFDFC3]">🛡️ Identity: <strong className="text-[#FEA38E]">Zero Knowledge</strong></div>
+                    <div className="text-[#DFB6B2]">📍 Location: Block C, 2nd Floor</div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#522B5B] text-[10px]">
+                    <span className="text-[#DFB6B2]">Status</span>
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      ✓ Action Taken
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-xs text-[#DFB6B2] font-mono tracking-wide">
+              Zero identity. Zero fear. Zero trace.
+            </p>
+          </div>
+
+          {/* Right Smartphone: Certificate Distribution */}
+          <div className="space-y-3 text-center">
+            <span className="text-xs font-black tracking-wider text-[#FFDFC3] uppercase flex items-center justify-center gap-1">
+              📜 CERTIFICATE DISTRIBUTION
+            </span>
+
+            <div className="mx-auto w-72 h-[460px] rounded-[3rem] bg-[#190019] border-4 border-[#522B5B] p-4 relative shadow-2xl flex flex-col justify-between overflow-hidden">
+              {/* Phone Status Bar */}
+              <div className="flex justify-between items-center text-[10px] text-[#DFB6B2] px-2 pt-1 font-mono">
+                <span>2:00</span>
+                <div className="flex items-center gap-1">
+                  <Wifi size={10} />
+                  <BatteryMedium size={10} className="rotate-90" />
+                </div>
+              </div>
+
+              {/* Spinner centered state */}
+              <div className="flex-1 flex flex-col items-center justify-center space-y-3">
+                <Loader2 size={36} className="animate-spin text-[#FEA38E]" />
+                <div className="text-center">
+                  <span className="text-sm font-bold text-[#FBE4D8] block">Processing...</span>
+                  <span className="text-[10px] text-[#DFB6B2] block mt-1">Admin is verifying & generating</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#DFB6B2] font-mono tracking-wide">
+              Request in seconds. Receive digitally. Track always.
+            </p>
+          </div>
+
+        </div>
+
+        {/* Global Process Multi-Step Tracker String */}
+        <div className="pt-6 max-w-2xl mx-auto">
+          <div className="flex items-center justify-between relative">
+            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-[#522B5B] -z-10" />
+            
+            {['Capture', 'Flash', 'Encrypt', 'Sent', 'Request', 'Process', 'Cert'].map((step, i) => (
+              <div key={step} className="flex flex-col items-center space-y-1.5 bg-[#190019] px-2">
+                <div className={`w-3.5 h-3.5 rounded-full border-2 ${i < 4 ? 'bg-[#FEA38E] border-[#FFDFC3]' : 'bg-[#522B5B] border-[#854F6C]'}`} />
+                <span className="text-[9px] font-mono text-[#F6E6D0] uppercase font-bold">{step}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+
+      {/* ========================================== */}
+      {/* MOCKUP REFERENCE IMAGE 4: STUDENT APP EVERYTHING YOU NEED */}
+      {/* ========================================== */}
+      <section className="py-20 px-6 max-w-5xl mx-auto text-center space-y-8 relative z-10 border-t border-[#522B5B]/30">
+        <div className="space-y-1">
+          <span className="text-[10px] uppercase font-mono tracking-widest text-[#FBA2AB] font-extrabold block">
+            STUDENT APP
+          </span>
+          <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[#FBE4D8] font-serif">
+            Everything You Need
+          </h2>
+        </div>
+
+        {/* Interactive Fluid Tag Pills Array */}
+        <div className="flex flex-wrap items-center justify-center gap-3.5 max-w-4xl mx-auto pt-4">
+          {[
+            { label: 'Real-time attendance & history', checked: true },
+            { label: 'Instant result & grade notifications', checked: true },
+            { label: 'Canteen pre-order — skip the line', checked: true },
+            { label: 'Live GPS bus tracking with ETA', checked: true },
+            { label: 'Built-in compiler — 15+ languages', checked: true },
+            { label: 'Certificate request & tracking', checked: true },
+            { label: 'Anonymous activity reporting', checked: false, icon: EyeOff },
+            { label: 'Fee payments & receipt history', checked: true },
+          ].map((item, idx) => (
+            <div 
+              key={idx} 
+              className="px-5 py-3 rounded-full bg-[#2B124C]/90 border border-[#854F6C] text-[#FBA2AB] text-xs font-bold flex items-center gap-2 shadow-md hover:border-[#FEA38E] hover:scale-105 transition-all cursor-default"
+            >
+              {item.checked ? (
+                <span className="w-4 h-4 rounded-full bg-[#FEA38E]/20 text-[#FEA38E] flex items-center justify-center shrink-0 border border-[#FEA38E]/30">
+                  ✓
+                </span>
+              ) : (
+                <span className="w-4 h-4 rounded-full bg-[#854F6C]/30 text-[#DFB6B2] flex items-center justify-center shrink-0">
+                  ∞
+                </span>
+              )}
+              <span className="text-[#FBE4D8] tracking-wide">{item.label}</span>
+            </div>
+          ))}
         </div>
       </section>
 

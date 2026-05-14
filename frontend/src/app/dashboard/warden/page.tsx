@@ -44,21 +44,30 @@ export default function WardenDashboard() {
   // Sample room records
   const [rooms, setRooms] = useState([
     { id: 'r1', block: 'Block A (Boys)', roomNo: '101', capacity: 2, occupants: ['Aarav Nikam', 'Rahul Verma'], status: 'Fully Occupied' },
-    { id: 'r2', block: 'Block A (Boys)', roomNo: '102', capacity: 2, occupants: [], status: 'Vacant' },
-    { id: 'r3', block: 'Block B (Girls)', roomNo: '201', capacity: 2, occupants: ['Ananya Sharma'], status: 'Partially Occupied' }
+    { id: 'r2', block: 'Block A (Boys)', roomNo: '102', capacity: 2, occupants: ['Amit Patel'], status: 'Partially Occupied' },
+    { id: 'r3', block: 'Block B (Girls)', roomNo: '201', capacity: 2, occupants: ['Ananya Sharma', 'Priya Deshmukh'], status: 'Fully Occupied' },
+    { id: 'r4', block: 'Block A (Boys)', roomNo: '103', capacity: 2, occupants: [], status: 'Vacant' },
+    { id: 'r5', block: 'Block B (Girls)', roomNo: '202', capacity: 2, occupants: ['Sneha Joshi'], status: 'Partially Occupied' }
   ]);
 
   // Sample Outing pass requests
   const [passes, setPasses] = useState([
     { id: 'p1', studentName: 'Aarav Nikam', rollNo: 'CS2026-001', destination: 'Local Marketplace / Weekend Groceries', outTime: 'Saturday 04:00 PM', status: 'Pending' },
-    { id: 'p2', studentName: 'Rahul Verma', rollNo: 'CS2026-018', destination: 'Medical Checkup Appointment', outTime: 'Friday 10:00 AM', status: 'Sanctioned' }
+    { id: 'p2', studentName: 'Rahul Verma', rollNo: 'CS2026-018', destination: 'Medical Checkup Appointment', outTime: 'Friday 10:00 AM', status: 'Sanctioned' },
+    { id: 'p3', studentName: 'Ananya Sharma', rollNo: 'CS2026-002', destination: 'Inter-College Hackathon Representation', outTime: 'Thursday 06:00 AM', status: 'Sanctioned' },
+    { id: 'p4', studentName: 'Amit Patel', rollNo: 'CS2026-004', destination: 'Family Emergency Leave Request', outTime: 'Monday 08:30 PM', status: 'Sanctioned' },
+    { id: 'p5', studentName: 'Sneha Joshi', rollNo: 'CS2026-007', destination: 'Late Night Library Access Extension', outTime: 'Wednesday 11:00 PM', status: 'Sanctioned' }
   ]);
 
   // Directives state
   const [directiveTitle, setDirectiveTitle] = useState('');
   const [directiveBody, setDirectiveBody] = useState('');
   const [directivesList, setDirectivesList] = useState([
-    { id: 'wd1', title: 'Curfew Timing Strict Implementation Notice', date: '2026-05-11', target: 'All Hostel Blocks' }
+    { id: 'wd1', title: 'Curfew Timing Strict Implementation Notice', date: '2026-05-11', target: 'All Hostel Blocks' },
+    { id: 'wd2', title: 'Mandatory Room Deep Cleaning Roster Schedule', date: '2026-04-02', target: 'Block A (Boys)' },
+    { id: 'wd3', title: 'Mess Committee Bi-Weekly Menu Feedback Invitation', date: '2026-02-14', target: 'All Residents' },
+    { id: 'wd4', title: 'Winter Vacation Room Key Surrender Protocols', date: '2025-11-28', target: 'All Hostel Blocks' },
+    { id: 'wd5', title: 'Monsoon Anti-Mosquito Fogging Safety Guidelines', date: '2025-08-05', target: 'All Residents' }
   ]);
 
   useEffect(() => {
@@ -115,11 +124,11 @@ export default function WardenDashboard() {
               HW
             </div>
             <div>
-              <span className="font-bold text-sm tracking-tight text-white block">
-                Hostel Warden Command
+              <span className="font-bold text-lg text-white block">
+                Hostel Warden
               </span>
-              <span className="text-[10px] text-rose-400 font-mono block">
-                Residential Tier DB
+              <span className="text-sm text-rose-400 block font-medium">
+                Hostel Management
               </span>
             </div>
           </div>
@@ -146,20 +155,20 @@ export default function WardenDashboard() {
         {/* LEFT COLUMN: Horizontal Selector Toolbar */}
         <div className="lg:col-span-3 space-y-4">
           <div className="glass p-4 rounded-3xl border-white/5 space-y-1">
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider px-3 block mb-2 font-mono">
-              Warden Tiers
+            <span className="text-sm font-semibold text-slate-400 px-3 block mb-2">
+              Warden Menu
             </span>
 
             <button
               onClick={() => setActiveTab('rooms')}
-              className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-between ${
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
                 activeTab === 'rooms' 
-                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20 shadow-sm' 
+                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20' 
                   : 'text-slate-400 hover:bg-white/[0.02] hover:text-white'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Home size={16} className={activeTab === 'rooms' ? 'text-rose-400' : ''} />
+                <Home size={18} className={activeTab === 'rooms' ? 'text-rose-400' : ''} />
                 <span>Room Matrix</span>
               </div>
               {activeTab === 'rooms' && <Sparkles size={12} className="text-rose-400" />}
@@ -167,14 +176,14 @@ export default function WardenDashboard() {
 
             <button
               onClick={() => setActiveTab('passes')}
-              className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-between ${
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
                 activeTab === 'passes' 
-                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20 shadow-sm' 
+                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20' 
                   : 'text-slate-400 hover:bg-white/[0.02] hover:text-white'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <DoorOpen size={16} className={activeTab === 'passes' ? 'text-rose-400' : ''} />
+                <DoorOpen size={18} className={activeTab === 'passes' ? 'text-rose-400' : ''} />
                 <span>Gate Outing Passes</span>
               </div>
               <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
@@ -184,70 +193,70 @@ export default function WardenDashboard() {
 
             <button
               onClick={() => setActiveTab('visitors')}
-              className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-between ${
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
                 activeTab === 'visitors' 
-                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20 shadow-sm' 
+                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20' 
                   : 'text-slate-400 hover:bg-white/[0.02] hover:text-white'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Users size={16} className={activeTab === 'visitors' ? 'text-rose-400' : ''} />
-                <span>Visitor Security Log</span>
+                <Users size={18} className={activeTab === 'visitors' ? 'text-rose-400' : ''} />
+                <span>Visitor Log</span>
               </div>
             </button>
 
             <button
               onClick={() => setActiveTab('directives')}
-              className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-between ${
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
                 activeTab === 'directives' 
-                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20 shadow-sm' 
+                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20' 
                   : 'text-slate-400 hover:bg-white/[0.02] hover:text-white'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <ShieldAlert size={16} className={activeTab === 'directives' ? 'text-rose-400' : ''} />
-                <span>Dispatch Directives</span>
+                <ShieldAlert size={18} className={activeTab === 'directives' ? 'text-rose-400' : ''} />
+                <span>Notice Board</span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab('mess')}
-              className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-between ${
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
                 activeTab === 'mess' 
-                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20 shadow-sm' 
+                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20' 
                   : 'text-slate-400 hover:bg-white/[0.02] hover:text-white'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Coffee size={16} className={activeTab === 'mess' ? 'text-rose-400' : ''} />
+                <Coffee size={18} className={activeTab === 'mess' ? 'text-rose-400' : ''} />
                 <span>Mess Management</span>
               </div>
             </button>
 
             <button
               onClick={() => setActiveTab('maintenance')}
-              className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-between ${
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
                 activeTab === 'maintenance' 
-                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20 shadow-sm' 
+                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20' 
                   : 'text-slate-400 hover:bg-white/[0.02] hover:text-white'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Wrench size={16} className={activeTab === 'maintenance' ? 'text-rose-400' : ''} />
+                <Wrench size={18} className={activeTab === 'maintenance' ? 'text-rose-400' : ''} />
                 <span>Maintenance</span>
               </div>
             </button>
 
             <button
               onClick={() => setActiveTab('incidents')}
-              className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-between ${
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
                 activeTab === 'incidents' 
-                  ? 'bg-red-500/10 text-red-400 border border-red-500/30 shadow-sm' 
+                  ? 'bg-red-500/10 text-red-400 border border-red-500/30' 
                   : 'text-red-500/50 hover:bg-white/[0.02] hover:text-red-400'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Lock size={16} className={activeTab === 'incidents' ? 'text-red-400' : ''} />
-                <span>Secure Incident Reports</span>
+                <Lock size={18} className={activeTab === 'incidents' ? 'text-red-400' : ''} />
+                <span>Anonymous Reports</span>
               </div>
             </button>
           </div>

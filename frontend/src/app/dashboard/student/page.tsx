@@ -19,19 +19,34 @@ import {
   Coffee,
   ShieldCheck,
   ShieldAlert,
-  Camera
+  Camera,
+  Bell,
+  Bus,
+  MapPin
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getCurrentUser, setCurrentUser, getSubjects, getUsers, placeCanteenOrder, submitAnonymousGrievance, UserRecord, SubjectRecord } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getSubjects, getUsers, placeCanteenOrder, submitAnonymousGrievance, UserRecord, SubjectRecord, getAlerts, markAlertRead, AlertRecord } from '@/lib/store';
 
 export default function StudentDashboard() {
   const router = useRouter();
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
+  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
+  const [selectedCertModal, setSelectedCertModal] = useState<{ id: string; name: string; txHash: string; date: string; issuerName?: string; photoUrl?: string; description?: string; signerName?: string } | null>(null);
+  const [activeCanteenOrder, setActiveCanteenOrder] = useState<{ item: string; amount: number; orderNo: string; pickupTime: string } | null>(null);
+  const [busEta, setBusEta] = useState(14);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setBusEta(prev => prev > 2 ? prev - 1 : 14);
+    }, 8000);
+    return () => clearInterval(timer);
+  }, []);
   
   // Primary Navigation tabs (Left Menu)
-  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'syllabus' | 'canteen' | 'certificates' | 'report'>('workspace');
+  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'syllabus' | 'canteen' | 'certificates' | 'report' | 'transport'>('workspace');
   
   // Secondary Sub-navigation tab states (Top Horizontal Bar)
   const [workspaceSubTab, setWorkspaceSubTab] = useState<'metrics' | 'ask'>('metrics');
@@ -40,6 +55,9 @@ export default function StudentDashboard() {
   const [doubtText, setDoubt] = useState('');
   const [doubtsLog, setLog] = useState([
     { q: 'How does operator precedence function for mixed brackets?', ans: 'Prof. Vikram: Check module configuration values for expression priority.' },
+    { q: 'Can k-epsilon turbulence iterations be run locally on standard sandbox nodes?', ans: 'Dr. Anjali: Yes, decrease grid density resolution coefficients below 0.05.' },
+    { q: 'Are we permitted to use external cloud API wrappers for final semester evaluation submittals?', ans: 'Prof. S. Mehta: Absolutely, provided IAM tokens are explicitly masked.' },
+    { q: 'What causes intermittent memory paging faults during extreme matrix allocation tests?', ans: 'Dr. Ramesh: Verify stack pointers alignment boundaries match word intervals.' }
   ]);
 
   // Grievance State
@@ -47,11 +65,28 @@ export default function StudentDashboard() {
   const [reportPhoto, setReportPhoto] = useState(false);
   const [reportStatus, setReportStatus] = useState<'idle' | 'encrypting' | 'sent'>('idle');
 
+  const loadAlerts = () => {
+    if (currentUser) {
+      setAlerts(getAlerts(currentUser.id).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+    }
+  };
+
   useEffect(() => {
     const user = getCurrentUser();
     if (user) setCurrent(user);
     setSubjects(getSubjects());
   }, []);
+
+  useEffect(() => {
+    loadAlerts();
+    window.addEventListener('campuscore_alerts_refresh', loadAlerts);
+    return () => window.removeEventListener('campuscore_alerts_refresh', loadAlerts);
+  }, [currentUser]);
+
+  const handleMarkAlertRead = (id: string) => {
+    markAlertRead(id);
+    loadAlerts();
+  };
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -68,7 +103,7 @@ export default function StudentDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white selection:bg-cyan-500/30 pb-20 relative overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#190019] text-[#FBE4D8] selection:bg-[#854F6C] selection:text-[#FFDFC3] pb-20 relative overflow-x-hidden font-sans">
       {/* Subtle Background Glow Overlay */}
       <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-cyan-950/20 via-transparent to-transparent pointer-events-none blur-3xl" />
 
@@ -89,11 +124,50 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative">
             <span className="hidden md:inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/5 text-xs text-slate-300 font-medium">
               <Sparkles size={14} className="text-cyan-400" />
               <span>Academic Account Access</span>
             </span>
+
+            <button 
+              onClick={() => setIsAlertsOpen(!isAlertsOpen)}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition-all border border-white/5 relative"
+            >
+              <Bell size={16} />
+              {alerts.some(a => !a.read) && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              )}
+            </button>
+
+            {isAlertsOpen && (
+              <div className="absolute top-full right-0 mt-2 w-80 glass rounded-2xl border-white/10 shadow-2xl overflow-hidden z-50 bg-[#080d1a]">
+                <div className="p-3 border-b border-white/5 bg-white/5">
+                  <span className="text-sm font-bold text-white">Notifications</span>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {alerts.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-400">No alerts found</div>
+                  ) : (
+                    alerts.map(a => (
+                      <div key={a.id} className={`p-3 border-b border-white/5 ${a.read ? 'bg-black/20' : 'bg-indigo-500/10'}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className={`text-xs font-bold ${a.type === 'fee' ? 'text-amber-400' : a.type === 'attendance' ? 'text-red-400' : 'text-blue-400'}`}>{a.title}</span>
+                            <p className="text-[10px] text-slate-300 mt-1">{a.message}</p>
+                          </div>
+                          {!a.read && (
+                            <button onClick={() => handleMarkAlertRead(a.id)} className="text-[10px] text-indigo-300 hover:text-indigo-200">
+                              Mark Read
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
 
             <button 
               onClick={handleLogout}
@@ -181,6 +255,19 @@ export default function StudentDashboard() {
             >
               <ShieldCheck size={18} className="shrink-0" />
               <span className="truncate">Certificates</span>
+            </button>
+
+            {/* Live Bus Tracking */}
+            <button
+              onClick={() => setActiveTab('transport')}
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'transport' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Bus size={18} className="shrink-0" />
+              <span className="truncate">Live Bus Tracking</span>
             </button>
 
             {/* Anti-Ragging */}
@@ -516,16 +603,44 @@ export default function StudentDashboard() {
                 </div>
               </div>
 
+              {/* Active Live Ticket Alert */}
+              {activeCanteenOrder && (
+                <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 border-2 border-emerald-500/30 animate-bounce-short space-y-3 relative">
+                  <button onClick={() => setActiveCanteenOrder(null)} className="absolute top-3 right-3 text-xs text-slate-400 hover:text-white">✕</button>
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">✅</span>
+                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider font-mono">Order successfully queued!</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-mono">Order Number</span>
+                      <span className="font-bold text-white text-sm">{activeCanteenOrder.orderNo}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-mono">Est. Pickup Time</span>
+                      <span className="font-bold text-emerald-300 text-sm">{activeCanteenOrder.pickupTime}</span>
+                    </div>
+                    <div className="col-span-full pt-1">
+                      <span className="text-[10px] text-slate-400 block font-mono">Item Ordered</span>
+                      <span className="font-bold text-cyan-300">{activeCanteenOrder.item} (₹{activeCanteenOrder.amount})</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2">
                 <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2 mb-2">
                   <span>Veg Biryani</span>
                   <button 
                     onClick={() => {
-                      if (currentUser && placeCanteenOrder(currentUser.id, 'Veg Biryani', 60)) {
-                        alert('Order Placed Successfully! ₹60 deducted.');
-                        setCurrent(getUsers().find(u => u.id === currentUser.id) || null);
-                      } else {
-                        alert('Insufficient Balance!');
+                      if (currentUser) {
+                        const res = placeCanteenOrder(currentUser.id, 'Veg Biryani', 60);
+                        if (res.success && res.orderNo && res.pickupTime) {
+                          setActiveCanteenOrder({ item: 'Veg Biryani', amount: 60, orderNo: res.orderNo, pickupTime: res.pickupTime });
+                          setCurrent(getUsers().find(u => u.id === currentUser.id) || null);
+                        } else {
+                          alert('Insufficient Balance!');
+                        }
                       }
                     }}
                     className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded font-bold text-xs hover:bg-cyan-500/30">
@@ -536,11 +651,14 @@ export default function StudentDashboard() {
                   <span>Cold Coffee</span>
                   <button 
                     onClick={() => {
-                      if (currentUser && placeCanteenOrder(currentUser.id, 'Cold Coffee', 45)) {
-                        alert('Order Placed Successfully! ₹45 deducted.');
-                        setCurrent(getUsers().find(u => u.id === currentUser.id) || null);
-                      } else {
-                        alert('Insufficient Balance!');
+                      if (currentUser) {
+                        const res = placeCanteenOrder(currentUser.id, 'Cold Coffee', 45);
+                        if (res.success && res.orderNo && res.pickupTime) {
+                          setActiveCanteenOrder({ item: 'Cold Coffee', amount: 45, orderNo: res.orderNo, pickupTime: res.pickupTime });
+                          setCurrent(getUsers().find(u => u.id === currentUser.id) || null);
+                        } else {
+                          alert('Insufficient Balance!');
+                        }
                       }
                     }}
                     className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded font-bold text-xs hover:bg-cyan-500/30">
@@ -548,6 +666,27 @@ export default function StudentDashboard() {
                   </button>
                 </div>
               </div>
+
+              {/* Order History Table */}
+              {currentUser?.canteenTransactions && currentUser.canteenTransactions.filter(t => t.type === 'debit' && t.orderNo).length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider font-mono">Active Pickups & Order History</span>
+                  <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                    {currentUser.canteenTransactions.filter(t => t.type === 'debit' && t.orderNo).reverse().map((tx, idx) => (
+                      <div key={idx} className="p-3 rounded-xl bg-black/20 border border-white/5 flex items-center justify-between text-xs font-mono">
+                        <div>
+                          <span className="font-bold text-white block">{tx.item}</span>
+                          <span className="text-[10px] text-slate-500">Order: {tx.orderNo}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-emerald-400 font-bold block">Pickup: {tx.pickupTime || 'N/A'}</span>
+                          <span className="text-[10px] text-slate-500">₹{tx.amount} Paid</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Generate Portfolio CTA */}
               <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 border border-cyan-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -574,12 +713,12 @@ export default function StudentDashboard() {
           {/* TAB 5: CERTIFICATES                                       */}
           {/* ========================================================= */}
           {activeTab === 'certificates' && (
-            <div className="glass p-8 rounded-3xl border-cyan-500/20 relative overflow-hidden animate-fade-in max-w-4xl mx-auto space-y-6">
+            <div className="glass p-8 rounded-3xl border-cyan-500/20 relative overflow-hidden animate-fade-in max-w-5xl mx-auto space-y-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-xl font-black text-white">Web3 Credentials</h2>
+                  <h2 className="text-xl font-black text-white">Photographic Web3 Credentials</h2>
                   <p className="text-xs text-slate-400 mt-1 max-w-md leading-relaxed">
-                    Soulbound tokens securely permanently verifying your academic achievements.
+                    Soulbound token badges incorporating responsive graphics, complete layout summaries, and verifiable issuing parameters securely bound to your identity.
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
@@ -588,25 +727,159 @@ export default function StudentDashboard() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {(currentUser?.certificates || []).map(cert => (
-                  <div key={cert.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-cyan-500/30 transition-all group relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cyan-500/10 to-transparent rounded-bl-full pointer-events-none" />
+                {(currentUser?.certificates || []).map((cert: any) => (
+                  <div 
+                    key={cert.id} 
+                    onClick={() => setSelectedCertModal(cert)}
+                    className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-cyan-500/30 transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between space-y-4 shadow-xl"
+                  >
+                    {cert.photoUrl ? (
+                      <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/10 group-hover:border-cyan-500/40 transition-all">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={cert.photoUrl} 
+                          alt={cert.name} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent p-3 flex flex-col justify-end">
+                          <span className="text-[9px] uppercase font-mono font-bold tracking-widest text-amber-400 block">
+                            {cert.issuerName || 'CampusCore Academic Authority'}
+                          </span>
+                          <span className="text-xs font-black text-white truncate block">
+                            {cert.name}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cyan-500/10 to-transparent rounded-bl-full pointer-events-none" />
+                    )}
                     
-                    <ShieldCheck size={20} className="text-cyan-400 mb-3" />
-                    <h3 className="text-sm font-bold text-white mb-1">{cert.name}</h3>
-                    <p className="text-[10px] text-slate-400 font-mono mb-4">Issued: {cert.date}</p>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors flex items-center gap-1.5 truncate">
+                          <ShieldCheck size={16} className="text-cyan-400 shrink-0" />
+                          <span className="truncate">{cert.name}</span>
+                        </span>
+                        <span className="text-[9px] font-bold text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20 shrink-0">
+                          {cert.photoUrl ? '📸 Photo Enclosed' : '🔗 Standard Token'}
+                        </span>
+                      </div>
+                      {cert.description && (
+                        <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed mb-3">
+                          {cert.description}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-slate-500 font-mono">Issued on: {cert.date}</p>
+                    </div>
                     
-                    <div className="p-2 rounded-lg bg-black border border-white/5 font-mono text-[9px] text-green-400 break-all">
+                    <div className="p-2 rounded-lg bg-black border border-white/5 font-mono text-[9px] text-green-400 truncate">
                       Tx: {cert.txHash}
                     </div>
                   </div>
                 ))}
                 {(!currentUser?.certificates || currentUser.certificates.length === 0) && (
-                  <div className="col-span-full p-8 text-center bg-black/20 rounded-2xl text-slate-500 text-sm">
-                    No Web3 credentials minted yet. Keep crushing those AST labs!
+                  <div className="col-span-full p-8 text-center bg-black/20 rounded-2xl text-slate-500 text-sm border border-white/5">
+                    No Web3 credentials minted yet. Request bulk validation badges via the administrative distribution interface!
                   </div>
                 )}
               </div>
+
+              {/* Certificate Modal Photographic Overlay View */}
+              {selectedCertModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                  <div className="relative w-full max-w-4xl bg-[#0b1220] border-4 border-double border-cyan-500/40 rounded-3xl p-6 md:p-10 shadow-2xl overflow-hidden text-center space-y-6 max-h-[90vh] overflow-y-auto">
+                    {/* Corner decorative ambient accents */}
+                    <div className="absolute top-0 left-0 w-32 h-32 bg-cyan-500/10 rounded-br-full pointer-events-none" />
+                    <div className="absolute bottom-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-tl-full pointer-events-none" />
+                    
+                    {/* Header Ribbon */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono font-bold tracking-widest text-amber-400 uppercase block">
+                        {selectedCertModal.issuerName || 'CampusCore Sovereign Academic Hub'}
+                      </span>
+                      <h3 className="text-2xl md:text-3xl font-black text-white font-serif tracking-wide">
+                        {selectedCertModal.name}
+                      </h3>
+                    </div>
+
+                    {/* Photographic Cover if present */}
+                    {selectedCertModal.photoUrl && (
+                      <div className="max-w-2xl mx-auto rounded-2xl overflow-hidden aspect-video border border-white/10 shadow-2xl relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={selectedCertModal.photoUrl} 
+                          alt="Certificate Frame" 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-white/10 text-[9px] text-slate-300 font-mono">
+                          Cryptographically Embedded Frame
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Body contents */}
+                    <div className="max-w-2xl mx-auto space-y-3 py-3 border-y border-white/5 text-left">
+                      <div className="text-center">
+                        <p className="text-[11px] text-slate-400 uppercase tracking-wider">
+                          This permanent digital instrument testifies that
+                        </p>
+                        <p className="text-xl md:text-2xl font-extrabold text-cyan-300 tracking-tight my-1">
+                          {currentUser?.name || 'Student Identity'}
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-xs text-slate-300 leading-relaxed text-center">
+                        {selectedCertModal.description || 'Has fulfilled all statutory academic constraints and semantic program evaluation rules established by the institutional engineering board.'}
+                      </div>
+                    </div>
+
+                    {/* Signatures & Verification blocks */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 items-end pt-2 text-left">
+                      <div>
+                        <div className="border-b border-white/20 pb-1 mb-1 font-serif text-cyan-400 italic text-xs">
+                          {selectedCertModal.issuerName || 'Dr. Ramesh S.'}
+                        </div>
+                        <span className="text-[9px] uppercase font-bold text-slate-500 block">Signatory Representative</span>
+                      </div>
+
+                      <div className="text-center">
+                        <div className="inline-block p-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[9px] font-mono text-cyan-400 font-bold">
+                          ✓ Soulbound Badge
+                        </div>
+                        <span className="text-[9px] block text-slate-500 mt-1 font-mono">Date: {selectedCertModal.date}</span>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="border-b border-white/20 pb-1 mb-1 font-serif text-indigo-400 italic text-xs justify-end flex">
+                          Institutional Hub
+                        </div>
+                        <span className="text-[9px] uppercase font-bold text-slate-500 block">Polygon Verification Key</span>
+                      </div>
+                    </div>
+
+                    {/* Footer Tx info */}
+                    <div className="pt-3 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono bg-black/40 p-3 rounded-xl">
+                      <span className="text-[9px] text-green-400 truncate max-w-md block">
+                        Tx Hash: {selectedCertModal.txHash}
+                      </span>
+                      <div className="flex gap-2 shrink-0">
+                        <button 
+                          onClick={() => window.print()} 
+                          className="px-3 py-1.5 rounded-lg bg-cyan-500 text-black font-bold text-xs hover:bg-cyan-400 transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          🖨️ Print Frame
+                        </button>
+                        <button 
+                          onClick={() => setSelectedCertModal(null)} 
+                          className="px-3 py-1.5 rounded-lg bg-white/10 text-white font-bold text-xs hover:bg-white/20 transition-all cursor-pointer"
+                        >
+                          ❌ Close
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -691,6 +964,104 @@ export default function StudentDashboard() {
                 </div>
               )}
 
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 7: LIVE BUS TRACKING MAP                              */}
+          {/* ========================================================= */}
+          {activeTab === 'transport' && (
+            <div className="glass p-6 rounded-3xl border-cyan-500/20 space-y-6 animate-fade-in max-w-4xl mx-auto">
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
+                    <Bus size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-black text-white">Live Route Telemetry — Route #04A</h2>
+                    <p className="text-xs text-slate-400 mt-0.5">Real-time student transportation GPS polling service</p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 block font-mono uppercase">Vehicle speed</span>
+                  <span className="text-lg font-black text-cyan-400 font-mono">42 km/h</span>
+                </div>
+              </div>
+
+              {/* Status Bar */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-center">
+                  <span className="text-[10px] text-slate-400 block">Driver Contact</span>
+                  <span className="text-xs font-bold text-white block mt-0.5">Mr. Santosh K.</span>
+                  <span className="text-[9px] text-cyan-400 font-mono block">+91 98221 04921</span>
+                </div>
+                <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-center">
+                  <span className="text-[10px] text-slate-400 block">Current Route Status</span>
+                  <span className="text-xs font-bold text-cyan-400 block mt-0.5">🟢 En Route</span>
+                  <span className="text-[9px] text-slate-500 block">GPS Polling Active</span>
+                </div>
+                <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-center animate-pulse">
+                  <span className="text-[10px] text-cyan-300 block font-bold">Estimated Arrival</span>
+                  <span className="text-xl font-black text-cyan-400 block font-mono">{busEta} Mins</span>
+                  <span className="text-[9px] text-cyan-500 block">Next Drop: Gate 2</span>
+                </div>
+              </div>
+
+              {/* Simulated Graphical GPS Map Interface */}
+              <div className="relative w-full h-80 rounded-2xl bg-[#030712] border border-white/10 overflow-hidden flex items-center justify-center">
+                {/* Background Grid Patterns */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:2rem_2rem] opacity-25" />
+                <div className="absolute top-1/2 left-0 right-0 h-1 bg-white/5" />
+                
+                {/* Simulated Road Line */}
+                <div className="absolute top-1/2 left-10 right-10 h-3 bg-slate-800 rounded-full border-y border-slate-700 flex items-center shadow-inner" />
+                
+                {/* Simulated Route Line Progression */}
+                <div 
+                  className="absolute top-1/2 left-10 h-3 bg-gradient-to-r from-cyan-600 via-teal-500 to-emerald-400 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(6,182,212,0.5)]" 
+                  style={{ width: `${Math.min(90, Math.max(15, 100 - busEta * 6))}%` }}
+                />
+
+                {/* Start Pin */}
+                <div className="absolute top-1/2 left-10 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center">
+                  <div className="w-4 h-4 rounded-full bg-slate-600 border-2 border-white flex items-center justify-center shadow-md">
+                    <span className="text-[8px] font-bold text-white">S</span>
+                  </div>
+                  <span className="text-[9px] font-bold text-slate-400 mt-1 whitespace-nowrap bg-black/60 px-1.5 py-0.5 rounded border border-white/5">Campus Hub</span>
+                </div>
+
+                {/* Moving Bus Target Marker */}
+                <div 
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-1000 z-10 flex flex-col items-center"
+                  style={{ left: `calc(2.5rem + ${Math.min(90, Math.max(15, 100 - busEta * 6))}% - 2.5rem)` }}
+                >
+                  <div className="relative">
+                    <div className="absolute -inset-2 bg-cyan-500 rounded-full animate-ping opacity-40" />
+                    <div className="w-8 h-8 rounded-xl bg-cyan-500 border-2 border-white flex items-center justify-center shadow-lg text-black font-black">
+                      <Bus size={16} />
+                    </div>
+                  </div>
+                  <div className="mt-2 px-2 py-1 bg-cyan-400 text-black font-black text-[9px] rounded shadow tracking-wider uppercase font-mono whitespace-nowrap">
+                    College Bus • {busEta}m left
+                  </div>
+                </div>
+
+                {/* Destination Pin */}
+                <div className="absolute top-1/2 right-10 -translate-y-1/2 translate-x-1/2 flex flex-col items-center">
+                  <MapPin size={20} className="text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-bounce" />
+                  <span className="text-[9px] font-bold text-red-300 mt-1 whitespace-nowrap bg-black/80 px-1.5 py-0.5 rounded border border-red-500/20">Drop Stop</span>
+                </div>
+
+                {/* HUD Overlay Info Overlay */}
+                <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/80 border border-white/10 text-[10px] font-mono text-slate-300 backdrop-blur-md">
+                  🛰️ Signal Strength: <strong className="text-cyan-400">Excellent (5/5 Satellites)</strong>
+                </div>
+
+                <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-mono text-cyan-400">
+                  Last Updated: Live
+                </div>
+              </div>
             </div>
           )}
 

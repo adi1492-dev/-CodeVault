@@ -423,8 +423,8 @@ const ProblemPage = () => {
             <Target size={16} />
           </div>
           <div>
-            <span className="text-[10px] font-mono font-bold text-blue-400 uppercase tracking-wider block mb-1">
-              🎯 Required Assignment Implementation Logic
+            <span className="text-sm font-semibold text-blue-400 block mb-1">
+              🎯 Assignment Instructions
             </span>
             <p className="text-xs text-slate-300 leading-relaxed font-sans">
               {problem.task_goal || 'Write appropriate pointer references or iterative boundaries inside the custom logic blocks below.'}
@@ -440,14 +440,14 @@ const ProblemPage = () => {
           <div className="flex items-center justify-between glass px-4 py-2 rounded-xl border-white/5 bg-black/60">
             <div className="flex items-center gap-2">
               <Code2 size={16} className="text-cyan-400" />
-              <span className="text-xs font-bold font-mono">Micro C Sandbox Pipeline</span>
+              <span className="text-sm font-semibold font-mono">Code Editor</span>
               {isMultiplayerActive && (
-                <span className="ml-2 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold border border-emerald-500/30 flex items-center gap-1 animate-pulse">
-                  <Users size={10} /> Live Sync Active
+                <span className="ml-2 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 flex items-center gap-1 animate-pulse">
+                  <Users size={12} /> Live Sync Active
                 </span>
               )}
               {teacherConnected && (
-                <span className="ml-1 px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 text-[9px] font-bold border border-indigo-500/30">
+                <span className="ml-1 px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 text-xs font-bold border border-indigo-500/30">
                   Teacher Monitoring
                 </span>
               )}

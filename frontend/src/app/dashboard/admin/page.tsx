@@ -26,7 +26,9 @@ import {
   Send,
   BookOpen,
   ShieldCheck,
-  Zap
+  Zap,
+  AlertCircle,
+  Coffee
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -42,11 +44,13 @@ import {
   addDepartment,
   assignDepartmentLeadership,
   mintCertificate,
+  createAlert,
   UserRecord, 
   UserRole, 
   SubjectRecord,
   DepartmentRecord 
 } from '@/lib/store';
+import { useWebSocket } from '@/components/WebSocketProvider';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -54,6 +58,8 @@ export default function AdminDashboard() {
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
   const [departments, setDepartments] = useState<DepartmentRecord[]>([]);
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
+  
+  const { broadcastRefresh } = useWebSocket();
   
   // Primary Navigation tabs (Left Menu)
   const [activeTab, setActiveTab] = useState<'departments' | 'students' | 'users' | 'academics' | 'telemetry' | 'certificates'>('departments');
@@ -74,6 +80,7 @@ export default function AdminDashboard() {
   const [vhodName, setVhodName] = useState('');
   const [vhodEmail, setVhodEmail] = useState('');
   const [deptSuccessMsg, setDeptSuccessMsg] = useState('');
+  const [studentSuccessMsg, setStudentSuccessMsg] = useState('');
 
   // Student Search State
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -85,7 +92,6 @@ export default function AdminDashboard() {
   // ==========================================
   // STAFF & FACULTY MANAGEMENT STATES
   // ==========================================
-  // Admin can create Staff, HOD, and Teacher profiles (Explicitly excludes Student profile creation)
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffEmail, setNewStaffEmail] = useState('');
   const [newStaffRole, setNewStaffRole] = useState<UserRole>('teacher');
@@ -106,8 +112,11 @@ export default function AdminDashboard() {
   const [newStaffMultiYears, setNewStaffMultiYears] = useState<string[]>(['1st Year']);
 
   // Certificates State
-  const [certStudentId, setCertStudentId] = useState('');
+  const [certStudentIds, setCertStudentIds] = useState<string[]>([]);
   const [certName, setCertName] = useState('');
+  const [certPhotoUrl, setCertPhotoUrl] = useState('https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?w=800&auto=format&fit=crop&q=80');
+  const [certDescription, setCertDescription] = useState('Awarded for absolute excellence in advanced computing modules and rigorous AST semantic analysis.');
+  const [certIssuerName, setCertIssuerName] = useState('Dr. Ramesh S. & Computing Faculty');
   const [mintStatus, setMintStatus] = useState<'idle' | 'minting' | 'success'>('idle');
   const [mintTx, setMintTx] = useState('');
 
@@ -148,6 +157,23 @@ export default function AdminDashboard() {
   // ==========================================
   // ACTIONS & SUBMISSIONS
   // ==========================================
+
+  const sendFeeReminder = (student: UserRecord) => {
+    const alertMsg = `Reminder: ₹${student.feeAmountDue?.toLocaleString() || 0} is pending for the current academic year. Please clear your dues.`;
+    
+    // Alert Student
+    createAlert(student.id, 'fee', 'Pending Fee Reminder', alertMsg);
+    
+    // Alert Parent (mock lookup for parent)
+    const parent = getUsers().find(u => u.role === 'parent' && u.department === student.id);
+    if (parent) {
+      createAlert(parent.id, 'fee', `Ward Pending Fee Reminder: ${student.name}`, alertMsg);
+    }
+    
+    broadcastRefresh('REFRESH_ALERTS');
+    setStudentSuccessMsg(`Fee reminder sent successfully to ${student.name} and their guardian.`);
+    setTimeout(() => setStudentSuccessMsg(''), 4000);
+  };
 
   const handleCreateDepartment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,13 +230,11 @@ export default function AdminDashboard() {
     setVhodName('');
     setVhodEmail('');
     
-    // Auto switch to list view to inspect newly created dept
     setDeptSubTab('list');
     
     setTimeout(() => setDeptSuccessMsg(''), 6000);
   };
 
-  // Create Staff Member profile (Admin Feature)
   const handleCreateStaffProfile = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStaffName || !newStaffEmail) return;
@@ -218,7 +242,7 @@ export default function AdminDashboard() {
     const created = addUser({
       name: newStaffName,
       email: newStaffEmail,
-      password: 'password', // Default starter password
+      password: 'password',
       role: newStaffRole,
       department: newStaffDept || departments[0]?.name || 'General Institute',
       section: newStaffSection || undefined,
@@ -227,12 +251,11 @@ export default function AdminDashboard() {
     });
 
     setUsers(getUsers());
-    setSelectedStaffId(created.id); // Instantly highlight newly allocated profile
+    setSelectedStaffId(created.id);
     setStaffSuccessMsg(`Profile for "${created.name}" successfully created as ${created.role} (${newStaffMultiYears.join(', ')}).`);
     setNewStaffName('');
     setNewStaffEmail('');
     
-    // Auto switch to directory sub tab to view profile allotments
     setStaffSubTab('directory');
 
     setTimeout(() => setStaffSuccessMsg(''), 6000);
@@ -256,7 +279,6 @@ export default function AdminDashboard() {
     setTimeout(() => setInfoNotice(''), 4000);
   };
 
-  // Update staff's allotted class section directly
   const handleUpdateStaffSection = (staffId: string, newSection: string) => {
     const updated = users.map(u => {
       if (u.id === staffId) {
@@ -273,23 +295,16 @@ export default function AdminDashboard() {
     router.push('/');
   };
 
-  // ==========================================
-  // LIST FILTERS
-  // ==========================================
-  
-  // Filter departments by year filter
   const filteredDepartments = selectedYearFilter === 'All Years' 
     ? departments 
     : departments.filter(d => !d.academicYear || d.academicYear === selectedYearFilter);
 
-  // Filter subjects by selected department dropdown and academic year filter
   const filteredSubjects = subjects.filter(s => {
     const yearMatch = selectedYearFilter === 'All Years' || !s.academicYear || s.academicYear === selectedYearFilter;
     const deptMatch = selectedDeptFilter === 'all' || s.department.toLowerCase() === selectedDeptFilter.toLowerCase();
     return yearMatch && deptMatch;
   });
 
-  // Staff list for assigning leadership filtered by year scope
   const eligibleStaff = users.filter(u => {
     if (u.role === 'student' || u.role === 'parent') return false;
     if (selectedYearFilter !== 'All Years') {
@@ -300,7 +315,6 @@ export default function AdminDashboard() {
     return true;
   });
 
-  // Search Results for Students filtered by Year Scope
   const studentSearchResults = users.filter(u => {
     if (u.role !== 'student') return false;
     if (selectedYearFilter !== 'All Years' && u.academicYear && u.academicYear !== selectedYearFilter) return false;
@@ -314,24 +328,16 @@ export default function AdminDashboard() {
 
   const selectedStudent = users.find(u => u.id === selectedStudentId);
 
-  // User Accounts section filter: ONLY SHOW STAFF, TEACHER, AND HOD PROFILES filtered by Year scope
-  // Exclude students and parents completely
   const staffAndFacultyUsers = users.filter(u => {
     if (u.role === 'student' || u.role === 'parent') return false;
-    
-    // Check year filter: single year match or included in multi-year instructor tracking array
     if (selectedYearFilter !== 'All Years') {
       const singleMatch = !u.academicYear || u.academicYear === selectedYearFilter;
       const multiMatch = u.academicYears?.includes(selectedYearFilter);
       if (!singleMatch && !multiMatch) return false;
     }
-    
-    // Check global department filter
     if (selectedDeptFilter !== 'all' && u.department?.toLowerCase() !== selectedDeptFilter.toLowerCase()) {
       return false;
     }
-
-    // Check staff search bar query
     if (!staffSearchQuery) return true;
     const q = staffSearchQuery.toLowerCase();
     return u.name.toLowerCase().includes(q) || 
@@ -344,12 +350,10 @@ export default function AdminDashboard() {
   const selectedStaff = users.find(u => u.id === selectedStaffId);
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white selection:bg-cyan-500/30 pb-20 relative overflow-x-hidden font-sans">
-      {/* Subtle Background Glow */}
+    <div className="min-h-screen bg-[#190019] text-[#FBE4D8] selection:bg-[#854F6C] selection:text-[#FFDFC3] pb-20 relative overflow-x-hidden font-sans">
       <div className="absolute top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cyan-900/25 via-indigo-950/15 to-transparent pointer-events-none blur-3xl" />
       <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-fuchsia-950/10 rounded-full pointer-events-none blur-3xl" />
 
-      {/* Top Header */}
       <header className="border-b border-white/5 bg-white/[0.01] backdrop-blur-xl sticky top-0 z-50 transition-all">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -384,10 +388,7 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* Main Container Layout with Left Sidebar */}
       <main className="max-w-7xl mx-auto px-6 mt-8 flex flex-col lg:flex-row gap-8 relative z-10 items-start">
-        
-        {/* Left Navigation Menu Bar */}
         <div className="w-full lg:w-72 shrink-0 p-4 rounded-3xl border border-white/10 bg-[#080d1a]/90 backdrop-blur-2xl shadow-2xl space-y-6 sticky top-20">
           <div className="px-4 pb-3 border-b border-white/10 mb-4">
             <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wide block">
@@ -396,7 +397,6 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-col gap-2">
-            {/* Departments Button */}
             <button
               onClick={() => setActiveTab('departments')}
               className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
@@ -409,7 +409,6 @@ export default function AdminDashboard() {
               <span className="truncate">Departments</span>
             </button>
 
-            {/* Student Search Button */}
             <button
               onClick={() => setActiveTab('students')}
               className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
@@ -424,7 +423,6 @@ export default function AdminDashboard() {
               </div>
             </button>
 
-            {/* Staff / Teacher Accounts Ledger */}
             <button
               onClick={() => setActiveTab('users')}
               className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
@@ -437,7 +435,6 @@ export default function AdminDashboard() {
               <span className="truncate">Staff & Teachers</span>
             </button>
 
-            {/* Subjects and Syllabus Management */}
             <button
               onClick={() => setActiveTab('academics')}
               className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
@@ -450,7 +447,6 @@ export default function AdminDashboard() {
               <span className="truncate">Academic Subjects ({subjects.length})</span>
             </button>
 
-            {/* System Status View */}
             <button
               onClick={() => setActiveTab('telemetry')}
               className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
@@ -463,7 +459,6 @@ export default function AdminDashboard() {
               <span className="truncate">System Status</span>
             </button>
 
-            {/* Certificates */}
             <button
               onClick={() => setActiveTab('certificates')}
               className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
@@ -475,9 +470,9 @@ export default function AdminDashboard() {
               <ShieldCheck size={18} className="shrink-0" />
               <span className="truncate">Issue Certificates</span>
             </button>
+
           </div>
 
-          {/* Department Global Switcher */}
           {(activeTab === 'users' || activeTab === 'academics') && (
             <div className="pt-4 border-t border-white/5 space-y-2">
               <div className="flex items-center gap-1.5 px-1">
@@ -502,10 +497,8 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Right Viewing Content Wrapper */}
         <div className="grow min-w-0 w-full space-y-6">
 
-          {/* Top Horizontal Academic Year Filter Pane */}
           <div className="flex items-center justify-between p-3 rounded-2xl bg-black/60 border border-white/5 backdrop-blur-md">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
@@ -530,13 +523,8 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* ========================================================= */}
-          {/* TAB 1: DEPARTMENTS SUITE                                  */}
-          {/* ========================================================= */}
           {activeTab === 'departments' && (
             <div className="space-y-6 animate-fade-in">
-              
-              {/* Secondary Top Horizontal Sub-Menu */}
               <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
                 <button
                   onClick={() => setDeptSubTab('list')}
@@ -558,7 +546,6 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              {/* Sub-Feature View 1: List Departments */}
               {deptSubTab === 'list' && (
                 <div className="glass p-6 rounded-3xl border-white/5 space-y-6 animate-fade-in">
                   <div className="flex items-center justify-between border-b border-white/5 pb-4">
@@ -612,9 +599,7 @@ export default function AdminDashboard() {
                             </span>
                           </div>
 
-                          {/* Leader Selection */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/5">
-                            {/* HOD */}
                             <div className="space-y-1 bg-black/30 p-2.5 rounded-xl border border-white/5">
                               <label className="text-[10px] font-bold text-fuchsia-400 uppercase block">
                                 Head of Department (HOD)
@@ -642,7 +627,6 @@ export default function AdminDashboard() {
                               )}
                             </div>
 
-                            {/* Vice HOD */}
                             <div className="space-y-1 bg-black/30 p-2.5 rounded-xl border border-white/5">
                               <label className="text-[10px] font-bold text-cyan-400 uppercase block">
                                 Vice HOD
@@ -671,7 +655,6 @@ export default function AdminDashboard() {
                             </div>
                           </div>
 
-                          {/* Teaching Staff List */}
                           <div className="pt-3 border-t border-white/5 space-y-2.5">
                             <span className="text-xs font-bold text-slate-300 block flex items-center justify-between">
                               <span>👨‍🏫 Teaching Staff & Syllabus Progress</span>
@@ -724,7 +707,6 @@ export default function AdminDashboard() {
                               </div>
                             )}
                           </div>
-
                         </div>
                       );
                     })}
@@ -732,7 +714,6 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {/* Sub-Feature View 2: Create Department Form */}
               {deptSubTab === 'create' && (
                 <div className="max-w-xl mx-auto glass p-6 rounded-3xl border-cyan-500/20 bg-gradient-to-b from-white/[0.02] to-transparent relative overflow-hidden animate-fade-in">
                   <div className="flex items-center gap-3 mb-4">
@@ -798,7 +779,6 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    {/* Optional Account Generation */}
                     <div className="pt-2 border-t border-white/5 mt-4 space-y-3">
                       <label className="flex items-center gap-2 cursor-pointer group">
                         <input 
@@ -873,17 +853,11 @@ export default function AdminDashboard() {
                   </form>
                 </div>
               )}
-
             </div>
           )}
 
-          {/* ========================================================= */}
-          {/* TAB 2: STUDENT PROFILE SEARCH SUITE                       */}
-          {/* ========================================================= */}
           {activeTab === 'students' && (
             <div className="space-y-6 animate-fade-in">
-              
-              {/* Secondary Top Horizontal Sub-Menu */}
               <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
                 <button
                   onClick={() => setStudentSubTab('search')}
@@ -905,7 +879,13 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              {/* Search bar inside view */}
+              {studentSuccessMsg && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold leading-relaxed flex items-start gap-2">
+                  <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+                  <span>{studentSuccessMsg}</span>
+                </div>
+              )}
+
               <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="w-full sm:w-auto">
@@ -938,7 +918,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Filter chips */}
                 <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5 items-center">
                   <span className="text-[11px] text-slate-400 font-bold mr-1">
                     Search Results:
@@ -965,11 +944,8 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Sub-Feature View 1: Detailed View Card */}
               {studentSubTab === 'search' && selectedStudent && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
-                  
-                  {/* Profile info column */}
                   <div className="lg:col-span-5 space-y-6">
                     <div className="glass p-6 rounded-3xl border-cyan-500/20 bg-gradient-to-b from-white/[0.02] to-transparent relative overflow-hidden">
                       <div className="absolute top-0 right-0 bg-cyan-500/10 text-cyan-400 text-[10px] font-bold px-3 py-1 rounded-bl-xl border-b border-cyan-500/20">
@@ -1005,19 +981,10 @@ export default function AdminDashboard() {
                           <span className="text-slate-400 font-mono">{selectedStudent.id}</span>
                         </div>
                       </div>
-
-                      <div className="pt-3 text-center">
-                        <span className="text-[10px] text-slate-500 block">
-                          Switch sub-tab above to "⚙️ Update Student Records" to edit properties.
-                        </span>
-                      </div>
                     </div>
                   </div>
 
-                  {/* Right Side: Standings */}
                   <div className="lg:col-span-7 space-y-6">
-                    
-                    {/* Attendance Record */}
                     <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1026,90 +993,18 @@ export default function AdminDashboard() {
                             Attendance Record
                           </h4>
                         </div>
-
                         <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                           Live Tracking
                         </span>
                       </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
-                        <div className="p-4 rounded-2xl bg-black/40 border border-white/5 text-center space-y-1">
+                      <div className="p-4 rounded-2xl bg-black/40 border border-white/5 text-center space-y-1">
                           <span className="text-xs text-slate-500 block">Total Attendance</span>
                           <span className="text-3xl font-black text-white block">
                             {selectedStudent.attendancePct || 91.5}%
                           </span>
-                          <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden mt-2">
-                            <div 
-                              className="bg-cyan-400 h-full rounded-full transition-all" 
-                              style={{ width: `${selectedStudent.attendancePct || 91.5}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="p-4 rounded-2xl bg-black/40 border border-white/5 text-center space-y-1">
-                          <span className="text-xs text-slate-500 block">Attendance Streak</span>
-                          <span className="text-2xl font-extrabold text-teal-400 block">
-                            24 Days
-                          </span>
-                          <span className="text-[10px] text-slate-400 block font-medium">in a row</span>
-                        </div>
-
-                        <div className="p-4 rounded-2xl bg-black/40 border border-white/5 text-center space-y-1">
-                          <span className="text-xs text-slate-500 block">Exam Eligibility</span>
-                          <span className="text-xs font-bold text-emerald-300 block py-1.5 bg-emerald-500/5 rounded border border-emerald-500/10">
-                            Eligible for exams
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="bg-black/20 p-2.5 rounded-xl border border-white/5 flex items-center justify-between text-xs">
-                        <span className="text-slate-400">Last 10 Days Attendance:</span>
-                        <div className="flex gap-1.5">
-                          {['P','P','P','P','A','P','P','P','P','P'].map((state, idx) => (
-                            <span 
-                              key={idx} 
-                              className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                                state === 'P' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                              }`}
-                            >
-                              {state}
-                            </span>
-                          ))}
-                        </div>
                       </div>
                     </div>
 
-                    {/* Academic Standing */}
-                    <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Award size={16} className="text-amber-400" />
-                          <h4 className="text-xs font-bold text-slate-200">
-                            Academic Performance
-                          </h4>
-                        </div>
-                        <span className="text-xs text-slate-400">
-                          Lab Test Results
-                        </span>
-                      </div>
-
-                      <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between gap-4">
-                        <div>
-                          <span className="text-xs text-slate-500 block mb-1 font-medium">
-                            Overall Grade Standing
-                          </span>
-                          <span className="text-base font-bold text-amber-300 block">
-                            {selectedStudent.gradesSummary || 'Grade A (Excellent progress in core labs)'}
-                          </span>
-                        </div>
-
-                        <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-black text-lg shrink-0">
-                          {selectedStudent.gradesSummary?.charAt(0) || 'A'}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Fee Status */}
                     <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1118,9 +1013,6 @@ export default function AdminDashboard() {
                             Fee Status & Payments
                           </h4>
                         </div>
-                        <span className="text-xs text-slate-400">
-                          Fee Department
-                        </span>
                       </div>
 
                       <div className="p-5 rounded-2xl bg-black/40 border border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -1137,7 +1029,6 @@ export default function AdminDashboard() {
                               {selectedStudent.feeStatus || 'Paid'}
                             </span>
                           </div>
-
                           <span className="text-lg font-black text-white block mt-1">
                             Total Due: ₹{selectedStudent.feeAmountDue !== undefined ? selectedStudent.feeAmountDue : 0}
                           </span>
@@ -1145,9 +1036,10 @@ export default function AdminDashboard() {
 
                         {selectedStudent.feeStatus === 'Pending' ? (
                           <button
-                            onClick={() => alert(`Reminder sent to the registered guardian email for ${selectedStudent.name}.`)}
-                            className="px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all shrink-0"
+                            onClick={() => sendFeeReminder(selectedStudent)}
+                            className="px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all shrink-0 flex items-center gap-2"
                           >
+                            <AlertCircle size={14} />
                             Send Fee Reminder
                           </button>
                         ) : (
@@ -1160,18 +1052,14 @@ export default function AdminDashboard() {
                         )}
                       </div>
                     </div>
-
                   </div>
-
                 </div>
               )}
 
-              {/* Sub-Feature View 2: Update Student Record Sliders */}
               {studentSubTab === 'update' && selectedStudent && (
                 <div className="max-w-xl mx-auto glass p-6 rounded-3xl border-white/5 space-y-6 animate-fade-in">
                   <div className="border-b border-white/5 pb-3">
                     <h3 className="text-sm font-bold text-white">⚙️ Update Target Student Records</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Modifying tracking constants for: <strong className="text-cyan-300">{selectedStudent.name}</strong></p>
                   </div>
 
                   <div className="space-y-4">
@@ -1218,23 +1106,11 @@ export default function AdminDashboard() {
                   )}
                 </div>
               )}
-
-              {!selectedStudent && (
-                <div className="p-12 text-center rounded-3xl bg-black/20 border border-white/5 text-slate-400 text-xs">
-                  Please select a matching student profile from the results sphere above to view or update metrics.
-                </div>
-              )}
-
             </div>
           )}
 
-          {/* ========================================================= */}
-          {/* TAB 3: STAFF & TEACHER ACCOUNTS MATRIX                    */}
-          {/* ========================================================= */}
           {activeTab === 'users' && (
             <div className="space-y-6 animate-fade-in">
-              
-              {/* Secondary Top Horizontal Sub-Menu */}
               <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
                 <button
                   onClick={() => setStaffSubTab('directory')}
@@ -1256,23 +1132,16 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              {/* Sub-Feature View 1: Directory List & Click Preview Pane */}
               {staffSubTab === 'directory' && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
-                  
-                  {/* Filterable Staff List Container */}
                   <div className="lg:col-span-5 space-y-3">
                     <div className="glass p-5 rounded-3xl border-white/5 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
                           Staff Directory ({staffAndFacultyUsers.length})
                         </span>
-                        <span className="text-[10px] text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded">
-                          Staff Only View
-                        </span>
                       </div>
 
-                      {/* Search inside staff list */}
                       <div className="relative">
                         <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                         <input 
@@ -1949,73 +1818,184 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">Select Student</label>
-                    <select
-                      value={certStudentId}
-                      onChange={(e) => setCertStudentId(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-cyan-300 focus:outline-none"
-                    >
-                      <option value="">-- Choose Student --</option>
-                      {users.filter(u => u.role === 'student').map(s => (
-                        <option key={s.id} value={s.id}>{s.name} ({s.rollNo})</option>
-                      ))}
-                    </select>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-7 space-y-4">
+                  <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-300 block uppercase tracking-wider">
+                        1. Target Recipients (Bulk Selection Available)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const studentList = users.filter(u => u.role === 'student').map(s => s.id);
+                          if (certStudentIds.length === studentList.length) {
+                            setCertStudentIds([]);
+                          } else {
+                            setCertStudentIds(studentList);
+                          }
+                        }}
+                        className="text-[10px] text-cyan-400 font-bold underline hover:text-cyan-300 cursor-pointer"
+                      >
+                        {certStudentIds.length === users.filter(u => u.role === 'student').length ? 'Deselect All' : 'Select All Cohort'}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[160px] overflow-y-auto pr-1">
+                      {users.filter(u => u.role === 'student').map(s => {
+                        const isSelected = certStudentIds.includes(s.id);
+                        return (
+                          <div
+                            key={s.id}
+                            onClick={() => {
+                              if (isSelected) {
+                                setCertStudentIds(certStudentIds.filter(id => id !== s.id));
+                              } else {
+                                setCertStudentIds([...certStudentIds, s.id]);
+                              }
+                            }}
+                            className={`p-2 rounded-xl text-xs flex items-center gap-2 cursor-pointer transition-all border ${
+                              isSelected 
+                                ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 font-bold' 
+                                : 'bg-black/60 border-white/5 text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            <input 
+                              type="checkbox"
+                              checked={isSelected}
+                              readOnly
+                              className="rounded border-white/10 bg-black text-cyan-500 focus:ring-0 cursor-pointer"
+                            />
+                            <span className="truncate">{s.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">Certificate Title</label>
+                      <input
+                        type="text"
+                        value={certName}
+                        onChange={(e) => setCertName(e.target.value)}
+                        placeholder="e.g. Master of AST Parsers"
+                        className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">Signatory Body / Issuer Name</label>
+                      <input
+                        type="text"
+                        value={certIssuerName}
+                        onChange={(e) => setCertIssuerName(e.target.value)}
+                        placeholder="e.g. Dean of Computing Labs"
+                        className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-400"
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">Certificate Title</label>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">Embedded Photographic Template URL</label>
                     <input
                       type="text"
-                      value={certName}
-                      onChange={(e) => setCertName(e.target.value)}
-                      placeholder="e.g. Master of AST Parsers"
-                      className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none"
+                      value={certPhotoUrl}
+                      onChange={(e) => setCertPhotoUrl(e.target.value)}
+                      placeholder="https://images.unsplash.com/..."
+                      className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-400 truncate"
+                    />
+                    <span className="text-[10px] text-slate-500 block mt-1">Provide a high-fidelity graphic URL to embed onto the minted output block.</span>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">Comprehensive Document Description</label>
+                    <textarea
+                      rows={2}
+                      value={certDescription}
+                      onChange={(e) => setCertDescription(e.target.value)}
+                      placeholder="Document text verifying curriculum coverage..."
+                      className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-400 resize-none"
                     />
                   </div>
+
                   <button
+                    type="button"
                     onClick={() => {
-                      if (!certStudentId || !certName) return;
+                      if (certStudentIds.length === 0 || !certName) return;
                       setMintStatus('minting');
                       setTimeout(() => {
                         const hash = '0x' + Math.random().toString(16).substr(2, 40);
-                        mintCertificate(certStudentId, certName, hash);
+                        mintCertificate(certStudentIds, certName, hash, certPhotoUrl, certDescription, certIssuerName);
                         setMintTx(hash);
                         setMintStatus('success');
                         setUsers(getUsers());
                         setTimeout(() => {
                           setMintStatus('idle');
                           setCertName('');
-                          setCertStudentId('');
+                          setCertStudentIds([]);
                         }, 5000);
                       }, 2500);
                     }}
-                    disabled={mintStatus !== 'idle'}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 hover:opacity-90 text-black font-extrabold text-xs uppercase tracking-wider transition-all disabled:opacity-50"
+                    disabled={mintStatus !== 'idle' || certStudentIds.length === 0 || !certName}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 hover:opacity-90 text-black font-extrabold text-xs uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/10"
                   >
-                    {mintStatus === 'idle' ? 'Mint Soulbound Token' : 'Processing...'}
+                    <Sparkles size={16} />
+                    <span>{mintStatus === 'idle' ? `Mint Soulbound Badges (${certStudentIds.length} Selected)` : 'Processing Array Mint...'}</span>
                   </button>
                 </div>
 
-                <div className="p-4 rounded-xl bg-black border border-white/10 font-mono text-[10px] text-green-400 relative overflow-hidden flex flex-col justify-end min-h-[200px]">
-                  {mintStatus === 'idle' && <div className="text-slate-500">Waiting for minting instruction...</div>}
-                  {mintStatus === 'minting' && (
-                    <div className="space-y-1 animate-pulse">
-                      <div>{'>'} Initializing Web3 Provider...</div>
-                      <div>{'>'} Generating cryptographic payload...</div>
-                      <div>{'>'} Sending transaction to Polygon Mainnet...</div>
-                      <div>{'>'} Awaiting block confirmation...</div>
-                    </div>
-                  )}
-                  {mintStatus === 'success' && (
-                    <div className="space-y-1 text-cyan-400">
-                      <div>{'>'} Transaction Confirmed!</div>
-                      <div>{'>'} Block #18492041</div>
-                      <div className="break-all">{'>'} Hash: {mintTx}</div>
-                      <div>{'>'} Credential permanently bound to student identity.</div>
-                    </div>
-                  )}
+                <div className="lg:col-span-5 space-y-4 flex flex-col justify-between">
+                  {/* Real-time Template Preview Card */}
+                  <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-3 relative overflow-hidden">
+                    <span className="text-[10px] uppercase font-mono font-bold text-slate-400 block border-b border-white/5 pb-2">
+                      Live Photographic Template Display
+                    </span>
+                    {certPhotoUrl ? (
+                      <div className="relative rounded-xl overflow-hidden aspect-video border border-white/10 shadow-inner group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={certPhotoUrl} 
+                          alt="Certificate Template" 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-3 flex flex-col justify-end">
+                          <span className="text-[10px] text-amber-400 font-bold font-mono uppercase tracking-wider block">
+                            {certIssuerName || 'Issuer Body'}
+                          </span>
+                          <span className="text-xs font-black text-white truncate block">
+                            {certName || 'Certificate Title'}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full aspect-video rounded-xl bg-white/5 border border-dashed border-white/10 flex items-center justify-center text-slate-600 text-xs">
+                        No Background URL Provided
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Transaction Terminal Logs */}
+                  <div className="p-4 rounded-xl bg-black border border-white/10 font-mono text-[10px] text-green-400 relative overflow-hidden flex flex-col justify-end min-h-[140px]">
+                    {mintStatus === 'idle' && <div className="text-slate-500">Waiting for bulk array distribution...</div>}
+                    {mintStatus === 'minting' && (
+                      <div className="space-y-1 animate-pulse">
+                        <div>{'>'} Mapping {certStudentIds.length} targeted identity structures...</div>
+                        <div>{'>'} Writing composite fields (PhotoUrl, Details)...</div>
+                        <div>{'>'} Executing recursive Polygon transactions...</div>
+                        <div>{'>'} Awaiting network confirmations...</div>
+                      </div>
+                    )}
+                    {mintStatus === 'success' && (
+                      <div className="space-y-1 text-cyan-400">
+                        <div>{'>'} Bulk Issuance Confirmed!</div>
+                        <div>{'>'} Distributed across {certStudentIds.length} viewports.</div>
+                        <div className="break-all">{'>'} Base Hash: {mintTx}</div>
+                        <div>{'>'} Custom metadata persistently cryptographically bound.</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

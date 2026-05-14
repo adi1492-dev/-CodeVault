@@ -43,7 +43,11 @@ export default function HodDashboard() {
   const [targetScope, setTargetScope] = useState('all');
   const [directives, setDirectives] = useState([
     { id: 'd1', title: 'Midterm Evaluation Preparation Checklist', scope: 'All Subject Faculty', date: '2026-05-12', active: true },
-    { id: 'd2', title: 'Final Review Guidelines for Lab Scoring', scope: 'Class Teachers', date: '2026-05-10', active: true }
+    { id: 'd2', title: 'Final Review Guidelines for Lab Scoring', scope: 'Class Teachers', date: '2026-05-10', active: true },
+    { id: 'd3', title: 'NBA Internal Audit Course Portfolio Requirements', scope: 'All Department Instructors', date: '2026-03-15', active: true },
+    { id: 'd4', title: 'Spring Hackathon Mentor Cohort Mapping Protocols', scope: 'Subject Teachers', date: '2026-02-02', active: true },
+    { id: 'd5', title: 'Winter Capstone Project Panel Assignment Roster', scope: 'All Department Instructors', date: '2025-11-20', active: true },
+    { id: 'd6', title: 'Curriculum Revision Roadmap & Elective Allocation', scope: 'Class Teachers', date: '2025-08-10', active: true }
   ]);
   const [successMsg, setSuccessMsg] = useState('');
 

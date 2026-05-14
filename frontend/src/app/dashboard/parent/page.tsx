@@ -16,10 +16,13 @@ import {
   TrendingUp,
   Receipt,
   MessageSquare,
-  Coffee
+  Coffee,
+  MapPin,
+  Bus
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser, setCurrentUser, getUsers, saveUsers, getSubjects, rechargeCanteenWallet, UserRecord, SubjectRecord } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getUsers, saveUsers, getSubjects, rechargeCanteenWallet, UserRecord, SubjectRecord, getAlerts, markAlertRead, AlertRecord } from '@/lib/store';
+import { useWebSocket } from '@/components/WebSocketProvider';
 
 export default function ParentDashboard() {
   const router = useRouter();
@@ -27,7 +30,7 @@ export default function ParentDashboard() {
   const [ward, setWard] = useState<UserRecord | null>(null);
   const [rechargeAmt, setRechargeAmt] = useState('');
   
-  const [activeTab, setActiveTab] = useState<'ward' | 'fees' | 'appointments' | 'syllabus' | 'canteen'>('ward');
+  const [activeTab, setActiveTab] = useState<'ward' | 'fees' | 'appointments' | 'syllabus' | 'canteen' | 'transport'>('ward');
   const [feeSubTab, setFeeSubTab] = useState<'pay' | 'history'>('pay');
   const [apptSubTab, setApptSubTab] = useState<'schedule' | 'circulars'>('schedule');
 
@@ -39,6 +42,25 @@ export default function ParentDashboard() {
   const [msg, setMsg] = useState('');
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
 
+  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
+  const [busEta, setBusEta] = useState(14);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setBusEta(prev => prev > 2 ? prev - 1 : 14);
+    }, 8000);
+    return () => clearInterval(timer);
+  }, []);
+  
+  const { isConnected } = useWebSocket();
+
+  const loadAlerts = () => {
+    if (currentUser) {
+      setAlerts(getAlerts(currentUser.id).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+    }
+  };
+
   useEffect(() => {
     const user = getCurrentUser();
     if (user) setCurrent(user);
@@ -47,6 +69,17 @@ export default function ParentDashboard() {
     const students = getUsers().filter(u => u.role === 'student');
     if (students.length) setWard(students[0]);
   }, []);
+
+  useEffect(() => {
+    loadAlerts();
+    window.addEventListener('campuscore_alerts_refresh', loadAlerts);
+    return () => window.removeEventListener('campuscore_alerts_refresh', loadAlerts);
+  }, [currentUser]);
+
+  const handleMarkAlertRead = (id: string) => {
+    markAlertRead(id);
+    loadAlerts();
+  };
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -92,20 +125,59 @@ export default function ParentDashboard() {
               PAR
             </div>
             <div>
-              <span className="font-extrabold tracking-tight text-sm block bg-gradient-to-r from-white via-slate-100 to-emerald-200 bg-clip-text text-transparent">
-                Parent Portal Overview
+              <span className="font-bold text-lg text-white block">
+                Parent Portal
               </span>
-              <span className="text-[10px] text-emerald-400 block font-semibold">
-                Supervising Ward: {ward?.name ?? 'Loading...'} (Section {ward?.section ?? '—'})
+              <span className="text-sm text-emerald-400 block font-medium">
+                Ward: {ward?.name ?? 'Loading...'} (Section {ward?.section ?? '—'})
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 text-[10px] text-slate-400 border border-white/5 font-medium">
-              <Sparkles size={11} className="text-emerald-400" />
-              <span>Guardian Authorization Access</span>
+          <div className="flex items-center gap-4 relative">
+            <span className="hidden md:inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/5 text-xs text-slate-300 font-medium">
+              <Sparkles size={14} className="text-emerald-400" />
+              <span>Parent Account</span>
             </span>
+
+            <button 
+              onClick={() => setIsAlertsOpen(!isAlertsOpen)}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition-all border border-white/5 relative"
+            >
+              <Bell size={16} />
+              {alerts.some(a => !a.read) && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              )}
+            </button>
+
+            {isAlertsOpen && (
+              <div className="absolute top-full right-0 mt-2 w-80 glass rounded-2xl border-white/10 shadow-2xl overflow-hidden z-50 bg-[#080d1a]">
+                <div className="p-3 border-b border-white/5 bg-white/5">
+                  <span className="text-sm font-bold text-white">Notifications</span>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {alerts.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-400">No alerts found</div>
+                  ) : (
+                    alerts.map(a => (
+                      <div key={a.id} className={`p-3 border-b border-white/5 ${a.read ? 'bg-black/20' : 'bg-emerald-500/10'}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className={`text-xs font-bold ${a.type === 'fee' ? 'text-amber-400' : a.type === 'attendance' ? 'text-red-400' : 'text-emerald-400'}`}>{a.title}</span>
+                            <p className="text-[10px] text-slate-300 mt-1">{a.message}</p>
+                          </div>
+                          {!a.read && (
+                            <button onClick={() => handleMarkAlertRead(a.id)} className="text-[10px] text-emerald-300 hover:text-emerald-200">
+                              Mark Read
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
 
             <button 
               onClick={handleLogout}
@@ -123,12 +195,9 @@ export default function ParentDashboard() {
         
         {/* Left Menu Selection Sidebar */}
         <div className="w-full lg:w-72 shrink-0 p-4 rounded-3xl border border-white/10 bg-[#080d1a]/90 backdrop-blur-2xl shadow-2xl space-y-6 sticky top-20">
-          <div className="px-2 pb-1 border-b border-white/5">
-            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
-              Guardian Options
-            </span>
-            <span className="text-xs text-slate-400 block mt-0.5 font-medium">
-              Ward Management
+          <div className="px-4 pb-3 border-b border-white/10 mb-4">
+            <span className="text-sm font-semibold text-emerald-400 uppercase tracking-wide block">
+              Parent Menu
             </span>
           </div>
 
@@ -136,22 +205,22 @@ export default function ParentDashboard() {
             {/* Ward Performance */}
             <button
               onClick={() => setActiveTab('ward')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'ward' 
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-extrabold shadow-lg shadow-emerald-500/20 scale-[1.02]' 
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <TrendingUp size={16} className="shrink-0" />
+              <TrendingUp size={18} className="shrink-0" />
               <span className="truncate">Ward Overview</span>
             </button>
 
             {/* Fee Management */}
             <button
               onClick={() => setActiveTab('fees')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'fees' 
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-extrabold shadow-lg shadow-emerald-500/20 scale-[1.02]' 
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -162,9 +231,9 @@ export default function ParentDashboard() {
             {/* Teacher Appointments */}
             <button
               onClick={() => setActiveTab('appointments')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'appointments' 
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-extrabold shadow-lg shadow-emerald-500/20 scale-[1.02]' 
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -175,9 +244,9 @@ export default function ParentDashboard() {
             {/* Syllabus Overview */}
             <button
               onClick={() => setActiveTab('syllabus')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'syllabus' 
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-extrabold shadow-lg shadow-emerald-500/20 scale-[1.02]' 
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -188,14 +257,27 @@ export default function ParentDashboard() {
             {/* Canteen Wallet */}
             <button
               onClick={() => setActiveTab('canteen')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'canteen' 
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-extrabold shadow-lg shadow-emerald-500/20 scale-[1.02]' 
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <Coffee size={16} className="shrink-0" />
               <span className="truncate">Canteen Wallet</span>
+            </button>
+
+            {/* Live Bus Tracking */}
+            <button
+              onClick={() => setActiveTab('transport')}
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'transport' 
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Bus size={16} className="shrink-0" />
+              <span className="truncate">Live Bus Tracking</span>
             </button>
           </div>
         </div>
@@ -208,15 +290,15 @@ export default function ParentDashboard() {
           {/* ========================================================= */}
           {activeTab === 'ward' && (
             <div className="glass p-6 rounded-3xl border-emerald-500/20 bg-gradient-to-r from-emerald-950/10 via-transparent to-transparent animate-fade-in max-w-2xl mx-auto space-y-6">
-              <span className="text-xs uppercase font-bold tracking-wider text-emerald-400 block border-b border-white/5 pb-2">
-                📊 Continuous Academic Tracking
+              <span className="text-base font-semibold text-emerald-400 block border-b border-white/5 pb-2">
+                Continuous Academic Tracking
               </span>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
                   <span className="text-xs text-slate-400 block font-medium">Attendance</span>
                   <span className={`text-3xl font-black mt-1 block ${(ward?.attendancePct ?? 0) >= 75 ? 'text-emerald-400' : 'text-red-400'}`}>{ward?.attendancePct ?? 0}%</span>
-                  {(ward?.attendancePct ?? 0) < 75 && <span className="text-[10px] text-red-400 block mt-0.5 font-bold">⚠ Below 75%</span>}
+                  {(ward?.attendancePct ?? 0) < 75 && <span className="text-xs text-red-400 block mt-0.5 font-bold">⚠ Below 75%</span>}
                 </div>
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
                   <span className="text-xs text-slate-400 block font-medium">CGPA</span>
@@ -573,6 +655,104 @@ export default function ParentDashboard() {
                       <div className="text-xs text-slate-500">No transactions yet.</div>
                     )}
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 6: LIVE BUS TRACKING MAP                              */}
+          {/* ========================================================= */}
+          {activeTab === 'transport' && (
+            <div className="glass p-6 rounded-3xl border-emerald-500/20 space-y-6 animate-fade-in max-w-4xl mx-auto">
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                    <Bus size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-black text-white">Live Route Telemetry — Route #04A</h2>
+                    <p className="text-xs text-slate-400 mt-0.5">Real-time child transportation vehicle tracking module</p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 block font-mono uppercase">Vehicle speed</span>
+                  <span className="text-lg font-black text-emerald-400 font-mono">42 km/h</span>
+                </div>
+              </div>
+
+              {/* Status Bar */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-center">
+                  <span className="text-[10px] text-slate-400 block">Driver Contact</span>
+                  <span className="text-xs font-bold text-white block mt-0.5">Mr. Santosh K.</span>
+                  <span className="text-[9px] text-emerald-400 font-mono block">+91 98221 04921</span>
+                </div>
+                <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-center">
+                  <span className="text-[10px] text-slate-400 block">Current Route Status</span>
+                  <span className="text-xs font-bold text-emerald-400 block mt-0.5">🟢 En Route</span>
+                  <span className="text-[9px] text-slate-500 block">GPS Polling Active</span>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center animate-pulse">
+                  <span className="text-[10px] text-emerald-300 block font-bold">Estimated Arrival</span>
+                  <span className="text-xl font-black text-emerald-400 block font-mono">{busEta} Mins</span>
+                  <span className="text-[9px] text-emerald-500 block">Next Drop: Gate 2</span>
+                </div>
+              </div>
+
+              {/* Simulated Graphical GPS Map Interface */}
+              <div className="relative w-full h-80 rounded-2xl bg-[#030712] border border-white/10 overflow-hidden flex items-center justify-center">
+                {/* Background Grid Patterns */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:2rem_2rem] opacity-25" />
+                <div className="absolute top-1/2 left-0 right-0 h-1 bg-white/5" />
+                
+                {/* Simulated Road Line */}
+                <div className="absolute top-1/2 left-10 right-10 h-3 bg-slate-800 rounded-full border-y border-slate-700 flex items-center shadow-inner" />
+                
+                {/* Simulated Route Line Progression */}
+                <div 
+                  className="absolute top-1/2 left-10 h-3 bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-400 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(16,185,129,0.5)]" 
+                  style={{ width: `${Math.min(90, Math.max(15, 100 - busEta * 6))}%` }}
+                />
+
+                {/* Start Pin */}
+                <div className="absolute top-1/2 left-10 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center">
+                  <div className="w-4 h-4 rounded-full bg-slate-600 border-2 border-white flex items-center justify-center shadow-md">
+                    <span className="text-[8px] font-bold text-white">S</span>
+                  </div>
+                  <span className="text-[9px] font-bold text-slate-400 mt-1 whitespace-nowrap bg-black/60 px-1.5 py-0.5 rounded border border-white/5">Campus Hub</span>
+                </div>
+
+                {/* Moving Bus Target Marker */}
+                <div 
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-1000 z-10 flex flex-col items-center"
+                  style={{ left: `calc(2.5rem + ${Math.min(90, Math.max(15, 100 - busEta * 6))}% - 2.5rem)` }}
+                >
+                  <div className="relative">
+                    <div className="absolute -inset-2 bg-emerald-500 rounded-full animate-ping opacity-40" />
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500 border-2 border-white flex items-center justify-center shadow-lg text-black font-black">
+                      <Bus size={16} />
+                    </div>
+                  </div>
+                  <div className="mt-2 px-2 py-1 bg-emerald-400 text-black font-black text-[9px] rounded shadow tracking-wider uppercase font-mono whitespace-nowrap">
+                    Child Vehicle • {busEta}m left
+                  </div>
+                </div>
+
+                {/* Destination Pin */}
+                <div className="absolute top-1/2 right-10 -translate-y-1/2 translate-x-1/2 flex flex-col items-center">
+                  <MapPin size={20} className="text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-bounce" />
+                  <span className="text-[9px] font-bold text-red-300 mt-1 whitespace-nowrap bg-black/80 px-1.5 py-0.5 rounded border border-red-500/20">Drop Stop</span>
+                </div>
+
+                {/* HUD Overlay Info Overlay */}
+                <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/80 border border-white/10 text-[10px] font-mono text-slate-300 backdrop-blur-md">
+                  🛰️ Signal Strength: <strong className="text-emerald-400">Excellent (5/5 Satellites)</strong>
+                </div>
+
+                <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-400">
+                  Last Updated: Live
                 </div>
               </div>
             </div>
