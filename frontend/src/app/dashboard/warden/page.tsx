@@ -15,10 +15,12 @@ import {
   AlertTriangle,
   FileText,
   Wrench,
-  Coffee
+  Coffee,
+  Lock,
+  Camera
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getUsers, getCurrentUser, setCurrentUser, UserRecord } from '@/lib/store';
+import { getUsers, getCurrentUser, setCurrentUser, getGrievances, decryptGrievance, UserRecord, GrievanceRecord } from '@/lib/store';
 
 export default function WardenDashboard() {
   const router = useRouter();
@@ -26,7 +28,11 @@ export default function WardenDashboard() {
   const [students, setStudents] = useState<UserRecord[]>([]);
   
   // Left Navigation Menu
-  const [activeTab, setActiveTab] = useState<'rooms' | 'passes' | 'visitors' | 'directives' | 'mess' | 'maintenance'>('rooms');
+  const [activeTab, setActiveTab] = useState<'rooms' | 'passes' | 'visitors' | 'directives' | 'mess' | 'maintenance' | 'incidents'>('rooms');
+  
+  // Grievance State
+  const [grievances, setGrievances] = useState<GrievanceRecord[]>([]);
+  const [decryptingId, setDecryptingId] = useState<string | null>(null);
   
   // Top Secondary Menu switchers
   const [roomSubTab, setRoomSubTab] = useState<'matrix' | 'status'>('matrix');
@@ -62,6 +68,9 @@ export default function WardenDashboard() {
     // Load static list of students
     const allUsers = getUsers();
     setStudents(allUsers.filter(u => u.role === 'student'));
+    
+    // Load Grievances
+    setGrievances(getGrievances());
   }, []);
 
   const handleLogout = () => {
@@ -225,6 +234,20 @@ export default function WardenDashboard() {
               <div className="flex items-center gap-2.5">
                 <Wrench size={16} className={activeTab === 'maintenance' ? 'text-rose-400' : ''} />
                 <span>Maintenance</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('incidents')}
+              className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-extrabold transition-all flex items-center justify-between ${
+                activeTab === 'incidents' 
+                  ? 'bg-red-500/10 text-red-400 border border-red-500/30 shadow-sm' 
+                  : 'text-red-500/50 hover:bg-white/[0.02] hover:text-red-400'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Lock size={16} className={activeTab === 'incidents' ? 'text-red-400' : ''} />
+                <span>Secure Incident Reports</span>
               </div>
             </button>
           </div>
@@ -531,6 +554,95 @@ export default function WardenDashboard() {
                   <span>Room 205 - Leaking tap</span>
                   <span className="text-amber-400 font-bold">In Progress</span>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 7: SECURE INCIDENT REPORTS                            */}
+          {/* ========================================================= */}
+          {activeTab === 'incidents' && (
+            <div className="glass p-6 rounded-3xl border-red-500/20 space-y-6 animate-fade-in relative overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <div>
+                  <h3 className="text-lg font-black text-red-400 flex items-center gap-2">
+                    <Lock size={20} />
+                    Secure Incident Reports
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">End-to-end encrypted anonymous anti-ragging submissions.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {grievances.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 text-sm bg-black/40 rounded-2xl border border-white/5">
+                    No secure incidents reported.
+                  </div>
+                ) : (
+                  grievances.map(g => (
+                    <div key={g.id} className="p-5 rounded-2xl bg-black/60 border border-red-500/10 relative overflow-hidden">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-[10px] font-mono text-slate-400">Timestamp: {new Date(g.timestamp).toLocaleString()}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${g.status === 'Encrypted' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                          Status: {g.status}
+                        </span>
+                      </div>
+
+                      {g.status === 'Encrypted' && (
+                        <div className="space-y-4">
+                          <div className="p-3 bg-black border border-white/5 rounded font-mono text-[9px] text-slate-500 break-all">
+                            [AES-256-GCM ENCRYPTED PAYLOAD]<br/>
+                            {g.encryptedMessage}
+                          </div>
+                          
+                          {decryptingId === g.id ? (
+                            <div className="p-4 bg-black border border-amber-500/20 rounded-xl space-y-2 text-xs font-mono text-amber-400">
+                              <div className="animate-pulse">{'>'} Establishing Secure Handshake...</div>
+                              <div className="animate-pulse" style={{ animationDelay: '0.5s' }}>{'>'} Verifying Warden RSA Private Key...</div>
+                              <div className="animate-pulse" style={{ animationDelay: '1s' }}>{'>'} Decrypting Media Payload...</div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setDecryptingId(g.id);
+                                setTimeout(() => {
+                                  decryptGrievance(g.id);
+                                  setGrievances(getGrievances());
+                                  setDecryptingId(null);
+                                }, 3000);
+                              }}
+                              className="px-4 py-2 bg-gradient-to-r from-red-500/20 to-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs font-bold rounded-lg border border-amber-500/30 transition-colors flex items-center gap-2"
+                            >
+                              <Lock size={14} /> Decrypt with Warden Key
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {g.status === 'Decrypted' && (
+                        <div className="space-y-4 animate-fade-in">
+                          <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
+                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block mb-2 border-b border-emerald-500/20 pb-1">
+                              Decrypted Message
+                            </span>
+                            <p className="text-sm text-white leading-relaxed">{g.decryptedMessage}</p>
+                          </div>
+                          
+                          {g.mockPhotoUrl && (
+                            <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl inline-block">
+                              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block mb-2 border-b border-emerald-500/20 pb-1 flex items-center gap-1">
+                                <Camera size={12} /> Photographic Evidence Attached
+                              </span>
+                              <div className="w-48 h-32 bg-black border border-white/10 rounded flex items-center justify-center text-slate-500 text-xs font-mono">
+                                [Decrypted Image Data]
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}

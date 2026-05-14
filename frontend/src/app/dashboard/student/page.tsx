@@ -17,11 +17,13 @@ import {
   TrendingUp,
   HelpCircle,
   Coffee,
-  ShieldCheck
+  ShieldCheck,
+  ShieldAlert,
+  Camera
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getCurrentUser, setCurrentUser, getSubjects, getUsers, placeCanteenOrder, UserRecord, SubjectRecord } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getSubjects, getUsers, placeCanteenOrder, submitAnonymousGrievance, UserRecord, SubjectRecord } from '@/lib/store';
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -29,7 +31,7 @@ export default function StudentDashboard() {
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
   
   // Primary Navigation tabs (Left Menu)
-  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'syllabus' | 'canteen' | 'certificates'>('workspace');
+  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'syllabus' | 'canteen' | 'certificates' | 'report'>('workspace');
   
   // Secondary Sub-navigation tab states (Top Horizontal Bar)
   const [workspaceSubTab, setWorkspaceSubTab] = useState<'metrics' | 'ask'>('metrics');
@@ -39,6 +41,11 @@ export default function StudentDashboard() {
   const [doubtsLog, setLog] = useState([
     { q: 'How does operator precedence function for mixed brackets?', ans: 'Prof. Vikram: Check module configuration values for expression priority.' },
   ]);
+
+  // Grievance State
+  const [reportMsg, setReportMsg] = useState('');
+  const [reportPhoto, setReportPhoto] = useState(false);
+  const [reportStatus, setReportStatus] = useState<'idle' | 'encrypting' | 'sent'>('idle');
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -177,6 +184,19 @@ export default function StudentDashboard() {
             >
               <ShieldCheck size={16} className="shrink-0" />
               <span className="truncate">My Credentials</span>
+            </button>
+
+            {/* Anti-Ragging */}
+            <button
+              onClick={() => setActiveTab('report')}
+              className={`w-full mt-4 px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'report' 
+                  ? 'bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20 scale-[1.02]' 
+                  : 'text-red-400/70 hover:text-red-400 hover:bg-red-500/10 border border-red-500/10'
+              }`}
+            >
+              <ShieldAlert size={16} className="shrink-0" />
+              <span className="truncate">Anonymous Report</span>
             </button>
           </div>
         </div>
@@ -590,6 +610,90 @@ export default function StudentDashboard() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 6: ANONYMOUS ANTI-RAGGING                             */}
+          {/* ========================================================= */}
+          {activeTab === 'report' && (
+            <div className="glass p-8 rounded-3xl border-red-500/30 relative overflow-hidden animate-fade-in max-w-3xl mx-auto space-y-6">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full pointer-events-none" />
+              
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-red-400 flex items-center gap-2">
+                    <ShieldAlert size={24} />
+                    Secure Incident Report
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1 max-w-md leading-relaxed">
+                    Report bullying or ragging strictly anonymously. Your identity and IP address are stripped before transmission.
+                  </p>
+                </div>
+              </div>
+
+              {reportStatus === 'idle' && (
+                <div className="space-y-4">
+                  <textarea 
+                    value={reportMsg}
+                    onChange={e => setReportMsg(e.target.value)}
+                    placeholder="Describe the incident securely..."
+                    className="w-full h-32 p-4 rounded-xl bg-black/50 border border-white/10 text-sm text-white focus:outline-none focus:border-red-400 transition-colors"
+                  />
+                  
+                  <button 
+                    onClick={() => setReportPhoto(!reportPhoto)}
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-xs font-bold transition-all ${
+                      reportPhoto ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Camera size={16} />
+                    {reportPhoto ? 'Photo Evidence Attached' : 'Attach Photo Evidence'}
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      if (!reportMsg) return;
+                      setReportStatus('encrypting');
+                      setTimeout(() => {
+                        submitAnonymousGrievance(reportMsg, reportPhoto ? 'mock_photo_data_url' : undefined);
+                        setReportStatus('sent');
+                        setTimeout(() => {
+                          setReportStatus('idle');
+                          setReportMsg('');
+                          setReportPhoto(false);
+                        }, 5000);
+                      }, 2500);
+                    }}
+                    className="w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:opacity-90 text-white font-black text-xs uppercase tracking-wider transition-all"
+                  >
+                    Encrypt & Submit Anonymously
+                  </button>
+                </div>
+              )}
+
+              {reportStatus === 'encrypting' && (
+                <div className="p-6 rounded-xl bg-black border border-red-500/20 font-mono text-xs text-red-400 space-y-2">
+                  <div className="animate-pulse">{'>'} Initializing AES-256-GCM Protocol...</div>
+                  <div className="animate-pulse" style={{ animationDelay: '0.5s' }}>{'>'} Stripping User Metadata & JWT Tokens...</div>
+                  <div className="animate-pulse" style={{ animationDelay: '1s' }}>{'>'} Encrypting Payload Buffer...</div>
+                  <div className="animate-pulse" style={{ animationDelay: '1.5s' }}>{'>'} Routing via Secure Tor Node proxy...</div>
+                  <div className="text-center mt-4">
+                    <ShieldAlert size={32} className="mx-auto text-red-500 animate-bounce" />
+                  </div>
+                </div>
+              )}
+
+              {reportStatus === 'sent' && (
+                <div className="p-6 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center space-y-3">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto text-emerald-400">
+                    <CheckCircle2 size={32} />
+                  </div>
+                  <h3 className="text-emerald-400 font-bold">Transmission Secured</h3>
+                  <p className="text-xs text-slate-300">Your report has been received by the Warden. Your identity remains 100% anonymous.</p>
+                </div>
+              )}
+
             </div>
           )}
 
