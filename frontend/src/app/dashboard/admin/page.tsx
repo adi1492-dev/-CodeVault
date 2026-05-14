@@ -357,19 +357,19 @@ export default function AdminDashboard() {
               ADM
             </div>
             <div>
-              <span className="font-extrabold tracking-tight text-sm block bg-gradient-to-r from-white via-slate-100 to-cyan-300 bg-clip-text text-transparent">
+              <span className="font-bold text-lg block text-white">
                 Administration Portal
               </span>
-              <span className="text-[10px] text-cyan-400/90 block font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Logged in as Administrator</span>
+              <span className="text-sm text-cyan-400 block font-medium flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Administrator</span>
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 text-[10px] text-slate-400 border border-white/5 font-medium">
-              <Sparkles size={11} className="text-amber-400" />
+            <span className="hidden md:inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/5 text-xs text-slate-300 font-medium">
+              <Sparkles size={14} className="text-amber-400" />
               <span>Full Admin Access</span>
             </span>
 
@@ -389,12 +389,9 @@ export default function AdminDashboard() {
         
         {/* Left Navigation Menu Bar */}
         <div className="w-full lg:w-72 shrink-0 p-4 rounded-3xl border border-white/10 bg-[#080d1a]/90 backdrop-blur-2xl shadow-2xl space-y-6 sticky top-20">
-          <div className="px-2 pb-1 border-b border-white/5">
-            <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
+          <div className="px-4 pb-3 border-b border-white/10 mb-4">
+            <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wide block">
               Menu Options
-            </span>
-            <span className="text-xs text-slate-400 block mt-0.5 font-medium">
-              Manage Institute Data
             </span>
           </div>
 
