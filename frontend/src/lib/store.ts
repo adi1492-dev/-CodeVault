@@ -436,6 +436,65 @@ export function addDepartment(name: string, code: string, hodId?: string, viceHo
 }
 
 // ==========================================
+// ANTI-RAGGING ANONYMOUS GRIEVANCES
+// ==========================================
+
+export interface GrievanceRecord {
+  id: string;
+  encryptedMessage: string;
+  decryptedMessage?: string;
+  mockPhotoUrl?: string; // Optional photo
+  timestamp: string;
+  status: 'Encrypted' | 'Decrypted' | 'Resolved';
+}
+
+const STORAGE_KEY_GRIEVANCES = 'campuscore_grievances';
+
+export function getGrievances(): GrievanceRecord[] {
+  if (typeof window === 'undefined') return [];
+  const stored = localStorage.getItem(STORAGE_KEY_GRIEVANCES);
+  if (!stored) return [];
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+}
+
+export function saveGrievances(grievances: GrievanceRecord[]) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_GRIEVANCES, JSON.stringify(grievances));
+  }
+}
+
+export function submitAnonymousGrievance(message: string, photoUrl?: string) {
+  const grievances = getGrievances();
+  const encryptedHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
+  
+  grievances.push({
+    id: `sec_inc_${Date.now()}`,
+    encryptedMessage: encryptedHash,
+    decryptedMessage: message,
+    mockPhotoUrl: photoUrl,
+    timestamp: new Date().toISOString(),
+    status: 'Encrypted'
+  });
+  
+  saveGrievances(grievances);
+}
+
+export function decryptGrievance(id: string) {
+  const grievances = getGrievances();
+  const updated = grievances.map(g => {
+    if (g.id === id) {
+      return { ...g, status: 'Decrypted' as const };
+    }
+    return g;
+  });
+  saveGrievances(updated);
+}
+
+// ==========================================
 // ERP State Mutators (Hackathon Mock Logic)
 // ==========================================
 
