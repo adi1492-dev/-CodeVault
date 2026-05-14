@@ -402,26 +402,26 @@ export default function AdminDashboard() {
             {/* Departments Button */}
             <button
               onClick={() => setActiveTab('departments')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'departments' 
-                  ? 'bg-gradient-to-r from-cyan-500 to-teal-400 text-black shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Building2 size={16} className="shrink-0" />
+              <Building2 size={18} className="shrink-0" />
               <span className="truncate">Departments</span>
             </button>
 
             {/* Student Search Button */}
             <button
               onClick={() => setActiveTab('students')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'students' 
-                  ? 'bg-gradient-to-r from-cyan-500 to-teal-400 text-black shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <GraduationCap size={16} className="shrink-0" />
+              <GraduationCap size={18} className="shrink-0" />
               <div className="text-left truncate flex-grow">
                 <span className="block truncate">Search Students</span>
               </div>
@@ -430,53 +430,53 @@ export default function AdminDashboard() {
             {/* Staff / Teacher Accounts Ledger */}
             <button
               onClick={() => setActiveTab('users')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'users' 
-                  ? 'bg-gradient-to-r from-cyan-500 to-teal-400 text-black shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Users size={16} className="shrink-0" />
+              <Users size={18} className="shrink-0" />
               <span className="truncate">Staff & Teachers</span>
             </button>
 
             {/* Subjects and Syllabus Management */}
             <button
               onClick={() => setActiveTab('academics')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'academics' 
-                  ? 'bg-gradient-to-r from-cyan-500 to-teal-400 text-black shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Layers size={16} className="shrink-0" />
+              <Layers size={18} className="shrink-0" />
               <span className="truncate">Academic Subjects ({subjects.length})</span>
             </button>
 
             {/* System Status View */}
             <button
               onClick={() => setActiveTab('telemetry')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'telemetry' 
-                  ? 'bg-gradient-to-r from-cyan-500 to-teal-400 text-black shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Cpu size={16} className="shrink-0" />
+              <Cpu size={18} className="shrink-0" />
               <span className="truncate">System Status</span>
             </button>
 
             {/* Certificates */}
             <button
               onClick={() => setActiveTab('certificates')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'certificates' 
-                  ? 'bg-gradient-to-r from-cyan-500 to-teal-400 text-black shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <ShieldCheck size={16} className="shrink-0" />
-              <span className="truncate">Web3 Certificates</span>
+              <ShieldCheck size={18} className="shrink-0" />
+              <span className="truncate">Issue Certificates</span>
             </button>
           </div>
 

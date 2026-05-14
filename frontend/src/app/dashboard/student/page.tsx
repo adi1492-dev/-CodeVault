@@ -80,18 +80,18 @@ export default function StudentDashboard() {
               STU
             </div>
             <div>
-              <span className="font-extrabold tracking-tight text-sm block bg-gradient-to-r from-white via-slate-100 to-cyan-200 bg-clip-text text-transparent">
+              <span className="font-bold text-lg block text-white">
                 Student Portal
               </span>
-              <span className="text-[10px] text-cyan-400 block font-semibold">
-                Logged in as: {currentUser?.name || 'Aarav Nikam'}
+              <span className="text-sm text-cyan-400 block font-medium">
+                Welcome, {currentUser?.name || 'Aarav Nikam'}
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 text-[10px] text-slate-400 border border-white/5 font-medium">
-              <Sparkles size={11} className="text-cyan-400" />
+            <span className="hidden md:inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/5 text-xs text-slate-300 font-medium">
+              <Sparkles size={14} className="text-cyan-400" />
               <span>Academic Account Access</span>
             </span>
 
@@ -111,12 +111,9 @@ export default function StudentDashboard() {
         
         {/* Left Vertical Menu Switcher Sidebar */}
         <div className="w-full lg:w-72 shrink-0 p-4 rounded-3xl border border-white/10 bg-[#080d1a]/90 backdrop-blur-2xl shadow-2xl space-y-6 sticky top-20">
-          <div className="px-2 pb-1 border-b border-white/5">
-            <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
-              Student Space
-            </span>
-            <span className="text-xs text-slate-400 block mt-0.5 font-medium">
-              Study Resource Area
+          <div className="px-4 pb-3 border-b border-white/10 mb-4">
+            <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wide block">
+              Student Menu
             </span>
           </div>
 
@@ -124,79 +121,79 @@ export default function StudentDashboard() {
             {/* Workspace Overview */}
             <button
               onClick={() => setActiveTab('workspace')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'workspace' 
-                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <TrendingUp size={16} className="shrink-0" />
-              <span className="truncate">Student Workspace</span>
+              <TrendingUp size={18} className="shrink-0" />
+              <span className="truncate">Dashboard</span>
             </button>
 
             {/* IDE Launchpad */}
             <button
               onClick={() => setActiveTab('ide')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'ide' 
-                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Code2 size={16} className="shrink-0" />
-              <span className="truncate">Coding Sandbox IDE</span>
+              <Code2 size={18} className="shrink-0" />
+              <span className="truncate">Code Editor</span>
             </button>
 
             {/* Syllabus Overview */}
             <button
               onClick={() => setActiveTab('syllabus')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'syllabus' 
-                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Layers size={16} className="shrink-0" />
-              <span className="truncate">Syllabus Status</span>
+              <Layers size={18} className="shrink-0" />
+              <span className="truncate">My Syllabus</span>
             </button>
 
             {/* Canteen */}
             <button
               onClick={() => setActiveTab('canteen')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'canteen' 
-                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Coffee size={16} className="shrink-0" />
+              <Coffee size={18} className="shrink-0" />
               <span className="truncate">Canteen Order</span>
             </button>
 
             {/* Certificates */}
             <button
               onClick={() => setActiveTab('certificates')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'certificates' 
-                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <ShieldCheck size={16} className="shrink-0" />
-              <span className="truncate">My Credentials</span>
+              <ShieldCheck size={18} className="shrink-0" />
+              <span className="truncate">Certificates</span>
             </button>
 
             {/* Anti-Ragging */}
             <button
               onClick={() => setActiveTab('report')}
-              className={`w-full mt-4 px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+              className={`w-full mt-4 px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'report' 
-                  ? 'bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/20 scale-[1.02]' 
-                  : 'text-red-400/70 hover:text-red-400 hover:bg-red-500/10 border border-red-500/10'
+                  ? 'bg-red-500/10 text-red-400 border border-red-500/30' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <ShieldAlert size={16} className="shrink-0" />
-              <span className="truncate">Anonymous Report</span>
+              <ShieldAlert size={18} className="shrink-0 text-red-400" />
+              <span className="truncate text-red-400">Report Incident</span>
             </button>
           </div>
         </div>
@@ -260,9 +257,9 @@ export default function StudentDashboard() {
 
                   {/* Syllabus downloads references */}
                   <div className="glass p-6 rounded-3xl border-white/5 space-y-4 max-w-xl">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                      <BookOpen size={14} className="text-cyan-400" />
-                      <span>Syllabus & Lecture Handouts</span>
+                    <h3 className="text-base font-semibold text-slate-300 flex items-center gap-2">
+                      <BookOpen size={16} className="text-cyan-400" />
+                      <span>Syllabus & Handouts</span>
                     </h3>
 
                     <div className="space-y-2.5">
@@ -290,9 +287,9 @@ export default function StudentDashboard() {
                   {/* Left Form widget */}
                   <div className="md:col-span-5 space-y-4">
                     <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                        <MessageSquare size={14} className="text-cyan-400" />
-                        <span>Submit Question Inquiry</span>
+                      <h3 className="text-base font-semibold text-slate-300 flex items-center gap-2">
+                        <MessageSquare size={16} className="text-cyan-400" />
+                        <span>Ask a Question</span>
                       </h3>
 
                       <form onSubmit={handleAskDoubt} className="space-y-3 pt-1">
