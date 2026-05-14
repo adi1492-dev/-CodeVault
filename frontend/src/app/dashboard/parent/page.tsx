@@ -19,12 +19,13 @@ import {
   Coffee
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser, setCurrentUser, getUsers, saveUsers, getSubjects, UserRecord, SubjectRecord } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getUsers, saveUsers, getSubjects, rechargeCanteenWallet, UserRecord, SubjectRecord } from '@/lib/store';
 
 export default function ParentDashboard() {
   const router = useRouter();
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
   const [ward, setWard] = useState<UserRecord | null>(null);
+  const [rechargeAmt, setRechargeAmt] = useState('');
   
   const [activeTab, setActiveTab] = useState<'ward' | 'fees' | 'appointments' | 'syllabus' | 'canteen'>('ward');
   const [feeSubTab, setFeeSubTab] = useState<'pay' | 'history'>('pay');
@@ -534,26 +535,43 @@ export default function ParentDashboard() {
                   <h3 className="text-sm font-bold text-slate-300 mb-2">Current Balance</h3>
                   <div className="text-4xl font-black text-emerald-400 mb-4">₹{(ward?.canteenWalletBalance ?? 0).toLocaleString()}</div>
                   <div className="flex gap-2">
-                    <input type="number" placeholder="Amount" className="w-24 p-2 rounded bg-black border border-white/10 text-xs text-white" />
-                    <button className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-black text-xs font-bold rounded">Recharge</button>
+                    <input 
+                      type="number" 
+                      value={rechargeAmt}
+                      onChange={e => setRechargeAmt(e.target.value)}
+                      placeholder="Amount" 
+                      className="w-24 p-2 rounded bg-black border border-white/10 text-xs text-white" 
+                    />
+                    <button 
+                      onClick={() => {
+                        if (ward && rechargeAmt) {
+                          rechargeCanteenWallet(ward.id, Number(rechargeAmt));
+                          const updatedUsers = getUsers();
+                          setWard(updatedUsers.find(u => u.id === ward.id) || null);
+                          setRechargeAmt('');
+                          alert('Recharge Successful!');
+                        }
+                      }}
+                      className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-black text-xs font-bold rounded hover:opacity-90 transition-all">
+                      Recharge
+                    </button>
                   </div>
                 </div>
 
                 <div className="p-6 bg-black/40 rounded-2xl border border-white/5">
                   <h3 className="text-sm font-bold text-slate-300 mb-3">Recent Transactions</h3>
                   <div className="space-y-2">
-                    <div className="flex justify-between text-xs p-2 bg-white/5 rounded">
-                      <span>Veg Biryani</span>
-                      <span className="text-red-400">-₹60</span>
-                    </div>
-                    <div className="flex justify-between text-xs p-2 bg-white/5 rounded">
-                      <span>Cold Coffee</span>
-                      <span className="text-red-400">-₹45</span>
-                    </div>
-                    <div className="flex justify-between text-xs p-2 bg-white/5 rounded">
-                      <span>Recharge (UPI)</span>
-                      <span className="text-emerald-400">+₹500</span>
-                    </div>
+                    {(ward?.canteenTransactions || []).slice().reverse().map(tx => (
+                      <div key={tx.id} className="flex justify-between text-xs p-2 bg-white/5 rounded">
+                        <span>{tx.item} <span className="text-[9px] text-slate-500 block">{tx.date}</span></span>
+                        <span className={tx.type === 'credit' ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                          {tx.type === 'credit' ? '+' : '-'}₹{tx.amount}
+                        </span>
+                      </div>
+                    ))}
+                    {!(ward?.canteenTransactions?.length) && (
+                      <div className="text-xs text-slate-500">No transactions yet.</div>
+                    )}
                   </div>
                 </div>
               </div>

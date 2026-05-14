@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { Play, Send, ChevronLeft, Shield, Clock, HardDrive, CheckCircle2, XCircle, Zap, RefreshCw, Code2, Target, Terminal } from 'lucide-react';
+import { Play, Send, ChevronLeft, Shield, Clock, HardDrive, CheckCircle2, XCircle, Zap, RefreshCw, Code2, Target, Terminal, Users } from 'lucide-react';
 import Link from 'next/link';
 import CodeEditor from '@/components/CodeEditor';
 import XRayMode from '@/components/XRayMode';
@@ -57,6 +57,41 @@ const ProblemPage = () => {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [serverMode, setServerMode] = useState(false);
+  
+  // Multiplayer / Collaboration State
+  const [isMultiplayerActive, setIsMultiplayerActive] = useState(false);
+  const [teacherConnected, setTeacherConnected] = useState(false);
+
+  useEffect(() => {
+    // Initialize BroadcastChannel for Zero-Latency "Google Docs for Code" experience
+    const channel = new BroadcastChannel(`campuscore-ide-${targetId}`);
+    
+    channel.onmessage = (event) => {
+      if (event.data.type === 'CODE_UPDATE') {
+        setCode(event.data.payload);
+        setIsMultiplayerActive(true);
+      }
+      if (event.data.type === 'TEACHER_JOINED') {
+        setTeacherConnected(true);
+      }
+    };
+
+    // Broadcast our presence
+    channel.postMessage({ type: 'TEACHER_JOINED' });
+
+    return () => {
+      channel.close();
+    };
+  }, [targetId]);
+
+  // Sync outbound changes instantly
+  const handleCodeChange = (newCode: string | undefined) => {
+    const val = newCode || '';
+    setCode(val);
+    const channel = new BroadcastChannel(`campuscore-ide-${targetId}`);
+    channel.postMessage({ type: 'CODE_UPDATE', payload: val });
+    channel.close();
+  };
 
   useEffect(() => {
     if (targetId) {
@@ -406,6 +441,16 @@ const ProblemPage = () => {
             <div className="flex items-center gap-2">
               <Code2 size={16} className="text-cyan-400" />
               <span className="text-xs font-bold font-mono">Micro C Sandbox Pipeline</span>
+              {isMultiplayerActive && (
+                <span className="ml-2 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold border border-emerald-500/30 flex items-center gap-1 animate-pulse">
+                  <Users size={10} /> Live Sync Active
+                </span>
+              )}
+              {teacherConnected && (
+                <span className="ml-1 px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 text-[9px] font-bold border border-indigo-500/30">
+                  Teacher Monitoring
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -428,7 +473,7 @@ const ProblemPage = () => {
             </div>
           </div>
 
-          <CodeEditor code={code} onChange={(v) => setCode(v || '')} />
+          <CodeEditor code={code} onChange={handleCodeChange} />
 
           <button 
             onClick={handleSubmit}

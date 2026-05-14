@@ -40,6 +40,10 @@ export interface UserRecord {
   leaveBalance?: number;
   semesterNo?: number;
   canteenWalletBalance?: number;
+  githubScore?: number;
+  completedLabs?: number;
+  certificates?: { id: string; name: string; txHash: string; date: string }[];
+  canteenTransactions?: { id: string; item: string; amount: number; type: 'debit' | 'credit'; date: string }[];
 }
 
 const INITIAL_USERS: UserRecord[] = [
@@ -60,6 +64,17 @@ const INITIAL_USERS: UserRecord[] = [
     hostelStatus: 'Day Scholar', nationality: 'Indian', address: '12, Shivaji Nagar, Pune - 411005',
     feePaid: 85000, feeDue: 0, totalFee: 85000,
     sgpa: [8.6, 9.1], cgpa: 8.85, backlogCount: 0, leaveBalance: 8,
+    canteenWalletBalance: 1200,
+    githubScore: 450,
+    completedLabs: 14,
+    certificates: [
+      { id: 'cert_1', name: 'AST Syntax Mastery', txHash: '0x1a2b...3c4d', date: '2026-05-10' }
+    ],
+    canteenTransactions: [
+      { id: 'tx_1', item: 'Wallet Recharge', amount: 1500, type: 'credit', date: '2026-05-01' },
+      { id: 'tx_2', item: 'Cold Coffee', amount: 45, type: 'debit', date: '2026-05-12' },
+      { id: 'tx_3', item: 'Veg Biryani', amount: 60, type: 'debit', date: '2026-05-13' }
+    ],
     documentStatus: [
       { name: '10th Marksheet', submitted: true }, { name: '12th Marksheet', submitted: true },
       { name: 'Birth Certificate', submitted: true }, { name: 'Caste Certificate', submitted: false },
@@ -76,6 +91,14 @@ const INITIAL_USERS: UserRecord[] = [
     hostelStatus: 'Hostel', nationality: 'Indian', address: '45, Gandhi Road, Nashik - 422001',
     feePaid: 40000, feeDue: 45000, totalFee: 85000,
     sgpa: [7.4, 7.8], cgpa: 7.6, backlogCount: 1, leaveBalance: 3,
+    canteenWalletBalance: 150,
+    githubScore: 120,
+    completedLabs: 4,
+    certificates: [],
+    canteenTransactions: [
+      { id: 'tx_4', item: 'Wallet Recharge', amount: 500, type: 'credit', date: '2026-05-05' },
+      { id: 'tx_5', item: 'Masala Dosa', amount: 50, type: 'debit', date: '2026-05-10' }
+    ],
     documentStatus: [
       { name: '10th Marksheet', submitted: true }, { name: '12th Marksheet', submitted: true },
       { name: 'Birth Certificate', submitted: false }, { name: 'Caste Certificate', submitted: true },
@@ -92,6 +115,17 @@ const INITIAL_USERS: UserRecord[] = [
     hostelStatus: 'Hostel', nationality: 'Indian', address: '8, MG Road, Nagpur - 440010',
     feePaid: 170000, feeDue: 0, totalFee: 170000,
     sgpa: [9.2, 9.5, 9.8, 9.6], cgpa: 9.53, backlogCount: 0, leaveBalance: 12,
+    canteenWalletBalance: 850,
+    githubScore: 980,
+    completedLabs: 25,
+    certificates: [
+      { id: 'cert_2', name: 'Advanced Pointer Operations', txHash: '0x9f8e...7d6c', date: '2026-04-15' },
+      { id: 'cert_3', name: 'Memory Safe Rust Lab', txHash: '0x5b4a...3d2c', date: '2026-05-01' }
+    ],
+    canteenTransactions: [
+      { id: 'tx_6', item: 'Wallet Recharge', amount: 1000, type: 'credit', date: '2026-05-01' },
+      { id: 'tx_7', item: 'Sandwich', amount: 40, type: 'debit', date: '2026-05-08' }
+    ],
     documentStatus: [
       { name: '10th Marksheet', submitted: true }, { name: '12th Marksheet', submitted: true },
       { name: 'Birth Certificate', submitted: true }, { name: 'Caste Certificate', submitted: false },
@@ -155,14 +189,6 @@ export function authenticateUser(emailOrRole: string, pass: string): UserRecord 
     warden: 'warden123',
   };
 
-  // Direct email matching allowing their custom password, their original stored password, or the helper shortcut password
-  const found = users.find(u => {
-    if (u.email.toLowerCase() !== emailOrRole.toLowerCase()) return false;
-    return u.password === pass || pass === helperPassMap[u.role] || pass === 'password' || u.password === 'password';
-  });
-  if (found) return found;
-
-  // Convenience fallback mapping for fast demo logging
   const cleanStr = emailOrRole.toLowerCase().trim();
   const roleMap: Record<string, UserRole> = {
     'admin': 'admin',
@@ -407,6 +433,70 @@ export function addDepartment(name: string, code: string, hodId?: string, viceHo
   };
   saveDepartments([...depts, newDept]);
   return newDept;
+}
+
+// ==========================================
+// ERP State Mutators (Hackathon Mock Logic)
+// ==========================================
+
+export function rechargeCanteenWallet(studentId: string, amount: number) {
+  const users = getUsers();
+  const updated = users.map(u => {
+    if (u.id === studentId) {
+      const bal = (u.canteenWalletBalance || 0) + amount;
+      const tx = [...(u.canteenTransactions || []), {
+        id: `tx_${Date.now()}`,
+        item: 'Wallet Recharge',
+        amount,
+        type: 'credit' as const,
+        date: new Date().toISOString().split('T')[0]
+      }];
+      return { ...u, canteenWalletBalance: bal, canteenTransactions: tx };
+    }
+    return u;
+  });
+  saveUsers(updated);
+}
+
+export function placeCanteenOrder(studentId: string, item: string, amount: number): boolean {
+  const users = getUsers();
+  let success = false;
+  const updated = users.map(u => {
+    if (u.id === studentId) {
+      const bal = u.canteenWalletBalance || 0;
+      if (bal >= amount) {
+        success = true;
+        const tx = [...(u.canteenTransactions || []), {
+          id: `tx_${Date.now()}`,
+          item,
+          amount,
+          type: 'debit' as const,
+          date: new Date().toISOString().split('T')[0]
+        }];
+        return { ...u, canteenWalletBalance: bal - amount, canteenTransactions: tx };
+      }
+    }
+    return u;
+  });
+  if (success) saveUsers(updated);
+  return success;
+}
+
+export function mintCertificate(studentId: string, certName: string, txHash: string) {
+  const users = getUsers();
+  const updated = users.map(u => {
+    if (u.id === studentId) {
+      const certs = [...(u.certificates || []), {
+        id: `cert_${Date.now()}`,
+        name: certName,
+        txHash,
+        date: new Date().toISOString().split('T')[0]
+      }];
+      return { ...u, certificates: certs };
+    }
+    return u;
+  });
+  saveUsers(updated);
 }
 
 export function assignDepartmentLeadership(departmentId: string, hodId?: string, viceHodId?: string, academicYear?: string) {

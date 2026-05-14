@@ -16,11 +16,12 @@ import {
   Sparkles,
   TrendingUp,
   HelpCircle,
-  Coffee
+  Coffee,
+  ShieldCheck
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getCurrentUser, setCurrentUser, getSubjects, UserRecord, SubjectRecord } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getSubjects, getUsers, placeCanteenOrder, UserRecord, SubjectRecord } from '@/lib/store';
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function StudentDashboard() {
   const [subjects, setSubjects] = useState<SubjectRecord[]>([]);
   
   // Primary Navigation tabs (Left Menu)
-  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'syllabus' | 'canteen'>('workspace');
+  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'syllabus' | 'canteen' | 'certificates'>('workspace');
   
   // Secondary Sub-navigation tab states (Top Horizontal Bar)
   const [workspaceSubTab, setWorkspaceSubTab] = useState<'metrics' | 'ask'>('metrics');
@@ -163,6 +164,19 @@ export default function StudentDashboard() {
             >
               <Coffee size={16} className="shrink-0" />
               <span className="truncate">Canteen Order</span>
+            </button>
+
+            {/* Certificates */}
+            <button
+              onClick={() => setActiveTab('certificates')}
+              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'certificates' 
+                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <ShieldCheck size={16} className="shrink-0" />
+              <span className="truncate">My Credentials</span>
             </button>
           </div>
         </div>
@@ -477,28 +491,105 @@ export default function StudentDashboard() {
                     Order food directly from the canteen using your wallet balance.
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-500/20">
-                  <Coffee size={24} />
+                <div className="flex flex-col items-end gap-2">
+                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-500/20">
+                    <Coffee size={24} />
+                  </div>
+                  <span className="text-xs font-bold text-emerald-400">Wallet: ₹{currentUser?.canteenWalletBalance || 0}</span>
                 </div>
               </div>
 
               <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2">
                 <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2 mb-2">
                   <span>Veg Biryani</span>
-                  <span className="text-emerald-400 font-bold">₹60</span>
+                  <button 
+                    onClick={() => {
+                      if (currentUser && placeCanteenOrder(currentUser.id, 'Veg Biryani', 60)) {
+                        alert('Order Placed Successfully! ₹60 deducted.');
+                        setCurrent(getUsers().find(u => u.id === currentUser.id) || null);
+                      } else {
+                        alert('Insufficient Balance!');
+                      }
+                    }}
+                    className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded font-bold text-xs hover:bg-cyan-500/30">
+                    Buy (₹60)
+                  </button>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span>Cold Coffee</span>
-                  <span className="text-emerald-400 font-bold">₹45</span>
+                  <button 
+                    onClick={() => {
+                      if (currentUser && placeCanteenOrder(currentUser.id, 'Cold Coffee', 45)) {
+                        alert('Order Placed Successfully! ₹45 deducted.');
+                        setCurrent(getUsers().find(u => u.id === currentUser.id) || null);
+                      } else {
+                        alert('Insufficient Balance!');
+                      }
+                    }}
+                    className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded font-bold text-xs hover:bg-cyan-500/30">
+                    Buy (₹45)
+                  </button>
                 </div>
               </div>
 
-              <button
-                onClick={() => alert('Added to cart & placed order!')}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-500 hover:opacity-90 text-black font-extrabold text-xs uppercase tracking-wider transition-all block text-center"
-              >
-                Place Example Order
-              </button>
+              {/* Generate Portfolio CTA */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 border border-cyan-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Sparkles size={16} className="text-cyan-400" />
+                    Public Web3 Portfolio
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Generate a shareable link containing your AST Labs, Grades, and Certificates.</p>
+                </div>
+                <Link 
+                  href={`/portfolio/${currentUser?.id}`}
+                  className="px-6 py-2.5 rounded-xl bg-cyan-500 text-black font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all whitespace-nowrap"
+                  target="_blank"
+                >
+                  View Live Resume
+                </Link>
+              </div>
+
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 5: CERTIFICATES                                       */}
+          {/* ========================================================= */}
+          {activeTab === 'certificates' && (
+            <div className="glass p-8 rounded-3xl border-cyan-500/20 relative overflow-hidden animate-fade-in max-w-4xl mx-auto space-y-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-white">Web3 Credentials</h2>
+                  <p className="text-xs text-slate-400 mt-1 max-w-md leading-relaxed">
+                    Soulbound tokens securely permanently verifying your academic achievements.
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
+                  <ShieldCheck size={24} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {(currentUser?.certificates || []).map(cert => (
+                  <div key={cert.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 hover:border-cyan-500/30 transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cyan-500/10 to-transparent rounded-bl-full pointer-events-none" />
+                    
+                    <ShieldCheck size={20} className="text-cyan-400 mb-3" />
+                    <h3 className="text-sm font-bold text-white mb-1">{cert.name}</h3>
+                    <p className="text-[10px] text-slate-400 font-mono mb-4">Issued: {cert.date}</p>
+                    
+                    <div className="p-2 rounded-lg bg-black border border-white/5 font-mono text-[9px] text-green-400 break-all">
+                      Tx: {cert.txHash}
+                    </div>
+                  </div>
+                ))}
+                {(!currentUser?.certificates || currentUser.certificates.length === 0) && (
+                  <div className="col-span-full p-8 text-center bg-black/20 rounded-2xl text-slate-500 text-sm">
+                    No Web3 credentials minted yet. Keep crushing those AST labs!
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
