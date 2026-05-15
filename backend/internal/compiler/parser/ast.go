@@ -54,6 +54,23 @@ type VarDeclaration struct {
 	Size        int
 }
 
+type MultiVarDeclaration struct {
+	Declarations []*VarDeclaration
+}
+
+func (mv *MultiVarDeclaration) statementNode()       {}
+func (mv *MultiVarDeclaration) TokenLiteral() string { return "multi_var" }
+func (mv *MultiVarDeclaration) String() string {
+	var out bytes.Buffer
+	for i, d := range mv.Declarations {
+		if i > 0 {
+			out.WriteString(", ")
+		}
+		out.WriteString(d.String())
+	}
+	return out.String()
+}
+
 func (vd *VarDeclaration) statementNode()       {}
 func (vd *VarDeclaration) TokenLiteral() string { return vd.Type }
 func (vd *VarDeclaration) String() string {

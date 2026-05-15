@@ -179,7 +179,11 @@ func (p *Parser) parseDeclaration() Statement {
 		return stmts[0]
 	}
 
-	return &BlockStatement{Statements: stmts}
+	multi := &MultiVarDeclaration{}
+	for _, s := range stmts {
+		multi.Declarations = append(multi.Declarations, s.(*VarDeclaration))
+	}
+	return multi
 }
 
 func (p *Parser) parseFunctionDeclaration(retType string, name string) *FunctionDeclaration {

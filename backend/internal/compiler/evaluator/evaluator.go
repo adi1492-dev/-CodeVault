@@ -81,6 +81,12 @@ func Eval(node parser.Node, env *Environment) Value {
 		env.Set(n.Name, val)
 		return Value{Type: NULL_VALUE}
 
+	case *parser.MultiVarDeclaration:
+		for _, decl := range n.Declarations {
+			Eval(decl, env)
+		}
+		return Value{Type: NULL_VALUE}
+
 	case *parser.FunctionDeclaration:
 		params := []string{}
 		for _, p := range n.Parameters {
