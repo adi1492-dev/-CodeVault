@@ -21,7 +21,10 @@ import {
   Monitor,
   MoreVertical,
   X,
-  Send
+  Send,
+  Plus,
+  Trash2,
+  FolderOpen
 } from 'lucide-react';
 
 interface Participant {
@@ -36,33 +39,42 @@ interface Message {
   time: string;
 }
 
+interface FileData {
+  id: string;
+  name: string;
+  language: string;
+}
+
 interface CollaborativeIDEProps {
   roomId: string;
   userName: string;
   onExit: () => void;
 }
 
-const LANGUAGES = [
-  { id: 'c', name: 'C', icon: 'C' },
-  { id: 'cpp', name: 'C++', icon: 'C++' },
-  { id: 'java', name: 'Java', icon: 'Java' },
-  { id: 'html', name: 'HTML', icon: 'HTML' },
-  { id: 'css', name: 'CSS', icon: 'CSS' },
-  { id: 'javascript', name: 'JavaScript', icon: 'JS' },
-];
-
-const MOCK_FILES = [
+const DEFAULT_FILES: FileData[] = [
   { id: '1', name: 'main.c', language: 'c' },
-  { id: '2', name: 'utils.cpp', language: 'cpp' },
-  { id: '3', name: 'App.java', language: 'java' },
+  { id: '2', name: 'App.java', language: 'java' },
+  { id: '3', name: 'script.py', language: 'python' },
   { id: '4', name: 'index.html', language: 'html' },
   { id: '5', name: 'styles.css', language: 'css' },
-  { id: '6', name: 'script.js', language: 'javascript' },
 ];
 
+const INITIAL_CODE: Record<string, string> = {
+  'main.c': '#include <stdio.h>\n\nint main() {\n    printf("Hello from Collaborative C!\\n");\n    return 0;\n}',
+  'App.java': 'public class App {\n    public static void main(String[] args) {\n        System.out.println("Java Collaboration Active");\n    }\n}',
+  'script.py': 'import sys\n# Try numpy if available\ntry:\n    import numpy as np\n    print(f"NumPy version: {np.__version__}")\nexcept:\n    print("NumPy not found, but Python is running!")\n\nprint("Hello from Collaborative Python!")',
+  'index.html': '<!DOCTYPE html>\n<html>\n<body>\n  <h1>Live Web Collab</h1>\n</body>\n</html>',
+  'styles.css': 'body {\n  background: #0d0d0d;\n  color: white;\n}',
+};
+
 export default function CollaborativeIDE({ roomId, userName, onExit }: CollaborativeIDEProps) {
-  const [code, setCode] = useState('// Welcome to CampusCore Collaborative Lab\n// Join your peers and start coding together!');
-  const [language, setLanguage] = useState('c');
+  const [files, setFiles] = useState<Record<string, string>>(INITIAL_CODE);
+  const [fileList, setFileList] = useState<FileData[]>(DEFAULT_FILES);
+  const [activeFile, setActiveFile] = useState<FileData>(DEFAULT_FILES[0]);
+  
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(["Welcome to CampusCore Terminal v2.0", "System ready. Click 'RUN' to execute code."]);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(true);
+  
   const [participants, setParticipants] = useState<Participant[]>([
     { id: 'me', name: userName, color: '#4F46E5' },
     { id: 'p1', name: 'Ananya S.', color: '#10B981' },
@@ -74,19 +86,26 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
   const [chatInput, setChatInput] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(true);
-  const [activeFile, setActiveFile] = useState(MOCK_FILES[0]);
   const [socketStatus, setSocketStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
 
   const socketRef = useRef<WebSocket | null>(null);
+  const terminalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Connect to Room WebSocket
-    const ws = new WebSocket(`ws://localhost:8080/ws/collaborative/${roomId}`);
+    // Auto-scroll terminal
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [terminalOutput]);
+
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname;
+    const ws = new WebSocket(`${protocol}//${host}:8080/ws/collaborative/${roomId}`);
     socketRef.current = ws;
 
     ws.onopen = () => {
       setSocketStatus('connected');
-      // Announce arrival
       ws.send(JSON.stringify({
         type: 'CHAT',
         user: 'System',
@@ -97,42 +116,47 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
       if (msg.type === 'CODE_SYNC') {
-        if (msg.code !== undefined) setCode(msg.code);
-        if (msg.language) setLanguage(msg.language);
+        if (msg.fileName && msg.code !== undefined) {
+          setFiles(prev => ({ ...prev, [msg.fileName]: msg.code }));
+        }
       } else if (msg.type === 'INIT_DATA') {
-        if (msg.data && msg.data.code) setCode(msg.data.code);
-        if (msg.data && msg.data.language) setLanguage(msg.data.language);
+        if (msg.data && msg.data.files) {
+          setFiles(prev => ({ ...prev, ...msg.data.files }));
+        }
       } else if (msg.type === 'CHAT') {
         setMessages(prev => [...prev, { user: msg.user, text: msg.text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+      } else if (msg.type === 'TERMINAL_DATA') {
+        setTerminalOutput(prev => [...prev, msg.text]);
       }
     };
 
     ws.onclose = () => setSocketStatus('disconnected');
-
-    return () => {
-      ws.close();
-    };
+    return () => ws.close();
   }, [roomId, userName]);
 
   const handleCodeChange = (newCode: string | undefined) => {
     const val = newCode || '';
-    setCode(val);
+    setFiles(prev => ({ ...prev, [activeFile.name]: val }));
+    
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({
         type: 'CODE_SYNC',
+        fileName: activeFile.name,
         code: val,
-        language: language
+        language: activeFile.language
       }));
     }
   };
 
-  const handleLanguageChange = (lang: string) => {
-    setLanguage(lang);
+  const handleRunCode = () => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
+      setTerminalOutput(prev => [...prev, `\n[Executing ${activeFile.name}...]`]);
+      setIsTerminalOpen(true);
       socketRef.current.send(JSON.stringify({
-        type: 'CODE_SYNC',
-        code: code,
-        language: lang
+        type: 'RUN_CODE',
+        fileName: activeFile.name,
+        code: files[activeFile.name],
+        language: activeFile.language
       }));
     }
   };
@@ -140,27 +164,32 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
   const sendChatMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
-    
-    const msg = {
-      type: 'CHAT',
-      user: userName,
-      text: chatInput
-    };
-    
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(msg));
-    }
-    
-    setMessages(prev => [...prev, { 
-      user: userName, 
-      text: chatInput, 
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-    }]);
+    const msg = { type: 'CHAT', user: userName, text: chatInput };
+    if (socketRef.current?.readyState === WebSocket.OPEN) socketRef.current.send(JSON.stringify(msg));
+    setMessages(prev => [...prev, { user: userName, text: chatInput, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
     setChatInput('');
   };
 
+  const addNewFile = () => {
+    const name = prompt("Enter file name (e.g. index.js):");
+    if (!name) return;
+    const ext = name.split('.').pop();
+    let lang = 'javascript';
+    if (ext === 'c') lang = 'c';
+    if (ext === 'cpp') lang = 'cpp';
+    if (ext === 'java') lang = 'java';
+    if (ext === 'py') lang = 'python';
+    if (ext === 'html') lang = 'html';
+    if (ext === 'css') lang = 'css';
+
+    const newFile = { id: Date.now().toString(), name, language: lang };
+    setFileList(prev => [...prev, newFile]);
+    setFiles(prev => ({ ...prev, [name]: '' }));
+    setActiveFile(newFile);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-[#0d0d0d] text-slate-300 flex flex-col font-sans overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-[#0d0d0d] text-slate-300 flex flex-col font-sans overflow-hidden">
       {/* Top Header Bar */}
       <header className="h-12 border-b border-white/10 bg-[#1a1a1a] flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-4">
@@ -183,26 +212,28 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
             {participants.map(p => (
               <div 
                 key={p.id} 
-                className="w-7 h-7 rounded-full border-2 border-[#1a1a1a] flex items-center justify-center text-[10px] font-bold text-white shadow-lg"
+                className="w-7 h-7 rounded-full border-2 border-[#1a1a1a] flex items-center justify-center text-[10px] font-bold text-white shadow-lg transition-transform hover:scale-110 cursor-pointer"
                 style={{ backgroundColor: p.color }}
                 title={p.name}
               >
                 {p.name.charAt(0)}
               </div>
             ))}
-            <div className="w-7 h-7 rounded-full border-2 border-[#1a1a1a] bg-white/10 flex items-center justify-center text-[10px] font-bold text-slate-400">
-              +0
-            </div>
           </div>
 
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold transition-all shadow-lg shadow-indigo-600/20">
-            <Share2 size={12} />
-            <span>COPY LINK</span>
+          <button onClick={handleRunCode} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black transition-all shadow-lg shadow-emerald-600/20 active:scale-95">
+            <Play size={12} fill="currentColor" />
+            <span>RUN</span>
+          </button>
+
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-bold transition-all border border-white/10">
+            <Save size={12} />
+            <span>SAVE</span>
           </button>
           
           <button 
             onClick={onExit}
-            className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all"
+            className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all ml-2"
           >
             <X size={18} />
           </button>
@@ -213,10 +244,12 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
       <div className="flex grow overflow-hidden">
         {/* Left Sidebar (Explorer) */}
         {isSidebarOpen && (
-          <aside className="w-64 border-right border-white/10 bg-[#151515] flex flex-col shrink-0 overflow-hidden border-r border-white/10">
+          <aside className="w-60 border-r border-white/10 bg-[#151515] flex flex-col shrink-0 overflow-hidden">
             <div className="p-3 border-b border-white/10 flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Explorer</span>
-              <button className="p-1 hover:bg-white/5 rounded text-slate-500"><MoreVertical size={12} /></button>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Explorer</span>
+              <button onClick={addNewFile} className="p-1 hover:bg-white/5 rounded text-indigo-400" title="New File">
+                <Plus size={14} />
+              </button>
             </div>
             <div className="grow overflow-y-auto py-2">
               <div className="px-3 flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-2">
@@ -224,36 +257,22 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
                 <span>WORKSPACE</span>
               </div>
               <div className="space-y-0.5">
-                {MOCK_FILES.map(file => (
+                {fileList.map(file => (
                   <button 
                     key={file.id}
-                    onClick={() => {
-                      setActiveFile(file);
-                      handleLanguageChange(file.language);
-                    }}
-                    className={`w-full px-6 py-1.5 flex items-center gap-2 text-[11px] transition-colors ${activeFile.id === file.id ? 'bg-indigo-600/10 text-indigo-400 border-l-2 border-indigo-600' : 'text-slate-400 hover:bg-white/5'}`}
+                    onClick={() => setActiveFile(file)}
+                    className={`w-full px-6 py-1.5 flex items-center gap-2 text-[11px] transition-colors group ${activeFile.id === file.id ? 'bg-indigo-600/10 text-indigo-400 border-l-2 border-indigo-600' : 'text-slate-400 hover:bg-white/5'}`}
                   >
                     <FileCode size={14} className={activeFile.id === file.id ? 'text-indigo-400' : 'text-slate-500'} />
-                    <span>{file.name}</span>
+                    <span className="truncate">{file.name}</span>
+                    {fileList.length > 1 && (
+                      <Trash2 size={10} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition-all" onClick={(e) => {
+                        e.stopPropagation();
+                        setFileList(prev => prev.filter(f => f.id !== file.id));
+                      }} />
+                    )}
                   </button>
                 ))}
-              </div>
-            </div>
-            
-            <div className="p-4 border-t border-white/10 space-y-4">
-              <div className="space-y-2">
-                <span className="text-[9px] font-bold text-slate-600 uppercase block tracking-wider">Language Engine</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {LANGUAGES.map(lang => (
-                    <button
-                      key={lang.id}
-                      onClick={() => handleLanguageChange(lang.id)}
-                      className={`px-2 py-1.5 rounded-lg border text-[9px] font-bold transition-all ${language === lang.id ? 'bg-indigo-600/20 border-indigo-600/40 text-indigo-400' : 'bg-black/20 border-white/5 text-slate-500 hover:border-white/10'}`}
-                    >
-                      {lang.name}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           </aside>
@@ -263,24 +282,26 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
         <div className="grow flex flex-col min-w-0 bg-[#0d0d0d]">
           {/* Tabs Bar */}
           <div className="h-9 bg-[#1a1a1a] flex items-center overflow-x-auto no-scrollbar border-b border-white/5">
-            <div className={`px-4 h-full flex items-center gap-2 text-[11px] font-medium border-r border-white/5 bg-[#0d0d0d] text-indigo-400 border-t-2 border-t-indigo-600`}>
-              <FileCode size={12} />
-              <span>{activeFile.name}</span>
-              <button className="ml-2 p-0.5 hover:bg-white/10 rounded"><X size={10} /></button>
-            </div>
-            <div className={`px-4 h-full flex items-center gap-2 text-[11px] font-medium border-r border-white/5 text-slate-500 hover:bg-white/[0.02] cursor-pointer`}>
-              <File size={12} />
-              <span>Syllabus.md</span>
-            </div>
+            {fileList.map(file => (
+              <div 
+                key={file.id}
+                onClick={() => setActiveFile(file)}
+                className={`px-4 h-full flex items-center gap-2 text-[11px] font-medium border-r border-white/5 cursor-pointer transition-all ${activeFile.id === file.id ? 'bg-[#0d0d0d] text-indigo-400 border-t-2 border-t-indigo-600' : 'text-slate-500 hover:bg-white/[0.02]'}`}
+              >
+                <FileCode size={12} />
+                <span>{file.name}</span>
+                <button className="ml-2 p-0.5 hover:bg-white/10 rounded opacity-0 group-hover:opacity-100"><X size={10} /></button>
+              </div>
+            ))}
           </div>
 
           {/* Editor Container */}
           <div className="grow relative">
             <Editor
               height="100%"
-              language={language}
+              language={activeFile.language}
               theme="vs-dark"
-              value={code}
+              value={files[activeFile.name] || ''}
               onChange={handleCodeChange}
               options={{
                 minimap: { enabled: true },
@@ -312,6 +333,28 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
             />
           </div>
 
+          {/* Terminal Section */}
+          {isTerminalOpen && (
+            <div className="h-48 border-t border-white/10 bg-[#0a0a0a] flex flex-col shrink-0">
+              <div className="h-8 border-b border-white/5 bg-[#151515] flex items-center justify-between px-3 shrink-0">
+                <div className="flex items-center gap-2">
+                  <TerminalIcon size={12} className="text-emerald-400" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Integrated Terminal</span>
+                </div>
+                <button onClick={() => setIsTerminalOpen(false)} className="p-1 hover:bg-white/5 rounded text-slate-500"><X size={12} /></button>
+              </div>
+              <div 
+                ref={terminalRef}
+                className="grow p-3 font-mono text-[11px] overflow-y-auto whitespace-pre-wrap selection:bg-indigo-500/30 custom-scrollbar"
+              >
+                {terminalOutput.map((line, i) => (
+                  <div key={i} className="mb-0.5">{line}</div>
+                ))}
+                <div className="animate-pulse inline-block w-2 h-4 bg-white/20 ml-1 translate-y-1" />
+              </div>
+            </div>
+          )}
+
           {/* Footer Status Bar */}
           <footer className="h-6 bg-indigo-600 text-white flex items-center justify-between px-3 text-[10px] font-bold shrink-0">
             <div className="flex items-center gap-4">
@@ -324,15 +367,19 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setIsTerminalOpen(!isTerminalOpen)}
+                className="flex items-center gap-1 hover:bg-white/10 px-2 h-full cursor-pointer transition-colors"
+              >
+                <TerminalIcon size={10} />
+                <span>TERMINAL</span>
+              </button>
               <div className="flex items-center gap-1 hover:bg-white/10 px-2 h-full cursor-pointer uppercase">
-                <span>Spaces: 4</span>
+                <span>{activeFile.language}</span>
               </div>
-              <div className="flex items-center gap-1 hover:bg-white/10 px-2 h-full cursor-pointer uppercase">
-                <span>{language}</span>
-              </div>
-              <div className="flex items-center gap-1 hover:bg-white/10 px-2 h-full cursor-pointer">
+              <div className="flex items-center gap-1">
                 <Monitor size={10} />
-                <span>Connected</span>
+                <span>{socketStatus === 'connected' ? 'Connected' : 'Syncing...'}</span>
               </div>
             </div>
           </footer>
@@ -340,17 +387,16 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
 
         {/* Right Sidebar (Chat & Presence) */}
         {isChatOpen && (
-          <aside className="w-80 border-l border-white/10 bg-[#151515] flex flex-col shrink-0 overflow-hidden">
+          <aside className="w-72 border-l border-white/10 bg-[#151515] flex flex-col shrink-0 overflow-hidden">
             <div className="p-3 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageSquare size={14} className="text-indigo-400" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-200">Room Chat</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-200">Room Chat</span>
               </div>
               <button onClick={() => setIsChatOpen(false)} className="p-1 hover:bg-white/5 rounded text-slate-500"><X size={12} /></button>
             </div>
             
             <div className="grow overflow-y-auto p-4 space-y-4 flex flex-col-reverse">
-              {/* Messages in reverse for automatic bottom alignment */}
               <div className="space-y-4">
                 {messages.map((m, i) => (
                   <div key={i} className={`flex flex-col space-y-1 ${m.user === userName ? 'items-end' : ''}`}>
@@ -358,7 +404,7 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
                       <span className={`text-[10px] font-bold ${m.user === 'System' ? 'text-indigo-400' : 'text-white'}`}>{m.user}</span>
                       <span className="text-[8px] text-slate-600">{m.time}</span>
                     </div>
-                    <div className={`p-2 rounded-xl text-xs leading-relaxed max-w-[90%] ${m.user === userName ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white/5 text-slate-300 rounded-tl-none'}`}>
+                    <div className={`p-2 rounded-xl text-xs leading-relaxed max-w-[95%] ${m.user === userName ? 'bg-indigo-600 text-white rounded-tr-none shadow-lg' : 'bg-white/5 text-slate-300 rounded-tl-none'}`}>
                       {m.text}
                     </div>
                   </div>
@@ -378,21 +424,6 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
                   <Send size={14} />
                 </button>
               </form>
-            </div>
-
-            <div className="p-4 border-t border-white/10 bg-black/20">
-              <span className="text-[9px] font-bold text-slate-600 uppercase block mb-3">Participants in session</span>
-              <div className="space-y-2">
-                {participants.map(p => (
-                  <div key={p.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-                      <span className="text-xs text-slate-300">{p.name}</span>
-                    </div>
-                    <span className="text-[8px] text-emerald-500 font-bold uppercase tracking-tighter">Online</span>
-                  </div>
-                ))}
-              </div>
             </div>
           </aside>
         )}

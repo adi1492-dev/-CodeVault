@@ -24,6 +24,8 @@ import { useRouter } from 'next/navigation';
 import { getCurrentUser, setCurrentUser, getUsers, saveUsers, getSubjects, updateSyllabusCoverage, createAlert, UserRecord, SubjectRecord } from '@/lib/store';
 import { useWebSocket } from '@/components/WebSocketProvider';
 import { createProblem } from '@/lib/api';
+import ProctoringDashboard from '@/components/ProctoringDashboard';
+import { Shield } from 'lucide-react';
 
 interface StudentSubmission {
   id: string;
@@ -39,7 +41,7 @@ export default function UnifiedTeacherDashboard() {
   const router = useRouter();
   const [currentUser, setCurrent] = useState<UserRecord | null>(null);
   
-  const [activeTab, setActiveTab] = useState<'teaching' | 'labs' | 'class'>('teaching');
+  const [activeTab, setActiveTab] = useState<'teaching' | 'labs' | 'exams' | 'class'>('teaching');
   const [teachingSubTab, setTeachingSubTab] = useState<'curriculum' | 'problems'>('curriculum');
   const [classSubTab, setClassSubTab] = useState<'roster' | 'announcements' | 'results'>('roster');
   
@@ -95,7 +97,7 @@ export default function UnifiedTeacherDashboard() {
     }
     setSubjects(getSubjects());
     // Load real students filtered by section
-    const allStudents = getUsers().filter(u => u.role === 'student');
+    const allStudents = getUsers().filter((u: UserRecord) => u.role === 'student');
     setStudents(allStudents);
   }, []);
 
@@ -165,8 +167,8 @@ export default function UnifiedTeacherDashboard() {
   const handleToggleModule = (subjectId: string, moduleIdx: number) => {
     const targetSub = subjects.find(s => s.id === subjectId);
     if (!targetSub) return;
-    const updatedModules = targetSub.modules.map((m, idx) => idx === moduleIdx ? { ...m, completed: !m.completed } : m);
-    const completedCount = updatedModules.filter(m => m.completed).length;
+    const updatedModules = targetSub.modules.map((m: { title: string; completed: boolean }, idx: number) => idx === moduleIdx ? { ...m, completed: !m.completed } : m);
+    const completedCount = updatedModules.filter((m: { title: string; completed: boolean }) => m.completed).length;
     const calculatedPct = Math.round((completedCount / updatedModules.length) * 100);
     
     updateSyllabusCoverage(subjectId, calculatedPct, updatedModules);
@@ -180,7 +182,7 @@ export default function UnifiedTeacherDashboard() {
 
   const sanctionLeave = (studentId: string) => {
     const all = getUsers();
-    const updated = all.map(u => {
+    const updated = all.map((u: UserRecord) => {
       if (u.id === studentId) {
         const newLeave = Math.max(0, (u.leaveBalance ?? 0) - 1);
         return { ...u, leaveBalance: newLeave };
@@ -188,16 +190,16 @@ export default function UnifiedTeacherDashboard() {
       return u;
     });
     saveUsers(updated);
-    setStudents(updated.filter(u => u.role === 'student'));
+    setStudents(updated.filter((u: UserRecord) => u.role === 'student'));
     setMsg('Leave sanctioned and balance updated.');
     setTimeout(() => setMsg(''), 4000);
   };
 
   const updateStudentAttendance = (studentId: string, newPct: number) => {
     const all = getUsers();
-    const updated = all.map(u => u.id === studentId ? { ...u, attendancePct: Math.min(100, Math.max(0, newPct)) } : u);
+    const updated = all.map((u: UserRecord) => u.id === studentId ? { ...u, attendancePct: Math.min(100, Math.max(0, newPct)) } : u);
     saveUsers(updated);
-    setStudents(updated.filter(u => u.role === 'student'));
+    setStudents(updated.filter((u: UserRecord) => u.role === 'student'));
     setMsg('Attendance updated.');
     setTimeout(() => setMsg(''), 3000);
   };
@@ -212,7 +214,7 @@ export default function UnifiedTeacherDashboard() {
     createAlert(student.id, 'attendance', 'Lecture Skipped', alertMsg);
     
     // Alert Parent
-    const parent = getUsers().find(u => u.role === 'parent'); // In real app, match by studentId
+    const parent = getUsers().find((u: UserRecord) => u.role === 'parent'); // In real app, match by studentId
     if (parent) {
       createAlert(parent.id, 'attendance', 'Ward Lecture Absenteeism', alertMsg);
     }
@@ -237,7 +239,7 @@ export default function UnifiedTeacherDashboard() {
 
     // Iterate all students in the teacher's section to assign verified score / trigger push alert
     const all = getUsers();
-    const updated = all.map(u => {
+    const updated = all.map((u: UserRecord) => {
       if (u.role === 'student' && (u.section === section || section === 'CS-A')) {
         // Trigger live alert
         createAlert(
@@ -257,9 +259,8 @@ export default function UnifiedTeacherDashboard() {
       }
       return u;
     });
-
     saveUsers(updated);
-    setStudents(updated.filter(u => u.role === 'student'));
+    setStudents(updated.filter((u: UserRecord) => u.role === 'student'));
     setResultsPublished(true);
     
     // Broadcast via WebSocket to reload state on all connected client dashboards instantaneously
@@ -278,99 +279,91 @@ export default function UnifiedTeacherDashboard() {
   const activeDisplaySubs = mySubjects.length > 0 ? mySubjects : subjects;
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white selection:bg-indigo-500/30 pb-20 relative overflow-x-hidden font-sans">
-      {/* Subtle Background Glow Overlay */}
-      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-indigo-950/20 via-transparent to-transparent pointer-events-none blur-3xl" />
-
-      {/* Sticky Header Container */}
-      <header className="border-b border-white/5 bg-white/[0.01] backdrop-blur-xl sticky top-0 z-50 transition-all">
+    <div className="min-h-screen bg-[#0a0b10] text-slate-200 selection:bg-indigo-500/30 font-sans">
+      {/* Header */}
+      <header className="border-b border-white/5 bg-[#0a0b10]/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-400 to-indigo-600 flex items-center justify-center font-black text-black text-xs shadow-md shadow-indigo-500/20">
-              FAC
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white text-xs">
+              EDU
             </div>
             <div>
-              <span className="font-extrabold tracking-tight text-sm block bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent">
-                Faculty Hub Interface
-              </span>
-              <span className="text-[10px] text-indigo-400 block font-semibold">
-                Instructor: {currentUser?.name || 'Dr. Vikram Anjali'} | Dept: {department}
-              </span>
+              <h1 className="text-sm font-bold text-white leading-tight">Faculty Workspace</h1>
+              <p className="text-[10px] text-slate-500 font-medium">
+                {currentUser?.name || 'Dr. Vikram Anjali'} • {department}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 text-[10px] text-slate-400 border border-white/5 font-medium">
-              <Sparkles size={11} className="text-amber-400" />
-              <span>Assigned Scope: Section {section}</span>
-            </span>
-
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-bold text-slate-400">Section {section}</span>
+            </div>
             <button 
               onClick={handleLogout}
-              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-red-500/10 hover:text-red-400 border border-white/5 text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300"
+              className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
+              title="Logout"
             >
-              <LogOut size={13} />
-              <span>Log Out</span>
+              <LogOut size={18} />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Layout Grid with Left Menu Sidebar */}
-      <main className="max-w-7xl mx-auto px-6 mt-8 flex flex-col lg:flex-row gap-8 relative z-10 items-start">
+      {/* Main Content Area */}
+      <main className="max-w-7xl mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
         
-        {/* Left Menu Options Sidebar */}
-        <div className="w-full lg:w-72 shrink-0 p-4 rounded-3xl border border-white/10 bg-[#080d1a]/90 backdrop-blur-2xl shadow-2xl space-y-6 sticky top-20">
-          <div className="px-2 pb-1 border-b border-white/5">
-            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">
-              Teaching Tools
-            </span>
-            <span className="text-xs text-slate-400 block mt-0.5 font-medium">
-              Manage Assignments
-            </span>
+        {/* Navigation Sidebar */}
+        <aside className="w-full lg:w-64 shrink-0 space-y-1">
+          <div className="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+            Main Navigation
           </div>
-
-          <div className="flex flex-col gap-2">
-            {/* Teaching Subjects */}
-            <button
-              onClick={() => setActiveTab('teaching')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
-                activeTab === 'teaching' 
-                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <BookOpen size={16} className="shrink-0" />
-              <span className="truncate">Teaching Subjects</span>
-            </button>
-
-            {/* Lab Evaluator */}
-            <button
-              onClick={() => setActiveTab('labs')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
-                activeTab === 'labs' 
-                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Code2 size={16} className="shrink-0" />
-              <span className="truncate">Evaluate Code Answers</span>
-            </button>
-
-            {/* Assigned Class Roster */}
-            <button
-              onClick={() => setActiveTab('class')}
-              className={`w-full px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-start gap-3 ${
-                activeTab === 'class' 
-                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Users size={16} className="shrink-0" />
-              <span className="truncate">My Assigned Class ⭐</span>
-            </button>
-          </div>
-        </div>
+          <button
+            onClick={() => setActiveTab('teaching')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'teaching' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <BookOpen size={18} />
+            <span>Curriculum</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('labs')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'labs' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Code2 size={18} />
+            <span>Lab Evaluation</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('class')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'class' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Users size={18} />
+            <span>Class Roster</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('exams')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'exams' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Shield size={18} />
+            <span>Examinations</span>
+          </button>
+        </aside>
 
         {/* Right Content Screen Sphere */}
         <div className="grow min-w-0 w-full space-y-6">
@@ -381,87 +374,74 @@ export default function UnifiedTeacherDashboard() {
           {activeTab === 'teaching' && (
             <div className="space-y-6 animate-fade-in">
               
-              {/* Secondary Horizontal Menu */}
-              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+              {/* Sub-navigation */}
+              <div className="flex items-center gap-1 border-b border-white/5">
                 <button
                   onClick={() => setTeachingSubTab('curriculum')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                    teachingSubTab === 'curriculum' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-400 hover:text-white'
+                  className={`px-4 py-3 text-xs font-bold transition-all relative ${
+                    teachingSubTab === 'curriculum' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
                   }`}
                 >
-                  <Sliders size={14} />
-                  <span>📖 Track Syllabus Delivery</span>
+                  Syllabus Tracking
+                  {teachingSubTab === 'curriculum' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 shadow-[0_-2px_10px_rgba(99,102,241,0.5)]" />}
                 </button>
                 <button
                   onClick={() => setTeachingSubTab('problems')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                    teachingSubTab === 'problems' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-400 hover:text-white'
+                  className={`px-4 py-3 text-xs font-bold transition-all relative ${
+                    teachingSubTab === 'problems' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
                   }`}
                 >
-                  <PlusCircle size={14} />
-                  <span>➕ Create Coding Test</span>
+                  Coding Assignments
+                  {teachingSubTab === 'problems' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 shadow-[0_-2px_10px_rgba(99,102,241,0.5)]" />}
                 </button>
               </div>
 
               {teachingSubTab === 'curriculum' && (
-                <div className="glass p-6 rounded-3xl border-white/5 space-y-6 animate-fade-in">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                    <div>
-                      <h3 className="text-base font-bold text-white">Syllabus Completion Control</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">Drag range controls to instantly register global delivery rates</p>
-                    </div>
-                  </div>
-
+                <div className="space-y-6 animate-fade-in">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {activeDisplaySubs.map(sub => (
-                      <div key={sub.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 space-y-4">
-                        <div className="flex items-start justify-between gap-2">
+                      <div key={sub.id} className="bg-[#14161e] p-6 rounded-xl border border-white/5 space-y-5">
+                        <div className="flex items-start justify-between">
                           <div>
-                            <span className="text-xs font-black text-white block">{sub.name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">
-                              Streams: {sub.sections.join(', ')} • Tier: <strong className="text-indigo-300 font-sans">{sub.academicYear || '1st Year'}</strong>
-                            </span>
+                            <h4 className="text-sm font-bold text-white">{sub.name}</h4>
+                            <p className="text-[10px] text-slate-500 font-medium mt-1 uppercase tracking-wider">
+                              {sub.code} • Sem {sub.academicYear || 'I'}
+                            </p>
                           </div>
-                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/5 text-indigo-400 shrink-0">
-                            {sub.code}
-                          </span>
+                          <div className="px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 text-[10px] font-bold border border-indigo-500/20">
+                            {sub.syllabusCoveredPct}%
+                          </div>
                         </div>
 
-                        {/* Interactive Range Slider Bar */}
-                        <div className="space-y-2 bg-black/50 p-3 rounded-xl border border-white/5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-400 font-medium">Coverage Completed</span>
-                            <span className="font-bold text-indigo-300">{sub.syllabusCoveredPct}%</span>
-                          </div>
+                        {/* Progress Bar */}
+                        <div className="space-y-2">
                           <input 
                             type="range" 
                             min="0" 
                             max="100" 
                             value={sub.syllabusCoveredPct}
                             onChange={(e) => handleSliderChange(sub.id, Number(e.target.value))}
-                            className="w-full accent-indigo-500 cursor-pointer h-1.5 bg-white/10 rounded-lg"
+                            className="w-full accent-indigo-500 cursor-pointer h-1 bg-white/5 rounded-lg appearance-none"
                           />
                         </div>
 
-                        {/* Delivery Checklist Arrays */}
-                        <div className="space-y-2">
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
-                            Sub-Unit Progress Checks
-                          </span>
-                          {sub.modules.map((m, idx) => (
-                            <label 
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Modules Checklist</p>
+                          {sub.modules.map((m: { title: string; completed: boolean }, idx: number) => (
+                            <div 
                               key={idx}
                               onClick={() => handleToggleModule(sub.id, idx)}
-                              className="flex items-start gap-2 text-xs text-slate-300 hover:text-white cursor-pointer select-none p-1.5 rounded-lg hover:bg-white/5 transition-all"
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer group"
                             >
-                              <input 
-                                type="checkbox"
-                                checked={m.completed}
-                                readOnly
-                                className="mt-0.5 rounded accent-indigo-500"
-                              />
-                              <span className={`leading-tight ${m.completed ? 'line-through text-slate-500' : ''}`}>{m.title}</span>
-                            </label>
+                              <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                m.completed ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-white/10 text-transparent group-hover:border-white/30'
+                              }`}>
+                                <CheckSquare size={10} />
+                              </div>
+                              <span className={`text-xs ${m.completed ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+                                {m.title}
+                              </span>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -632,6 +612,33 @@ export default function UnifiedTeacherDashboard() {
                 </div>
               )}
 
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 2.5: EXAMINATION CENTER & PROCTORING                  */}
+          {/* ========================================================= */}
+          {activeTab === 'exams' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-6 glass rounded-3xl border-red-500/10 bg-gradient-to-br from-red-500/5 to-transparent">
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Shield size={20} className="text-red-400" />
+                    <span>Active Examination Control Panel</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Real-time surveillance and integrity monitoring for ongoing assessments</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-3 py-1.5 rounded-full bg-red-500/10 text-[10px] font-black text-red-400 border border-red-500/20 uppercase animate-pulse">
+                    Surveillance Active
+                  </span>
+                  <button className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-bold transition-all">
+                    Generate Report
+                  </button>
+                </div>
+              </div>
+
+              <ProctoringDashboard />
             </div>
           )}
 

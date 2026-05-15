@@ -11,13 +11,13 @@ func GetProblems(c *fiber.Ctx) error {
 		return c.JSON([]fiber.Map{
 			{
 				"ID": 1, "title": "Hello World", "difficulty": "easy", 
-				"description": "Write a program that prints 'Hello, World!'",
-				"starter_code": "#include <stdio.h>\n\nint main() {\n    // Your code here\n    return 0;\n}",
+				"description": "The standard entry point for all programmers. Write a program that prints 'Hello, World!' to the console.",
+				"starter_code": "#include <stdio.h>\n\nint main() {\n    printf(\"Hello, World!\\n\");\n    return 0;\n}",
 			},
 			{
-				"ID": 2, "title": "Sum of Two Numbers", "difficulty": "easy",
-				"description": "Read two integers and print their sum",
-				"starter_code": "#include <stdio.h>\n\nint main() {\n    int a, b;\n    // Read and print sum\n    return 0;\n}",
+				"ID": 2, "title": "Addition of Two Integers", "difficulty": "easy",
+				"description": "Read two integers from standard input and output their sum.",
+				"starter_code": "#include <stdio.h>\n\nint main() {\n    int a, b;\n    // Read input and print sum here\n    return 0;\n}",
 			},
 		})
 	}
@@ -29,12 +29,23 @@ func GetProblems(c *fiber.Ctx) error {
 func GetProblem(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if db.DB == nil {
+		if id == "1" {
+			return c.JSON(fiber.Map{
+				"ID": 1, "title": "Hello World", "difficulty": "easy",
+				"description": "The standard entry point for all programmers. Write a program that prints 'Hello, World!' to the console.",
+				"starter_code": "#include <stdio.h>\n\nint main() {\n    printf(\"Hello, World!\\n\");\n    return 0;\n}",
+				"TestCases": []fiber.Map{
+					{"input": "", "expected_output": "Hello, World!\n"},
+				},
+			})
+		}
 		return c.JSON(fiber.Map{
-			"ID": id, "title": "Stateless Sandbox Problem", "difficulty": "easy",
-			"description": "Stateless coding problem executing AST token trees directly inside Go compiler memory.",
-			"starter_code": "#include <stdio.h>\n\nint main() {\n    printf(\"Hello from CampusCore Engine!\\n\");\n    return 0;\n}",
+			"ID": id, "title": "Addition of Two Integers", "difficulty": "easy",
+			"description": "Read two integers from standard input and output their sum.",
+			"starter_code": "#include <stdio.h>\n\nint main() {\n    int a, b;\n    // Read input and print sum here\n    return 0;\n}",
 			"TestCases": []fiber.Map{
-				{"input": "", "expected_output": "Hello from CampusCore Engine!\n"},
+				{"input": "5 3", "expected_output": "8\n"},
+				{"input": "10 20", "expected_output": "30\n"},
 			},
 		})
 	}

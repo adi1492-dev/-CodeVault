@@ -11,59 +11,63 @@ type GradeResult struct {
 	Score       int
 	MaxScore    int
 	TestResults []models.TestResult
-	Tokens      interface{}
-	AST         interface{}
+	BadgeType   string
 }
 
+// Grade evaluates a student's code against a set of problem test cases.
 func Grade(code string, problem models.Problem) GradeResult {
-	executor := compiler.NewSmartExecutor()
 	totalScore := 0
 	maxScore := 0
 	results := []models.TestResult{}
-	var firstTokens interface{}
-	var firstAST interface{}
 
 	config := models.ExecutionConfig{
 		TimeoutMs: problem.TimeLimitMs,
 		MemoryMB:  problem.MemoryLimitKB / 1024,
 	}
 
-	for i, tc := range problem.TestCases {
+	for _, tc := range problem.TestCases {
 		maxScore += tc.Weight
 
-		execResult := executor.SafeExecute(code, tc.Input, config)
+		// Execute code using the native system compiler
+		execResult := compiler.Execute(code, tc.Input, config)
 
-		if i == 0 {
-			firstTokens = execResult.Tokens
-			firstAST = execResult.AST
-		}
-
-		passed := execResult.Success && stringsTrim(execResult.Output) == stringsTrim(tc.ExpectedOutput)
+		// Determine success via normalized output comparison
+		actual := strings.TrimSpace(execResult.Output)
+		expected := strings.TrimSpace(tc.ExpectedOutput)
+		
+		passed := execResult.Success && actual == expected
+		
 		earned := 0
 		if passed {
 			earned = tc.Weight
 			totalScore += earned
 		}
 
+		// Surface raw compiler errors if execution failed
+		finalOutput := execResult.Output
+		if !execResult.Success && execResult.Error != "" {
+			finalOutput = execResult.Error
+		}
+
 		results = append(results, models.TestResult{
 			TestCaseID: tc.ID,
 			Input:      tc.Input,
 			Expected:   tc.ExpectedOutput,
-			Actual:     execResult.Output,
+			Actual:     finalOutput,
 			Passed:     passed,
 			Weight:     earned,
 		})
+	}
+
+	status := "FAIL"
+	if totalScore == maxScore && maxScore > 0 {
+		status = "PASS"
 	}
 
 	return GradeResult{
 		Score:       totalScore,
 		MaxScore:    maxScore,
 		TestResults: results,
-		Tokens:      firstTokens,
-		AST:         firstAST,
+		BadgeType:   status,
 	}
-}
-
-func stringsTrim(s string) string {
-	return strings.TrimSpace(s)
 }

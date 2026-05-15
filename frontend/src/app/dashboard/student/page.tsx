@@ -26,12 +26,14 @@ import {
   Users as UsersIcon,
   Search,
   Globe,
-  Monitor
+  Monitor,
+  Shield
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentUser, setCurrentUser, getSubjects, getUsers, placeCanteenOrder, submitAnonymousGrievance, UserRecord, SubjectRecord, getAlerts, markAlertRead, AlertRecord } from '@/lib/store';
 import CollaborativeIDE from '@/components/CollaborativeIDE';
+import ExamInterface from '@/components/ExamInterface';
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -51,14 +53,16 @@ export default function StudentDashboard() {
   }, []);
   
   // Primary Navigation tabs (Left Menu)
-  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'collab' | 'syllabus' | 'canteen' | 'certificates' | 'report' | 'transport'>('workspace');
+  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'collab' | 'exams' | 'syllabus' | 'canteen' | 'certificates' | 'report' | 'transport'>('workspace');
   
   // Secondary Sub-navigation tab states (Top Horizontal Bar)
   const [workspaceSubTab, setWorkspaceSubTab] = useState<'metrics' | 'ask'>('metrics');
   const [collabSubTab, setCollabSubTab] = useState<'explore' | 'active'>('explore');
+  const [syllabusSubTab, setSyllabusSubTab] = useState<'tracking' | 'receipt'>('tracking');
 
   // Collaboration State
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+  const [activeExamId, setActiveExamId] = useState<string | null>(null);
   const [joinRoomId, setJoinRoomId] = useState('');
   const [exploreRooms, setExploreRooms] = useState([
     { id: 'ROOM-102', name: 'DSA Group Study', creator: 'Ananya S.', lang: 'C++', members: 3, tags: ['DSA', 'Pointers'] },
@@ -117,24 +121,19 @@ export default function StudentDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#190019] text-[#FBE4D8] selection:bg-[#854F6C] selection:text-[#FFDFC3] pb-20 relative overflow-x-hidden font-sans">
-      {/* Subtle Background Glow Overlay */}
-      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-cyan-950/20 via-transparent to-transparent pointer-events-none blur-3xl" />
-
-      {/* Header Container Bar */}
-      <header className="border-b border-white/5 bg-white/[0.01] backdrop-blur-xl sticky top-0 z-50 transition-all">
+    <div className="min-h-screen bg-[#0a0b10] text-slate-200 selection:bg-indigo-500/30 font-sans">
+      {/* Header */}
+      <header className="border-b border-white/5 bg-[#0a0b10]/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-400 to-indigo-500 flex items-center justify-center font-black text-black text-xs shadow-md shadow-cyan-500/20">
-              STU
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white text-xs">
+              EDU
             </div>
             <div>
-              <span className="font-bold text-lg block text-white">
-                Student Portal
-              </span>
-              <span className="text-sm text-cyan-400 block font-medium">
+              <h1 className="text-sm font-bold text-white leading-tight">Student Portal</h1>
+              <p className="text-[10px] text-slate-500 font-medium">
                 Welcome, {currentUser?.name || 'Aarav Nikam'}
-              </span>
+              </p>
             </div>
           </div>
 
@@ -194,123 +193,107 @@ export default function StudentDashboard() {
         </div>
       </header>
 
-      {/* Main Framework Container layout */}
-      <main className="max-w-7xl mx-auto px-6 mt-8 flex flex-col lg:flex-row gap-8 relative z-10 items-start">
+      {/* Main Content Area */}
+      <main className="max-w-7xl mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
         
-        {/* Left Vertical Menu Switcher Sidebar */}
-        <div className="w-full lg:w-72 shrink-0 p-4 rounded-3xl border border-white/10 bg-[#080d1a]/90 backdrop-blur-2xl shadow-2xl space-y-6 sticky top-20">
-          <div className="px-4 pb-3 border-b border-white/10 mb-4">
-            <span className="text-sm font-semibold text-cyan-400 uppercase tracking-wide block">
-              Student Menu
-            </span>
+        {/* Navigation Sidebar */}
+        <aside className="w-full lg:w-64 shrink-0 space-y-1">
+          <div className="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+            Main Navigation
           </div>
-
-          <div className="flex flex-col gap-2">
-            {/* Workspace Overview */}
-            <button
-              onClick={() => setActiveTab('workspace')}
-              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
-                activeTab === 'workspace' 
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <TrendingUp size={18} className="shrink-0" />
-              <span className="truncate">Dashboard</span>
-            </button>
-
-            {/* IDE Launchpad */}
-            <button
-              onClick={() => setActiveTab('ide')}
-              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
-                activeTab === 'ide' 
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Cpu size={18} className="shrink-0" />
-              <span className="truncate">Practice Arena</span>
-            </button>
-
-            {/* Collaborative Lab */}
-            <button
-              onClick={() => setActiveTab('collab')}
-              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
-                activeTab === 'collab' 
-                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <UsersIcon size={18} className="shrink-0 text-indigo-400" />
-              <span className="truncate">Collaborative Lab</span>
-            </button>
-
-            {/* Syllabus Overview */}
-            <button
-              onClick={() => setActiveTab('syllabus')}
-              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
-                activeTab === 'syllabus' 
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Layers size={18} className="shrink-0" />
-              <span className="truncate">My Syllabus</span>
-            </button>
-
-            {/* Canteen */}
-            <button
-              onClick={() => setActiveTab('canteen')}
-              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
-                activeTab === 'canteen' 
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Coffee size={18} className="shrink-0" />
-              <span className="truncate">Canteen Order</span>
-            </button>
-
-            {/* Certificates */}
-            <button
-              onClick={() => setActiveTab('certificates')}
-              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
-                activeTab === 'certificates' 
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <ShieldCheck size={18} className="shrink-0" />
-              <span className="truncate">Certificates</span>
-            </button>
-
-            {/* Live Bus Tracking */}
-            <button
-              onClick={() => setActiveTab('transport')}
-              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
-                activeTab === 'transport' 
-                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Bus size={18} className="shrink-0" />
-              <span className="truncate">Live Bus Tracking</span>
-            </button>
-
-            {/* Anti-Ragging */}
-            <button
-              onClick={() => setActiveTab('report')}
-              className={`w-full mt-4 px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
-                activeTab === 'report' 
-                  ? 'bg-red-500/10 text-red-400 border border-red-500/30' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <ShieldAlert size={18} className="shrink-0 text-red-400" />
-              <span className="truncate text-red-400">Report Incident</span>
-            </button>
+          <button
+            onClick={() => setActiveTab('workspace')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'workspace' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <TrendingUp size={18} />
+            <span>Dashboard</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('ide')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'ide' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Cpu size={18} />
+            <span>Practice Arena</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('collab')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'collab' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <UsersIcon size={18} />
+            <span>Collaborative Lab</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('exams')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'exams' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Shield size={18} />
+            <span>Examinations</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('syllabus')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'syllabus' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Layers size={18} />
+            <span>Syllabus</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('canteen')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'canteen' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Coffee size={18} />
+            <span>Canteen</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('certificates')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'certificates' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Award size={18} />
+            <span>Certificates</span>
+          </button>
+          
+          <div className="pt-4 px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+            Reporting
           </div>
-        </div>
+          <button
+            onClick={() => setActiveTab('report')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'report' 
+                ? 'bg-red-600 text-white shadow-lg shadow-red-600/10' 
+                : 'text-red-400 hover:text-white hover:bg-red-500/10'
+            }`}
+          >
+            <ShieldAlert size={18} />
+            <span>Report Incident</span>
+          </button>
+        </aside>
 
         {/* Right Content Panels */}
         <div className="grow min-w-0 w-full space-y-6">
@@ -346,26 +329,28 @@ export default function StudentDashboard() {
               {workspaceSubTab === 'metrics' && (
                 <div className="space-y-6 animate-fade-in">
                   {/* Quick Stat Blocks from live store */}
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <div className="glass p-5 rounded-3xl border-white/5">
-                      <span className="text-xs text-slate-400 block font-medium">Attendance</span>
-                      <span className={`text-3xl font-black mt-1 block ${(currentUser?.attendancePct ?? 0) >= 75 ? 'text-emerald-400' : 'text-red-400'}`}>{currentUser?.attendancePct ?? 0}%</span>
-                      {(currentUser?.attendancePct ?? 0) < 75 && <span className="text-[10px] text-red-400 block mt-0.5 font-bold">⚠ Below 75% shortfall</span>}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-[#14161e] p-5 rounded-xl border border-white/5">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">Attendance</span>
+                      <div className="flex items-end gap-2 mt-1">
+                        <span className={`text-2xl font-bold ${(currentUser?.attendancePct ?? 0) >= 75 ? 'text-emerald-400' : 'text-red-400'}`}>{currentUser?.attendancePct ?? 0}%</span>
+                        {(currentUser?.attendancePct ?? 0) < 75 && <span className="text-[10px] text-red-500 font-bold pb-1 underline decoration-red-500/30">Shortfall</span>}
+                      </div>
                     </div>
-                    <div className="glass p-5 rounded-3xl border-white/5">
-                      <span className="text-xs text-slate-400 block font-medium">CGPA</span>
-                      <span className="text-3xl font-black text-cyan-400 mt-1 block">{currentUser?.cgpa ?? 'N/A'}</span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">Sem {currentUser?.semesterNo ?? 1}</span>
+                    <div className="bg-[#14161e] p-5 rounded-xl border border-white/5">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">Academic CGPA</span>
+                      <span className="text-2xl font-bold text-white mt-1 block">{currentUser?.cgpa ?? 'N/A'}</span>
                     </div>
-                    <div className="glass p-5 rounded-3xl border-white/5">
-                      <span className="text-xs text-slate-400 block font-medium">Fee Status</span>
-                      <span className={`text-2xl font-black mt-1 block ${currentUser?.feeStatus === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}`}>{currentUser?.feeStatus ?? 'N/A'}</span>
-                      {currentUser?.feeDue ? <span className="text-[10px] text-amber-400 block mt-0.5">Due: ₹{currentUser.feeDue.toLocaleString()}</span> : null}
+                    <div className="bg-[#14161e] p-5 rounded-xl border border-white/5">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">Fee Status</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-xl font-bold ${currentUser?.feeStatus === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}`}>{currentUser?.feeStatus ?? 'N/A'}</span>
+                        {currentUser?.feeDue ? <span className="text-[10px] text-slate-500">₹{currentUser.feeDue.toLocaleString()} Due</span> : null}
+                      </div>
                     </div>
-                    <div className="glass p-5 rounded-3xl border-white/5">
-                      <span className="text-xs text-slate-400 block font-medium">Leave Balance</span>
-                      <span className="text-3xl font-black text-indigo-400 mt-1 block">{currentUser?.leaveBalance ?? 0}</span>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">days remaining</span>
+                    <div className="bg-[#14161e] p-5 rounded-xl border border-white/5">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">Leave Balance</span>
+                      <span className="text-2xl font-bold text-white mt-1 block">{currentUser?.leaveBalance ?? 0} <span className="text-xs text-slate-500 font-normal">Days</span></span>
                     </div>
                   </div>
 
@@ -595,13 +580,72 @@ export default function StudentDashboard() {
             </div>
           )}
 
-          {/* Collaborative IDE Overlay */}
-          {activeRoomId && (
-            <CollaborativeIDE 
-              roomId={activeRoomId} 
-              userName={currentUser?.name || 'Student'} 
-              onExit={() => setActiveRoomId(null)} 
-            />
+          {/* ========================================================= */}
+          {/* TAB 3.5: EXAMINATION HUB                                  */}
+          {/* ========================================================= */}
+          {activeTab === 'exams' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-8 glass rounded-[2.5rem] border-red-500/10 bg-gradient-to-br from-red-500/5 to-transparent relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-3xl -mr-20 -mt-20" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400 border border-red-500/20">
+                      <Shield size={20} />
+                    </div>
+                    <h2 className="text-xl font-black text-white">Institutional Examination Center</h2>
+                  </div>
+                  <p className="text-xs text-slate-400 max-w-lg leading-relaxed">
+                    Access your scheduled assessments and mid-term evaluations. All sessions are protected by the **CampusCore Integrity Shield** real-time proctoring telemetry.
+                  </p>
+                </div>
+                <div className="shrink-0 flex items-center gap-4 relative z-10">
+                    <div className="text-right">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Status</span>
+                        <span className="text-xs font-black text-emerald-400">Hub Online</span>
+                    </div>
+                    <div className="w-px h-8 bg-white/10" />
+                    <button className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-bold transition-all">
+                        View Schedule
+                    </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                    { id: 'EX-101', title: 'Mid-Term Lab Automata Evaluation', dept: 'CS', duration: '60m', status: 'Live Now' },
+                    { id: 'EX-102', title: 'Data Structures & Algorithms Final', dept: 'CS', duration: '120m', status: 'Upcoming' },
+                    { id: 'EX-103', title: 'Operating Systems Quiz', dept: 'IT', duration: '30m', status: 'Scheduled' }
+                ].map((exam, i) => (
+                    <div key={exam.id} className="glass p-6 rounded-3xl border-white/5 hover:border-red-500/30 transition-all group">
+                        <div className="flex items-start justify-between mb-4">
+                            <div className="w-10 h-10 rounded-xl bg-black border border-white/5 flex items-center justify-center text-indigo-400 font-black text-[10px]">
+                                {exam.dept}
+                            </div>
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${
+                                exam.status === 'Live Now' ? 'bg-red-500/20 text-red-400 border border-red-500/20 animate-pulse' : 'bg-white/5 text-slate-500 border border-white/5'
+                            }`}>
+                                {exam.status}
+                            </span>
+                        </div>
+                        <h4 className="text-sm font-bold text-white mb-2 group-hover:text-red-400 transition-colors leading-tight">{exam.title}</h4>
+                        <div className="flex items-center gap-3 text-[10px] text-slate-500 mb-6">
+                            <span>ID: {exam.id}</span>
+                            <div className="w-1 h-1 rounded-full bg-white/10" />
+                            <span>{exam.duration}</span>
+                        </div>
+                        <button 
+                            disabled={exam.status !== 'Live Now'}
+                            onClick={() => setActiveExamId(exam.id)}
+                            className={`w-full py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                                exam.status === 'Live Now' ? 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20' : 'bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed'
+                            }`}
+                        >
+                            {exam.status === 'Live Now' ? 'Enter Examination' : 'Awaiting Window'}
+                        </button>
+                    </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* ========================================================= */}
@@ -1247,6 +1291,25 @@ export default function StudentDashboard() {
         </div>
 
       </main>
+
+      {/* Collaborative IDE Overlay */}
+      {activeRoomId && (
+        <CollaborativeIDE 
+          roomId={activeRoomId} 
+          userName={currentUser?.name || 'Student'} 
+          onExit={() => setActiveRoomId(null)} 
+        />
+      )}
+
+      {/* Exam Interface Overlay */}
+      {activeExamId && (
+        <ExamInterface 
+          examId={activeExamId}
+          examTitle="Mid-Term Lab Automata Evaluation"
+          userName={currentUser?.name || 'Student'}
+          onExit={() => setActiveExamId(null)}
+        />
+      )}
     </div>
   );
 }

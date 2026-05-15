@@ -42,6 +42,10 @@ export default function WebSocketProvider({ children }: { children: ReactNode })
           // Dispatch a custom window event for components to pick up
           window.dispatchEvent(new CustomEvent('campuscore_alerts_refresh'));
         }
+        if (data.type === 'PROCTOR_ALERT') {
+          // Dispatch a proctor alert event for the teacher dashboard
+          window.dispatchEvent(new CustomEvent('campuscore_proctor_alert', { detail: data }));
+        }
       } catch {
         // Ignored
       }

@@ -1,81 +1,106 @@
 package compiler
 
 import (
-	"context"
-	"fmt"
+	"bytes"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 
-	"github.com/adi1492-dev/codevault/internal/compiler/evaluator"
-	"github.com/adi1492-dev/codevault/internal/compiler/lexer"
-	"github.com/adi1492-dev/codevault/internal/compiler/parser"
 	"github.com/adi1492-dev/codevault/internal/models"
 )
 
+// Execute takes C code and input, compiles it with GCC, and returns the result.
 func Execute(code string, input string, config models.ExecutionConfig) models.ExecutionResult {
 	start := time.Now()
+	
+	// 1. Create a clean sandbox
+	tempDir, err := os.MkdirTemp("", "cc-sandbox-*")
+	if err != nil {
+		return models.ExecutionResult{Success: false, Error: "System Error: Failed to initialize sandbox"}
+	}
+	defer os.RemoveAll(tempDir)
 
-	// 1. Lexical Analysis
-	l := lexer.New(code)
-	tokens, _ := l.Tokenize()
+	sourcePath := filepath.Join(tempDir, "main.c")
+	outputPath := filepath.Join(tempDir, "main.exe")
 
-	// 2. Syntactic Analysis
-	p := parser.New(lexer.New(code))
-	ast := p.ParseProgram()
+	if err := os.WriteFile(sourcePath, []byte(code), 0644); err != nil {
+		return models.ExecutionResult{Success: false, Error: "System Error: Failed to write source file"}
+	}
 
-	if len(p.Errors()) > 0 {
+	// 2. Compilation Phase
+	gccPath := `C:\MinGW\bin\gcc.exe`
+	gccBinDir := filepath.Dir(gccPath)
+	
+	compileCmd := exec.Command(gccPath, sourcePath, "-o", outputPath)
+	
+	// Inject GCC path to ensure sub-tools are found
+	env := os.Environ()
+	pathFound := false
+	for i, v := range env {
+		if strings.HasPrefix(strings.ToUpper(v), "PATH=") {
+			env[i] = v + ";" + gccBinDir
+			pathFound = true
+			break
+		}
+	}
+	if !pathFound {
+		env = append(env, "PATH="+gccBinDir)
+	}
+	compileCmd.Env = env
+	
+	var compileOut bytes.Buffer
+	compileCmd.Stdout = &compileOut
+	compileCmd.Stderr = &compileOut
+
+	if err := compileCmd.Run(); err != nil {
 		return models.ExecutionResult{
-			Success:      false,
-			Error:        p.Errors()[0], // Return first error for simplicity
-			Tokens:       tokens,
-			CompilerUsed: "Custom Go Micro-Compiler ⚡",
+			Success: false,
+			Error:   "Compilation Error:\n" + compileOut.String(),
 		}
 	}
 
-	// 3. Execution
-	env := evaluator.NewEnvironment(nil)
-	env.Input.WriteString(input)
+	// 3. Execution Phase
+	runCmd := exec.Command(outputPath)
+	var stdout, stderr bytes.Buffer
+	runCmd.Stdout = &stdout
+	runCmd.Stderr = &stderr
+	runCmd.Stdin = bytes.NewBufferString(input)
 
-	// Use context for timeout
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.TimeoutMs)*time.Millisecond)
-	defer cancel()
+	timeout := time.Duration(config.TimeoutMs) * time.Millisecond
+	if timeout == 0 {
+		timeout = 10 * time.Second
+	}
 
-	resultChan := make(chan models.ExecutionResult)
-
+	done := make(chan error, 1)
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				resultChan <- models.ExecutionResult{
-					Success:      false,
-					Error:        fmt.Sprintf("Runtime Error: %v", r),
-					Tokens:       tokens,
-					AST:          parser.ToJSON(ast),
-					CompilerUsed: "Custom Go Micro-Compiler ⚡",
-				}
-			}
-		}()
-
-		evaluator.Eval(ast, env)
-		resultChan <- models.ExecutionResult{
-			Success:      true,
-			Output:       env.Output.String(),
-			Tokens:       tokens,
-			AST:          parser.ToJSON(ast),
-			CompilerUsed: "Custom Go Micro-Compiler ⚡",
-		}
+		done <- runCmd.Run()
 	}()
 
 	select {
-	case res := <-resultChan:
-		res.TimeTakenMs = time.Since(start).Milliseconds()
-		return res
-	case <-ctx.Done():
-		return models.ExecutionResult{
-			Success:      false,
-			Error:        "Time Limit Exceeded",
-			Tokens:       tokens,
-			AST:          parser.ToJSON(ast),
-			TimeTakenMs:  time.Since(start).Milliseconds(),
-			CompilerUsed: "Custom Go Micro-Compiler ⚡",
+	case <-time.After(timeout):
+		if runCmd.Process != nil {
+			runCmd.Process.Kill()
 		}
+		return models.ExecutionResult{
+			Success:     false,
+			Error:       "Execution Timeout (TLE)",
+			TimeTakenMs: time.Since(start).Milliseconds(),
+		}
+	case err := <-done:
+		if err != nil {
+			return models.ExecutionResult{
+				Success:     false,
+				Error:       "Runtime Error:\n" + stderr.String(),
+				TimeTakenMs: time.Since(start).Milliseconds(),
+			}
+		}
+	}
+
+	return models.ExecutionResult{
+		Success:     true,
+		Output:      stdout.String(),
+		TimeTakenMs: time.Since(start).Milliseconds(),
 	}
 }

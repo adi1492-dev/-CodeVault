@@ -30,23 +30,15 @@ func SubmitCode(c *fiber.Ctx) error {
 			}
 		case 2:
 			problem = models.Problem{
-				ID: 2, Title: "Sum of Two Numbers", TimeLimitMs: 2000,
+				ID: 2, Title: "Addition of Two Integers", TimeLimitMs: 2000,
 				TestCases: []models.TestCase{
-					{Input: "5 3\n", ExpectedOutput: "8\n", Weight: 50},
-					{Input: "10 20\n", ExpectedOutput: "300\n", Weight: 50}, // Mismatch intended for testing
-				},
-			}
-		case 3:
-			problem = models.Problem{
-				ID: 3, Title: "Odd or Even", TimeLimitMs: 2000,
-				TestCases: []models.TestCase{
-					{Input: "4\n", ExpectedOutput: "even\n", Weight: 50},
-					{Input: "7\n", ExpectedOutput: "odd\n", Weight: 50},
+					{Input: "5 3", ExpectedOutput: "8\n", Weight: 50},
+					{Input: "10 20", ExpectedOutput: "30\n", Weight: 50},
 				},
 			}
 		default:
 			problem = models.Problem{
-				ID: input.ProblemID, Title: "Stateless Execution Problem", TimeLimitMs: 2000,
+				ID: input.ProblemID, Title: "Stateless Submission", TimeLimitMs: 2000,
 				TestCases: []models.TestCase{{Input: "", ExpectedOutput: "Hello, World!\n", Weight: 100}},
 			}
 		}
@@ -83,8 +75,7 @@ func SubmitCode(c *fiber.Ctx) error {
 		"status":       submission.Status,
 		"score":        submission.Score,
 		"test_results": submission.TestResults,
-		"tokens":       gradeResult.Tokens,
-		"ast":          gradeResult.AST,
+		"badgeType":    gradeResult.BadgeType,
 	})
 }
 

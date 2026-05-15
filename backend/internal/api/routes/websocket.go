@@ -18,6 +18,9 @@ var (
 	rooms   = make(map[string]map[*websocket.Conn]bool)
 	roomsMu sync.Mutex
 
+	// Mutex for writing to the websocket connection to avoid concurrency issues
+	wsWriteMu sync.Mutex
+
 	// Store room data (current code, language, etc.)
 	roomData   = make(map[string]map[string]interface{})
 	roomDataMu sync.Mutex
@@ -54,7 +57,9 @@ func SetupWebSocketRoutes(app *fiber.App) {
 			if err != nil {
 				break
 			}
-			// Broadcast to all global clients
+			
+			// If it's a proctoring alert, we broadcast it to everyone (including teachers)
+			// In a real app, we'd filter by role, but for this ERP, global broadcast is used for live notifications.
 			clientsMu.Lock()
 			for client := range clients {
 				client.WriteMessage(mt, msg)
@@ -114,12 +119,27 @@ func SetupWebSocketRoutes(app *fiber.App) {
 			// Update room data if it's a sync message
 			if msg["type"] == "CODE_SYNC" {
 				roomDataMu.Lock()
-				if roomData[roomId] == nil {
-					roomData[roomId] = make(map[string]interface{})
+				// Initialize files map if not present
+				if roomData[roomId]["files"] == nil {
+					roomData[roomId]["files"] = make(map[string]interface{})
 				}
-				roomData[roomId]["code"] = msg["code"]
+				
+				files := roomData[roomId]["files"].(map[string]interface{})
+				if fileName, ok := msg["fileName"].(string); ok {
+					files[fileName] = msg["code"].(string)
+				}
+				
 				roomData[roomId]["language"] = msg["language"]
 				roomDataMu.Unlock()
+			}
+
+			// Handle Code Execution
+			if msg["type"] == "RUN_CODE" {
+				lang := msg["language"].(string)
+				code := msg["code"].(string)
+				go RunCommand(lang, code, roomId, c, &wsWriteMu)
+				// We don't broadcast RUN_CODE to others, only the results via TERMINAL_DATA
+				continue
 			}
 
 			// Broadcast to everyone in the room EXCEPT the sender
