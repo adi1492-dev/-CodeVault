@@ -90,7 +90,7 @@ type FunctionDeclaration struct {
 	ReturnType string
 	Name       string
 	Parameters []*Parameter
-	Body       *BlockStatement
+	Body       Statement
 }
 
 func (fd *FunctionDeclaration) statementNode()       {}
@@ -147,19 +147,31 @@ func (rs *ReturnStatement) String() string {
 	return out.String()
 }
 
+type BreakStatement struct{}
+
+func (bs *BreakStatement) statementNode()       {}
+func (bs *BreakStatement) TokenLiteral() string { return "break" }
+func (bs *BreakStatement) String() string       { return "break;" }
+
+type ContinueStatement struct{}
+
+func (cs *ContinueStatement) statementNode()       {}
+func (cs *ContinueStatement) TokenLiteral() string { return "continue" }
+func (cs *ContinueStatement) String() string       { return "continue;" }
+
 type IfStatement struct {
 	Condition   Expression
-	Consequence *BlockStatement
-	Alternative *BlockStatement
+	Consequence Statement
+	Alternative Statement
 }
 
 func (is *IfStatement) statementNode()       {}
 func (is *IfStatement) TokenLiteral() string { return "if" }
 func (is *IfStatement) String() string {
 	var out bytes.Buffer
-	out.WriteString("if" + is.Condition.String() + " " + is.Consequence.String())
+	out.WriteString("if " + is.Condition.String() + " " + is.Consequence.String())
 	if is.Alternative != nil {
-		out.WriteString("else " + is.Alternative.String())
+		out.WriteString(" else " + is.Alternative.String())
 	}
 	return out.String()
 }
@@ -228,6 +240,16 @@ func (ue *UnaryExpression) expressionNode()      {}
 func (ue *UnaryExpression) TokenLiteral() string { return ue.Operator }
 func (ue *UnaryExpression) String() string       { return "(" + ue.Operator + ue.Right.String() + ")" }
 
+
+type PostfixExpression struct {
+	Operator string
+	Left     Expression
+}
+
+func (pe *PostfixExpression) expressionNode()      {}
+func (pe *PostfixExpression) TokenLiteral() string { return pe.Operator }
+func (pe *PostfixExpression) String() string       { return "(" + pe.Left.String() + pe.Operator + ")" }
+
 type BinaryExpression struct {
 	Left     Expression
 	Operator string
@@ -286,7 +308,7 @@ type ForStatement struct {
 	Init      Statement
 	Condition Expression
 	Update    Expression
-	Body      *BlockStatement
+	Body      Statement
 }
 
 func (fs *ForStatement) statementNode()       {}
@@ -295,7 +317,7 @@ func (fs *ForStatement) String() string       { return "for(...)" }
 
 type WhileStatement struct {
 	Condition Expression
-	Body      *BlockStatement
+	Body      Statement
 }
 
 func (ws *WhileStatement) statementNode()       {}

@@ -29,6 +29,7 @@ const (
 	GT_EQ    = ">="
 	AND      = "&&"
 	OR       = "||"
+	ADDR     = "&"
 
 	PLUS_PLUS   = "++"
 	MINUS_MINUS = "--"

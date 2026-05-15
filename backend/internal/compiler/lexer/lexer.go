@@ -125,7 +125,7 @@ func (l *Lexer) NextToken() Token {
 			l.readChar()
 			tok = Token{Type: AND, Literal: string(ch) + string(l.ch), Line: l.line, Column: l.column - 1}
 		} else {
-			tok = l.newToken(ILLEGAL, l.ch)
+			tok = l.newToken(ADDR, l.ch)
 		}
 	case '|':
 		if l.peekChar() == '|' {

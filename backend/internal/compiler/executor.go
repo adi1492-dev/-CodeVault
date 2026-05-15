@@ -21,22 +21,7 @@ func NewSmartExecutor() *SmartExecutor {
 
 func (se *SmartExecutor) SafeExecute(code string, input string, config models.ExecutionConfig) models.ExecutionResult {
 	if se.CustomCompiler {
-		result := Execute(code, input, config)
-
-		if result.Success || result.Error == "" {
-			return result
-		}
-
-		// Check if error is recoverable (unsupported syntax)
-		if isRecoverableError(result.Error) {
-			fallbackResult := se.Fallback.Execute(code, input, config)
-			fallbackResult.CompilerUsed = "Standard Compiler (Fallback)"
-			fallbackResult.Tokens = result.Tokens
-			fallbackResult.AST = result.AST
-			return fallbackResult
-		}
-
-		return result
+		return Execute(code, input, config)
 	}
 
 	return se.Fallback.Execute(code, input, config)

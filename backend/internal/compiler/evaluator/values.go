@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"fmt"
+	"github.com/adi1492-dev/codevault/internal/compiler/parser"
 )
 
 type ValueType string
@@ -53,6 +54,6 @@ func (v Value) String() string {
 
 type FunctionValue struct {
 	Parameters []string
-	Body       interface{} // *parser.BlockStatement
+	Body       parser.Node
 	Env        *Environment
 }

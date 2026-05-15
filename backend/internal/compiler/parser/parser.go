@@ -10,6 +10,7 @@ import (
 const (
 	_ int = iota
 	LOWEST
+	ASSIGNMENT  // =
 	EQUALS      // ==
 	LESSGREATER // > or <
 	SUM         // +
@@ -17,9 +18,11 @@ const (
 	PREFIX      // -X or !X
 	CALL        // myFunction(X)
 	INDEX       // array[index]
+	POSTFIX     // i++
 )
 
 var precedences = map[lexer.TokenType]int{
+	lexer.ASSIGN:   ASSIGNMENT,
 	lexer.EQ:       EQUALS,
 	lexer.NOT_EQ:   EQUALS,
 	lexer.LT:       LESSGREATER,
@@ -33,12 +36,15 @@ var precedences = map[lexer.TokenType]int{
 	lexer.PERCENT:  PRODUCT,
 	lexer.LPAREN:   CALL,
 	lexer.LBRACKET: INDEX,
+	lexer.PLUS_PLUS: POSTFIX,
+	lexer.MINUS_MINUS: POSTFIX,
 }
 
 type (
 	prefixParseFn func() Expression
 	infixParseFn  func(Expression) Expression
 )
+
 
 type Parser struct {
 	l      *lexer.Lexer
@@ -62,6 +68,9 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(lexer.NUMBER, p.parseIntegerLiteral)
 	p.registerPrefix(lexer.BANG, p.parsePrefixExpression)
 	p.registerPrefix(lexer.MINUS, p.parsePrefixExpression)
+	p.registerPrefix(lexer.ADDR, p.parsePrefixExpression)
+	p.registerPrefix(lexer.PLUS_PLUS, p.parsePrefixExpression)
+	p.registerPrefix(lexer.MINUS_MINUS, p.parsePrefixExpression)
 	p.registerPrefix(lexer.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(lexer.STRING, p.parseStringLiteral)
 
@@ -80,6 +89,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(lexer.LPAREN, p.parseCallExpression)
 	p.registerInfix(lexer.LBRACKET, p.parseIndexExpression)
 	p.registerInfix(lexer.ASSIGN, p.parseAssignmentExpression)
+	p.registerInfix(lexer.PLUS_PLUS, p.parsePostfixExpression)
+	p.registerInfix(lexer.MINUS_MINUS, p.parsePostfixExpression)
 
 	// Read two tokens, so curToken and peekToken are both set
 	p.nextToken()
@@ -114,6 +125,10 @@ func (p *Parser) parseStatement() Statement {
 		return p.parseDeclaration()
 	case lexer.RETURN:
 		return p.parseReturnStatement()
+	case lexer.BREAK:
+		return &BreakStatement{}
+	case lexer.CONTINUE:
+		return &ContinueStatement{}
 	case lexer.IF:
 		return p.parseIfStatement()
 	case lexer.FOR:
@@ -328,6 +343,10 @@ func (p *Parser) parsePrefixExpression() Expression {
 	return expression
 }
 
+func (p *Parser) parsePostfixExpression(left Expression) Expression {
+	return &PostfixExpression{Operator: p.curToken.Literal, Left: left}
+}
+
 func (p *Parser) parseInfixExpression(left Expression) Expression {
 	expression := &BinaryExpression{
 		Operator: p.curToken.Literal,
@@ -367,20 +386,24 @@ func (p *Parser) parseIfStatement() Statement {
 		return nil
 	}
 
-	if !p.expectPeek(lexer.LBRACE) {
-		return nil
+	if p.peekToken.Type == lexer.LBRACE {
+		p.nextToken()
+		expression.Consequence = p.parseBlockStatement()
+	} else {
+		p.nextToken()
+		expression.Consequence = p.parseStatement()
 	}
-
-	expression.Consequence = p.parseBlockStatement()
 
 	if p.peekToken.Type == lexer.ELSE {
 		p.nextToken()
 
-		if !p.expectPeek(lexer.LBRACE) {
-			return nil
+		if p.peekToken.Type == lexer.LBRACE {
+			p.nextToken()
+			expression.Alternative = p.parseBlockStatement()
+		} else {
+			p.nextToken()
+			expression.Alternative = p.parseStatement()
 		}
-
-		expression.Alternative = p.parseBlockStatement()
 	}
 
 	return expression
@@ -444,24 +467,66 @@ func (p *Parser) parseAssignmentExpression(left Expression) Expression {
 }
 
 func (p *Parser) parseForStatement() Statement {
-	p.nextToken() // (
-	p.nextToken()
-	
-	// Very simplified for loop parsing
 	stmt := &ForStatement{}
-	// Skip for now or implement properly
-	p.skipUntilBrace()
-	stmt.Body = p.parseBlockStatement()
+	p.nextToken() // (
+
+	if p.peekToken.Type != lexer.SEMICOLON {
+		p.nextToken()
+		if p.curToken.Type == lexer.INT || p.curToken.Type == lexer.FLOAT {
+			stmt.Init = p.parseDeclaration()
+		} else {
+			stmt.Init = p.parseExpressionStatement()
+		}
+	} else {
+		p.nextToken() // ;
+	}
+
+	// Condition
+	if p.peekToken.Type != lexer.SEMICOLON {
+		p.nextToken()
+		stmt.Condition = p.parseExpression(LOWEST)
+	}
+	p.expectPeek(lexer.SEMICOLON)
+
+	// Update
+	if p.peekToken.Type != lexer.RPAREN {
+		p.nextToken()
+		stmt.Update = p.parseExpression(LOWEST)
+	}
+	p.expectPeek(lexer.RPAREN)
+
+	// Body
+	if p.peekToken.Type == lexer.LBRACE {
+		p.nextToken()
+		stmt.Body = p.parseBlockStatement()
+	} else {
+		p.nextToken()
+		stmt.Body = p.parseStatement()
+	}
+
 	return stmt
 }
 
 func (p *Parser) parseWhileStatement() Statement {
+	stmt := &WhileStatement{}
 	p.nextToken() // (
+
 	p.nextToken()
-	stmt := &WhileStatement{Condition: p.parseExpression(LOWEST)}
-	p.expectPeek(lexer.RPAREN)
-	p.expectPeek(lexer.LBRACE)
-	stmt.Body = p.parseBlockStatement()
+	stmt.Condition = p.parseExpression(LOWEST)
+
+	if !p.expectPeek(lexer.RPAREN) {
+		return nil
+	}
+
+	// Body
+	if p.peekToken.Type == lexer.LBRACE {
+		p.nextToken()
+		stmt.Body = p.parseBlockStatement()
+	} else {
+		p.nextToken()
+		stmt.Body = p.parseStatement()
+	}
+
 	return stmt
 }
 
@@ -515,8 +580,7 @@ func (p *Parser) Errors() []string {
 }
 
 func (p *Parser) skipUntilNewline() {
-	startLine := p.curToken.Line
-	for p.curToken.Type != lexer.EOF && p.curToken.Line == startLine {
+	for p.peekToken.Type != lexer.EOF && p.peekToken.Line == p.curToken.Line {
 		p.nextToken()
 	}
 }

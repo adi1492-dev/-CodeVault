@@ -71,6 +71,12 @@ func Eval(node parser.Node, env *Environment) Value {
 		val := Eval(n.ReturnValue, env)
 		return Value{Type: RETURN_VALUE, IntVal: val.IntVal, FloatVal: val.FloatVal, StrVal: val.StrVal, BoolVal: val.BoolVal, ReturnedVal: &val}
 
+	case *parser.BreakStatement:
+		return Value{Type: BREAK_VALUE}
+
+	case *parser.ContinueStatement:
+		return Value{Type: CONTINUE_VALUE}
+
 	case *parser.VarDeclaration:
 		var val Value
 		if n.Initializer != nil {
@@ -118,6 +124,12 @@ func Eval(node parser.Node, env *Environment) Value {
 		right := Eval(n.Right, env)
 		return evalBinaryExpression(n.Operator, left, right)
 
+	case *parser.UnaryExpression:
+		return evalUnaryExpression(n, env)
+
+	case *parser.PostfixExpression:
+		return evalPostfixExpression(n, env)
+
 	case *parser.IfStatement:
 		condition := Eval(n.Condition, env)
 		if isTrue(condition) {
@@ -127,11 +139,18 @@ func Eval(node parser.Node, env *Environment) Value {
 		}
 		return Value{Type: NULL_VALUE}
 
+	case *parser.ForStatement:
+		return evalForStatement(n, env)
+
+	case *parser.WhileStatement:
+		return evalWhileStatement(n, env)
+
 	case *parser.CallExpression:
 		return evalCallExpression(n, env)
 	
 	case *parser.AssignmentExpression:
 		val := Eval(n.Value, env)
+		// fmt.Printf("Assigning %s = %v\n", n.Name, val)
 		env.Set(n.Name, val)
 		return val
 	}
@@ -153,13 +172,11 @@ func evalProgram(p *parser.Program, env *Environment) Value {
 	// Auto-execute main() if defined
 	if mainVal, ok := env.Get("main"); ok && mainVal.Type == FUNCTION_VALUE {
 		if fn, ok := mainVal.FuncVal.(*FunctionValue); ok {
-			if block, ok := fn.Body.(*parser.BlockStatement); ok {
-				res := evalBlockStatement(block, NewEnvironment(fn.Env))
-				if res.Type == RETURN_VALUE && res.ReturnedVal != nil {
-					return *res.ReturnedVal
-				}
-				return res
+			res := Eval(fn.Body, NewEnvironment(fn.Env))
+			if res.Type == RETURN_VALUE && res.ReturnedVal != nil {
+				return *res.ReturnedVal
 			}
+			return res
 		}
 	}
 	return result
@@ -206,6 +223,14 @@ func evalIntegerBinaryExpression(op string, left, right int64) Value {
 		return Value{Type: BOOL_VALUE, BoolVal: left < right}
 	case ">":
 		return Value{Type: BOOL_VALUE, BoolVal: left > right}
+	case "<=":
+		return Value{Type: BOOL_VALUE, BoolVal: left <= right}
+	case ">=":
+		return Value{Type: BOOL_VALUE, BoolVal: left >= right}
+	case "&&":
+		return Value{Type: BOOL_VALUE, BoolVal: left != 0 && right != 0}
+	case "||":
+		return Value{Type: BOOL_VALUE, BoolVal: left != 0 || right != 0}
 	}
 	return Value{Type: NULL_VALUE}
 }
@@ -226,10 +251,12 @@ func isTrue(v Value) bool {
 func evalCallExpression(n *parser.CallExpression, env *Environment) Value {
 	// Handle Built-ins first
 	if ident, ok := n.Function.(*parser.Identifier); ok {
-		if ident.Value == "printf" {
+		switch ident.Value {
+		case "printf":
 			return handlePrintf(n.Arguments, env)
+		case "scanf":
+			return handleScanf(n.Arguments, env)
 		}
-		// Add more built-ins...
 		
 		// Check if it's a custom function in env
 		if fnVal, ok := env.Get(ident.Value); ok && fnVal.Type == FUNCTION_VALUE {
@@ -242,17 +269,178 @@ func evalCallExpression(n *parser.CallExpression, env *Environment) Value {
 						callEnv.Set(paramName, Value{Type: NULL_VALUE})
 					}
 				}
-				if block, ok := fn.Body.(*parser.BlockStatement); ok {
-					res := evalBlockStatement(block, callEnv)
-					if res.Type == RETURN_VALUE && res.ReturnedVal != nil {
-						return *res.ReturnedVal
-					}
-					return res
+				res := Eval(fn.Body, callEnv)
+				if res.Type == RETURN_VALUE && res.ReturnedVal != nil {
+					return *res.ReturnedVal
 				}
+				return res
 			}
 		}
 	}
 	
+	return Value{Type: NULL_VALUE}
+}
+
+func evalForStatement(fs *parser.ForStatement, env *Environment) Value {
+	forEnv := NewEnvironment(env)
+	if fs.Init != nil {
+		Eval(fs.Init, forEnv)
+	}
+
+	var result Value
+	for {
+		if fs.Condition != nil {
+			cond := Eval(fs.Condition, forEnv)
+			if !isTrue(cond) {
+				break
+			}
+		}
+
+		result = Eval(fs.Body, forEnv)
+		if result.Type == RETURN_VALUE {
+			return result
+		}
+		if result.Type == BREAK_VALUE {
+			break
+		}
+		// CONTINUE is handled implicitly by ending the block evaluation early
+
+		if fs.Update != nil {
+			Eval(fs.Update, forEnv)
+		}
+	}
+	return Value{Type: NULL_VALUE}
+}
+
+func evalWhileStatement(ws *parser.WhileStatement, env *Environment) Value {
+	var result Value
+	for {
+		cond := Eval(ws.Condition, env)
+		if !isTrue(cond) {
+			break
+		}
+
+		result = Eval(ws.Body, env)
+		if result.Type == RETURN_VALUE {
+			return result
+		}
+		if result.Type == BREAK_VALUE {
+			break
+		}
+	}
+	return Value{Type: NULL_VALUE}
+}
+
+func handleScanf(args []parser.Expression, env *Environment) Value {
+	if len(args) < 2 {
+		return Value{Type: INT_VALUE, IntVal: 0}
+	}
+
+	root := env
+	for root.parent != nil {
+		root = root.parent
+	}
+
+	input := root.Input.String()
+	
+	count := 0
+	for i := 1; i < len(args); i++ {
+		// Skip leading whitespace
+		for root.InputPos < len(input) && (input[root.InputPos] == ' ' || input[root.InputPos] == '\t' || input[root.InputPos] == '\n' || input[root.InputPos] == '\r') {
+			root.InputPos++
+		}
+		
+		if root.InputPos >= len(input) {
+			break
+		}
+
+		remaining := input[root.InputPos:]
+		var valStr string
+		idx := strings.IndexAny(remaining, " \t\n\r")
+		if idx == -1 {
+			valStr = remaining
+			root.InputPos = len(input)
+		} else {
+			valStr = remaining[:idx]
+			root.InputPos += idx
+		}
+
+		var val Value
+		arg := args[i]
+		var varName string
+		
+		if ue, ok := arg.(*parser.UnaryExpression); ok && ue.Operator == "&" {
+			if ident, ok := ue.Right.(*parser.Identifier); ok {
+				varName = ident.Value
+			}
+		} else if ident, ok := arg.(*parser.Identifier); ok {
+			varName = ident.Value
+		}
+		
+		if varName != "" {
+			var v int64
+			if _, err := fmt.Sscanf(valStr, "%d", &v); err == nil {
+				val = Value{Type: INT_VALUE, IntVal: v}
+			} else {
+				val = Value{Type: STRING_VALUE, StrVal: valStr}
+			}
+			env.Set(varName, val)
+			count++
+		}
+	}
+	
+	return Value{Type: INT_VALUE, IntVal: int64(count)}
+}
+
+func evalUnaryExpression(ue *parser.UnaryExpression, env *Environment) Value {
+	right := Eval(ue.Right, env)
+	switch ue.Operator {
+	case "!":
+		return Value{Type: BOOL_VALUE, BoolVal: !isTrue(right)}
+	case "-":
+		if right.Type == INT_VALUE {
+			return Value{Type: INT_VALUE, IntVal: -right.IntVal}
+		}
+		return Value{Type: NULL_VALUE}
+	case "&":
+		return right
+	case "++":
+		if ident, ok := ue.Right.(*parser.Identifier); ok {
+			val, okVal := env.Get(ident.Value)
+			if okVal && val.Type == INT_VALUE {
+				newVal := Value{Type: INT_VALUE, IntVal: val.IntVal + 1}
+				env.Set(ident.Value, newVal)
+				return newVal
+			}
+		}
+	case "--":
+		if ident, ok := ue.Right.(*parser.Identifier); ok {
+			val, okVal := env.Get(ident.Value)
+			if okVal && val.Type == INT_VALUE {
+				newVal := Value{Type: INT_VALUE, IntVal: val.IntVal - 1}
+				env.Set(ident.Value, newVal)
+				return newVal
+			}
+		}
+	}
+	return Value{Type: NULL_VALUE}
+}
+
+func evalPostfixExpression(pe *parser.PostfixExpression, env *Environment) Value {
+	if ident, ok := pe.Left.(*parser.Identifier); ok {
+		val, okVal := env.Get(ident.Value)
+		if !okVal || val.Type != INT_VALUE {
+			return Value{Type: NULL_VALUE}
+		}
+		oldVal := val
+		switch pe.Operator {
+		case "++":
+			env.Set(ident.Value, Value{Type: INT_VALUE, IntVal: val.IntVal + 1})
+		case "--":
+			env.Set(ident.Value, Value{Type: INT_VALUE, IntVal: val.IntVal - 1})
+		}
+		return oldVal
+	}
 	return Value{Type: NULL_VALUE}
 }
 
