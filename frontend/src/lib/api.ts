@@ -16,5 +16,6 @@ export const getProblem = (id: string) => api.get(`/problems/${id}`);
 export const submitCode = (problemId: number, code: string) => 
   api.post('/submissions', { problem_id: problemId, code });
 export const getSubmission = (id: string) => api.get(`/submissions/${id}`);
+export const createProblem = (problemData: any) => api.post('/problems', problemData);
 
 export default api;

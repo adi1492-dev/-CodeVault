@@ -57,16 +57,15 @@ func Seed() {
 			},
 		},
 		{
-			Title:       "Factorial Calculator",
-			Description: "Calculate factorial of N using recursion or loops",
-			Difficulty:  "medium",
-			StarterCode: "#include <stdio.h>\n\nint main() {\n    int n;\n    scanf(\"%d\", &n);\n    // Calculate factorial\n    return 0;\n}",
+			Title:       "Odd or Even",
+			Description: "Check if a given integer is odd or even.",
+			Difficulty:  "easy",
+			StarterCode: "#include <stdio.h>\n\nint main() {\n    int n;\n    scanf(\"%d\", &n);\n    // Check if odd or even\n    return 0;\n}",
 			TimeLimitMs: 2000,
 			IsPublished: true,
 			TestCases: []models.TestCase{
-				{Input: "5\n", ExpectedOutput: "120\n", IsHidden: false, Weight: 5},
-				{Input: "0\n", ExpectedOutput: "1\n", IsHidden: false, Weight: 5},
-				{Input: "7\n", ExpectedOutput: "5040\n", IsHidden: true, Weight: 10},
+				{Input: "4\n", ExpectedOutput: "even\n", IsHidden: false, Weight: 5},
+				{Input: "7\n", ExpectedOutput: "odd\n", IsHidden: false, Weight: 5},
 			},
 		},
 	}

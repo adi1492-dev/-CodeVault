@@ -7,6 +7,27 @@ import { getProblems } from '@/lib/api';
 
 const DEFAULT_PROBLEMS = [
   {
+    id: 1,
+    title: 'Hello World',
+    difficulty: 'easy',
+    description: 'The classic entry point. Write a program that prints "Hello, World!" to the console.',
+    test_cases: [1]
+  },
+  {
+    id: 2,
+    title: 'Sum of Two Numbers',
+    difficulty: 'easy',
+    description: 'Read two integers from standard input and output their sum. Simple and effective.',
+    test_cases: [1, 2, 3]
+  },
+  {
+    id: 3,
+    title: 'Odd or Even',
+    difficulty: 'easy',
+    description: 'Check if a given integer is odd or even. Use the modulo operator for a quick result.',
+    test_cases: [1, 2]
+  },
+  {
     id: 101,
     title: 'Array Summation Pipeline',
     difficulty: 'easy',

@@ -9,6 +9,39 @@ import XRayMode from '@/components/XRayMode';
 import { getProblem, submitCode } from '@/lib/api';
 
 const MOCK_PROBLEMS: Record<string, any> = {
+  '1': {
+    id: 1,
+    title: 'Hello World',
+    difficulty: 'easy',
+    description: 'The classic entry point. Write a program that prints "Hello, World!" to the console.',
+    task_goal: 'Use printf to output exactly "Hello, World!" followed by a newline.',
+    expected_output_preview: 'Hello, World!',
+    time_limit_ms: 1000,
+    memory_limit_kb: 32768,
+    starter_code: '#include <stdio.h>\n\nint main() {\n    // Your code here\n    return 0;\n}'
+  },
+  '2': {
+    id: 2,
+    title: 'Sum of Two Numbers',
+    difficulty: 'easy',
+    description: 'Read two integers from standard input and output their sum.',
+    task_goal: 'Use scanf to read two integers and printf to show their sum.',
+    expected_output_preview: '8',
+    time_limit_ms: 1000,
+    memory_limit_kb: 32768,
+    starter_code: '#include <stdio.h>\n\nint main() {\n    int a, b;\n    // Read and print sum\n    return 0;\n}'
+  },
+  '3': {
+    id: 3,
+    title: 'Odd or Even',
+    difficulty: 'easy',
+    description: 'Check if a given integer is odd or even.',
+    task_goal: 'Read an integer and print "even" or "odd".',
+    expected_output_preview: 'even',
+    time_limit_ms: 1000,
+    memory_limit_kb: 32768,
+    starter_code: '#include <stdio.h>\n\nint main() {\n    int n;\n    // Logic here\n    return 0;\n}'
+  },
   '101': {
     id: 101,
     title: 'Array Summation Pipeline',
@@ -232,30 +265,37 @@ const ProblemPage = () => {
     let isCodeCorrectForProblem = false;
     let missingLogicDetails = '';
 
-    if (activeSearchTarget.includes('Hello') || activeSearchTarget.includes('Engine')) {
+    if (targetIdStr === '1' || activeSearchTarget.includes('Hello') || activeSearchTarget.includes('World')) {
       // Hello World / String match objective displayed natively in the UI test cases
       if (srcCode.includes('printf') && (srcCode.includes('Hello') || srcCode.includes('CampusCore') || srcCode.includes('Engine'))) {
         isCodeCorrectForProblem = true;
       } else {
         missingLogicDetails = 'Required literal string output tokens missing from printf buffer stream.';
       }
-    } else if (targetIdStr === '101' || activeSearchTarget.includes('45') || activeSearchTarget.includes('sum')) {
-      // Array Summation objective: must contain array references or accumulation logic loops
+    } else if (targetIdStr === '2' || targetIdStr === '101' || (activeSearchTarget.includes('sum') && !activeSearchTarget.includes('checksum'))) {
+      // Array Summation or Addition objective
       const hasLoopOrArray = (srcCode.includes('for') || srcCode.includes('while')) && (srcCode.includes('[') || srcCode.includes('*'));
       const hasAccumulation = srcCode.includes('+') || srcCode.includes('sum') || srcCode.includes('+=');
-      if (hasLoopOrArray && hasAccumulation && srcCode.includes('return')) {
+      if ((targetIdStr === '2' && hasAccumulation) || (hasLoopOrArray && hasAccumulation && srcCode.includes('return'))) {
         isCodeCorrectForProblem = true;
       } else {
         missingLogicDetails = 'Array iteration logic limits or accumulated sum boundary logic is missing/incorrect.';
       }
-    } else if (targetIdStr === '102' || activeSearchTarget.includes('120') || activeSearchTarget.includes('fact')) {
+    } else if (targetIdStr === '3' || activeSearchTarget.includes('even') || activeSearchTarget.includes('odd')) {
+      // Odd or Even objective
+      if (srcCode.includes('%') && (srcCode.includes('if') || srcCode.includes('?'))) {
+        isCodeCorrectForProblem = true;
+      } else {
+        missingLogicDetails = 'Modulo operator or parity check logic missing.';
+      }
+    } else if (targetIdStr === '102' || activeSearchTarget.includes('fact')) {
       // Factorial recursion objective
       if (srcCode.includes('*') && srcCode.includes('return') && (srcCode.includes('fact') || srcCode.includes('if'))) {
         isCodeCorrectForProblem = true;
       } else {
         missingLogicDetails = 'Tail recursive multiplication nodes or base condition limits absent.';
       }
-    } else if (targetIdStr === '104' || activeSearchTarget.includes('100') || activeSearchTarget.includes('root')) {
+    } else if (targetIdStr === '104' || activeSearchTarget.includes('root')) {
       // Tree allocation objective
       if ((srcCode.includes('root') || srcCode.includes('val')) && (srcCode.includes('->') || srcCode.includes('='))) {
         isCodeCorrectForProblem = true;
@@ -284,10 +324,14 @@ const ProblemPage = () => {
       logicStateMsg = '❌ Compilation Error: Empty/invalid source buffer detected. Execution halted.';
       isPassed = false;
     } else if (isCodeCorrectForProblem) {
-      // Code perfectly addresses the problem's exact semantic logic objectives! Award 100 optimal points natively
-      finalScore = 100;
-      isPassed = true;
-      badgeType = 'PERFECT';
+      // Logic is structurally sound, but for simulation we can only be 100% sure for very simple cases
+      const isVerySimple = targetIdStr === '1' || targetIdStr === '104'; 
+      finalScore = isVerySimple ? 100 : 90;
+      isPassed = isVerySimple;
+      logicStateMsg = isVerySimple 
+        ? '✅ Perfection: Semantic logic and expected structure verified.' 
+        : '⚠️ Logic Verified: Structural check passed, but exact output verification requires live execution.';
+      badgeType = isPassed ? 'PERFECT' : 'LOGIC_CREDIT';
     } else if (hasCoreLogic && srcCode.includes('printf')) {
       // Code is compilable but incorrect/missing objective targets for this scenario! Award 75% logic score credit exactly as requested by user
       finalScore = 75;
@@ -342,18 +386,7 @@ const ProblemPage = () => {
           clearTimeout(timeoutId);
           if (res.data) {
             let backendData = res.data;
-            // Intercept dummy DB single-case fallback mismatches that incorrectly return score 0 for valid C solutions
-            const localCheck = simulateCompilerExecution(code);
-            if (backendData.score === 0 && localCheck.score > 0) {
-              backendData = {
-                ...backendData,
-                score: localCheck.score, // Correctly override with active local validation score
-                test_results: localCheck.test_results,
-                ast: backendData.ast || localCheck.ast,
-                tokens: backendData.tokens || localCheck.tokens,
-                proxyCorrectionApplied: true
-              };
-            }
+            // The backend is the source of truth for execution. We only fallback to simulation if the backend is unavailable.
             setResult(backendData);
             setLoading(false);
             return;

@@ -23,6 +23,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { getCurrentUser, setCurrentUser, getUsers, saveUsers, getSubjects, updateSyllabusCoverage, createAlert, UserRecord, SubjectRecord } from '@/lib/store';
 import { useWebSocket } from '@/components/WebSocketProvider';
+import { createProblem } from '@/lib/api';
 
 interface StudentSubmission {
   id: string;
@@ -50,7 +51,14 @@ export default function UnifiedTeacherDashboard() {
 
   // TEACHING & LABS
   const [title, setTitle] = useState('');
-  const [testcase, setTest] = useState('');
+  const [description, setDescription] = useState('');
+  const [difficulty, setDifficulty] = useState('easy');
+  const [starterCode, setStarterCode] = useState('#include <stdio.h>\n\nint main() {\n    // Your code here\n    return 0;\n}');
+  const [isPublished, setIsPublished] = useState(false);
+  const [testCases, setTestCases] = useState([
+    { input: '', expected_output: '', is_hidden: false, weight: 10 }
+  ]);
+
   const [problems, setProblems] = useState([
     { id: 'p1', title: 'Array Sum Iteration Test', testcases: 4, activeSubmissions: 45 },
     { id: 'p2', title: 'Recursive Factorial Verification', testcases: 6, activeSubmissions: 38 },
@@ -96,19 +104,58 @@ export default function UnifiedTeacherDashboard() {
     router.push('/');
   };
 
-  const handleAddProblem = (e: React.FormEvent) => {
+  const handleAddProblem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title) return;
-    setProblems([...problems, {
-      id: String(Date.now()),
+
+    const newProblem = {
       title,
-      testcases: Number(testcase) || 5,
-      activeSubmissions: 0
-    }]);
-    setTitle('');
-    setTest('');
-    // Auto switch sub tab view to observe deployed problems
-    setTeachingSubTab('problems');
+      description,
+      difficulty,
+      starter_code: starterCode,
+      is_published: isPublished,
+      test_cases: testCases.filter(tc => tc.expected_output.trim() !== ''),
+      teacher_id: Number(currentUser?.id || 0)
+    };
+
+    try {
+      setMsg('Deploying problem to institutional arena...');
+      const res = await createProblem(newProblem);
+      if (res.data) {
+        setProblems([...problems, {
+          id: String(res.data.id || Date.now()),
+          title: res.data.title,
+          testcases: res.data.test_cases?.length || testCases.length,
+          activeSubmissions: 0
+        }]);
+        setMsg('Problem successfully published to the Practice Arena!');
+        
+        // Reset form
+        setTitle('');
+        setDescription('');
+        setDifficulty('easy');
+        setStarterCode('#include <stdio.h>\n\nint main() {\n    // Your code here\n    return 0;\n}');
+        setIsPublished(false);
+        setTestCases([{ input: '', expected_output: '', is_hidden: false, weight: 10 }]);
+        
+        // Switch view
+        setTeachingSubTab('problems');
+        setTimeout(() => setMsg(''), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+      setMsg('⚠️ Error deploying problem. Ensure backend is active.');
+      setTimeout(() => setMsg(''), 5000);
+    }
+  };
+
+  const handleAddTestCase = () => {
+    setTestCases([...testCases, { input: '', expected_output: '', is_hidden: false, weight: 10 }]);
+  };
+
+  const updateTestCase = (idx: number, field: string, value: any) => {
+    const updated = testCases.map((tc, i) => i === idx ? { ...tc, [field]: value } : tc);
+    setTestCases(updated);
   };
 
   const handleOverrideScore = (subId: string, newScore: number) => {
@@ -424,42 +471,133 @@ export default function UnifiedTeacherDashboard() {
               )}
 
               {teachingSubTab === 'problems' && (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 animate-fade-in">
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-fade-in">
                   {/* Left Form sphere */}
-                  <div className="md:col-span-5 space-y-4">
+                  <div className="xl:col-span-7 space-y-4">
                     <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                        <PlusCircle size={14} className="text-indigo-400" />
-                        <span>Deploy Lab Assignment Problem</span>
-                      </h3>
+                      <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                          <PlusCircle size={14} className="text-indigo-400" />
+                          <span>Deploy Lab Assignment Problem</span>
+                        </h3>
+                        {msg && <span className="text-[10px] text-emerald-400 font-bold animate-pulse">{msg}</span>}
+                      </div>
 
-                      <form onSubmit={handleAddProblem} className="space-y-3 pt-1">
-                        <div>
-                          <label className="text-xs font-bold text-slate-300 block mb-1">Problem Title</label>
-                          <input 
-                            type="text"
-                            required
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="e.g. Iterative Array Searching Task"
-                            className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-400"
-                          />
+                      <form onSubmit={handleAddProblem} className="space-y-4 pt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="sm:col-span-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Problem Title</label>
+                            <input 
+                              type="text"
+                              required
+                              value={title}
+                              onChange={(e) => setTitle(e.target.value)}
+                              placeholder="e.g. Iterative Array Searching Task"
+                              className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-400"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Description / Task Goal</label>
+                            <textarea 
+                              required
+                              rows={2}
+                              value={description}
+                              onChange={(e) => setDescription(e.target.value)}
+                              placeholder="Describe what the student needs to implement..."
+                              className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-400 resize-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Difficulty</label>
+                            <select
+                              value={difficulty}
+                              onChange={(e) => setDifficulty(e.target.value)}
+                              className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none"
+                            >
+                              <option value="easy">Easy</option>
+                              <option value="medium">Medium</option>
+                              <option value="hard">Hard</option>
+                            </select>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-5">
+                            <input 
+                              type="checkbox"
+                              id="isPublished"
+                              checked={isPublished}
+                              onChange={(e) => setIsPublished(e.target.checked)}
+                              className="w-4 h-4 rounded accent-indigo-500"
+                            />
+                            <label htmlFor="isPublished" className="text-xs font-bold text-indigo-300 cursor-pointer">Publish to All Students</label>
+                          </div>
                         </div>
 
                         <div>
-                          <label className="text-xs font-bold text-slate-300 block mb-1">Expected Evaluator Cases</label>
-                          <input 
-                            type="number"
-                            value={testcase}
-                            onChange={(e) => setTest(e.target.value)}
-                            placeholder="5"
-                            className="w-full p-2.5 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-400"
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Starter Template Code</label>
+                          <textarea 
+                            required
+                            rows={5}
+                            value={starterCode}
+                            onChange={(e) => setStarterCode(e.target.value)}
+                            className="w-full p-3 rounded-xl bg-black border border-white/10 text-[11px] text-emerald-400 font-mono focus:outline-none focus:border-indigo-400 resize-none"
                           />
+                        </div>
+
+                        {/* Test Cases Manager */}
+                        <div className="space-y-3 pt-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Automated Test Cases</label>
+                            <button 
+                              type="button"
+                              onClick={handleAddTestCase}
+                              className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                            >
+                              <PlusCircle size={12} /> Add Case
+                            </button>
+                          </div>
+
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                            {testCases.map((tc, idx) => (
+                              <div key={idx} className="p-3 rounded-xl bg-black/40 border border-white/5 grid grid-cols-1 sm:grid-cols-12 gap-3 relative">
+                                <div className="sm:col-span-5">
+                                  <span className="text-[9px] text-slate-500 block mb-0.5">Input</span>
+                                  <textarea 
+                                    rows={1}
+                                    value={tc.input}
+                                    onChange={(e) => updateTestCase(idx, 'input', e.target.value)}
+                                    placeholder="\n separated values"
+                                    className="w-full p-1.5 rounded bg-black border border-white/10 text-[10px] text-slate-300 focus:outline-none"
+                                  />
+                                </div>
+                                <div className="sm:col-span-5">
+                                  <span className="text-[9px] text-purple-400 block mb-0.5">Expected Output</span>
+                                  <textarea 
+                                    rows={1}
+                                    value={tc.expected_output}
+                                    onChange={(e) => updateTestCase(idx, 'expected_output', e.target.value)}
+                                    placeholder="Exact string match"
+                                    className="w-full p-1.5 rounded bg-black border border-white/10 text-[10px] text-purple-200 focus:outline-none"
+                                  />
+                                </div>
+                                <div className="sm:col-span-2 flex flex-col justify-end items-center pb-1">
+                                  <span className="text-[9px] text-slate-500 block mb-1">Hidden?</span>
+                                  <input 
+                                    type="checkbox"
+                                    checked={tc.is_hidden}
+                                    onChange={(e) => updateTestCase(idx, 'is_hidden', e.target.checked)}
+                                    className="w-3.5 h-3.5 accent-indigo-500"
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
 
                         <button
                           type="submit"
-                          className="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs uppercase tracking-wider transition-all block mt-2"
+                          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:opacity-90 text-white font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/10"
                         >
                           Publish Problem Set Definition
                         </button>
@@ -468,16 +606,21 @@ export default function UnifiedTeacherDashboard() {
                   </div>
 
                   {/* Deployed Active problem suite list */}
-                  <div className="md:col-span-7 space-y-4">
+                  <div className="xl:col-span-5 space-y-4">
                     <div className="glass p-6 rounded-3xl border-white/5 space-y-3">
                       <span className="text-xs font-bold text-slate-300 uppercase block tracking-wider border-b border-white/5 pb-2">
                         Configured Assignment Master Suite
                       </span>
                       {problems.map(p => (
                         <div key={p.id} className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between text-xs">
-                          <div>
-                            <span className="font-bold text-white block">{p.title}</span>
-                            <span className="text-[10px] text-indigo-400 block mt-0.5">{p.testcases} Verification Cases Mapped</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-[10px] border border-indigo-500/20">
+                              {p.id.startsWith('p') ? p.id.toUpperCase() : 'NEW'}
+                            </div>
+                            <div>
+                              <span className="font-bold text-white block">{p.title}</span>
+                              <span className="text-[10px] text-indigo-400 block mt-0.5">{p.testcases} Verification Cases Mapped</span>
+                            </div>
                           </div>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 text-slate-400 shrink-0">
                             {p.activeSubmissions} Runs
