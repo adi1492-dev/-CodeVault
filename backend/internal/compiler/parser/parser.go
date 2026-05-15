@@ -121,7 +121,6 @@ func (p *Parser) parseStatement() Statement {
 	case lexer.WHILE:
 		return p.parseWhileStatement()
 	case lexer.INCLUDE:
-		p.errors = append(p.errors, "Unsupported directive #include triggers fallback")
 		p.skipUntilNewline()
 		return nil
 	default:
@@ -133,38 +132,54 @@ func (p *Parser) parseDeclaration() Statement {
 	typeToken := p.curToken
 	p.nextToken() // ident
 
-	ident := p.curToken.Literal
-
+	// Check if it's a function declaration
 	if p.peekToken.Type == lexer.LPAREN {
-		// Function Declaration
-		return p.parseFunctionDeclaration(typeToken.Literal, ident)
+		return p.parseFunctionDeclaration(typeToken.Literal, p.curToken.Literal)
 	}
 
-	// Variable Declaration
-	stmt := &VarDeclaration{Type: typeToken.Literal, Name: ident}
+	// It's a variable declaration (possibly multiple)
+	stmts := []Statement{}
 
-	if p.peekToken.Type == lexer.LBRACKET {
-		p.nextToken() // [
-		p.nextToken() // size or ]
-		if p.curToken.Type == lexer.NUMBER {
-			size, _ := strconv.Atoi(p.curToken.Literal)
-			stmt.IsArray = true
-			stmt.Size = size
-			p.nextToken() // ]
+	for {
+		ident := p.curToken.Literal
+		stmt := &VarDeclaration{Type: typeToken.Literal, Name: ident}
+
+		if p.peekToken.Type == lexer.LBRACKET {
+			p.nextToken() // [
+			p.nextToken() // size or ]
+			if p.curToken.Type == lexer.NUMBER {
+				size, _ := strconv.Atoi(p.curToken.Literal)
+				stmt.IsArray = true
+				stmt.Size = size
+				p.nextToken() // ]
+			}
 		}
-	}
 
-	if p.peekToken.Type == lexer.ASSIGN {
-		p.nextToken() // =
-		p.nextToken()
-		stmt.Initializer = p.parseExpression(LOWEST)
+		if p.peekToken.Type == lexer.ASSIGN {
+			p.nextToken() // =
+			p.nextToken()
+			stmt.Initializer = p.parseExpression(LOWEST)
+		}
+
+		stmts = append(stmts, stmt)
+
+		if p.peekToken.Type == lexer.COMMA {
+			p.nextToken() // ,
+			p.nextToken() // next ident
+		} else {
+			break
+		}
 	}
 
 	if p.peekToken.Type == lexer.SEMICOLON {
 		p.nextToken()
 	}
 
-	return stmt
+	if len(stmts) == 1 {
+		return stmts[0]
+	}
+
+	return &BlockStatement{Statements: stmts}
 }
 
 func (p *Parser) parseFunctionDeclaration(retType string, name string) *FunctionDeclaration {

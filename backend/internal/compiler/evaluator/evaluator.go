@@ -50,6 +50,10 @@ func (e *Environment) Write(s string) {
 }
 
 func Eval(node parser.Node, env *Environment) Value {
+	if node == nil {
+		return Value{Type: NULL_VALUE}
+	}
+
 	switch n := node.(type) {
 	case *parser.Program:
 		return evalProgram(n, env)
@@ -68,7 +72,12 @@ func Eval(node parser.Node, env *Environment) Value {
 		return Value{Type: RETURN_VALUE, IntVal: val.IntVal, FloatVal: val.FloatVal, StrVal: val.StrVal, BoolVal: val.BoolVal, ReturnedVal: &val}
 
 	case *parser.VarDeclaration:
-		val := Eval(n.Initializer, env)
+		var val Value
+		if n.Initializer != nil {
+			val = Eval(n.Initializer, env)
+		} else {
+			val = Value{Type: INT_VALUE, IntVal: 0} // Default for int in C
+		}
 		env.Set(n.Name, val)
 		return Value{Type: NULL_VALUE}
 
