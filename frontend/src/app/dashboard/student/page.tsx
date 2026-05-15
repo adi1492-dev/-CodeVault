@@ -22,11 +22,16 @@ import {
   Camera,
   Bell,
   Bus,
-  MapPin
+  MapPin,
+  Users as UsersIcon,
+  Search,
+  Globe,
+  Monitor
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentUser, setCurrentUser, getSubjects, getUsers, placeCanteenOrder, submitAnonymousGrievance, UserRecord, SubjectRecord, getAlerts, markAlertRead, AlertRecord } from '@/lib/store';
+import CollaborativeIDE from '@/components/CollaborativeIDE';
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -46,11 +51,20 @@ export default function StudentDashboard() {
   }, []);
   
   // Primary Navigation tabs (Left Menu)
-  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'syllabus' | 'canteen' | 'certificates' | 'report' | 'transport'>('workspace');
+  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'collab' | 'syllabus' | 'canteen' | 'certificates' | 'report' | 'transport'>('workspace');
   
   // Secondary Sub-navigation tab states (Top Horizontal Bar)
   const [workspaceSubTab, setWorkspaceSubTab] = useState<'metrics' | 'ask'>('metrics');
-  const [syllabusSubTab, setSyllabusSubTab] = useState<'tracking' | 'receipt'>('tracking');
+  const [collabSubTab, setCollabSubTab] = useState<'explore' | 'active'>('explore');
+
+  // Collaboration State
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+  const [joinRoomId, setJoinRoomId] = useState('');
+  const [exploreRooms, setExploreRooms] = useState([
+    { id: 'ROOM-102', name: 'DSA Group Study', creator: 'Ananya S.', lang: 'C++', members: 3, tags: ['DSA', 'Pointers'] },
+    { id: 'LAB-402', name: 'Compiler Project', creator: 'Vikram K.', lang: 'C', members: 5, tags: ['Compiler', 'AST'] },
+    { id: 'WEB-301', name: 'Frontend Workshop', creator: 'Sneha R.', lang: 'HTML', members: 2, tags: ['React', 'CSS'] },
+  ]);
 
   const [doubtText, setDoubt] = useState('');
   const [doubtsLog, setLog] = useState([
@@ -214,8 +228,21 @@ export default function StudentDashboard() {
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Code2 size={18} className="shrink-0" />
-              <span className="truncate">Code Editor</span>
+              <Cpu size={18} className="shrink-0" />
+              <span className="truncate">Practice Arena</span>
+            </button>
+
+            {/* Collaborative Lab */}
+            <button
+              onClick={() => setActiveTab('collab')}
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'collab' 
+                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <UsersIcon size={18} className="shrink-0 text-indigo-400" />
+              <span className="truncate">Collaborative Lab</span>
             </button>
 
             {/* Syllabus Overview */}
@@ -423,6 +450,158 @@ export default function StudentDashboard() {
               )}
 
             </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 2.5: COLLABORATIVE LAB                                */}
+          {/* ========================================================= */}
+          {activeTab === 'collab' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Secondary Horizontal Menu Bar */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setCollabSubTab('explore')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    collabSubTab === 'explore' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Globe size={14} />
+                  <span>Explore Rooms</span>
+                </button>
+                <button
+                  onClick={() => setCollabSubTab('active')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    collabSubTab === 'active' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <UsersIcon size={14} />
+                  <span>Your Sessions</span>
+                </button>
+              </div>
+
+              {collabSubTab === 'explore' && (
+                <div className="space-y-6 animate-fade-in">
+                  <div className="flex flex-col md:flex-row gap-6">
+                    {/* Create/Join Card */}
+                    <div className="md:w-80 shrink-0 space-y-4">
+                      <div className="glass p-6 rounded-3xl border-indigo-500/20 bg-gradient-to-br from-indigo-500/5 to-transparent">
+                        <h3 className="text-sm font-bold text-white mb-4">Start Collaborating</h3>
+                        
+                        <div className="space-y-3">
+                          <button 
+                            onClick={() => {
+                              const newId = `ROOM-${Math.floor(1000 + Math.random() * 9000)}`;
+                              setActiveRoomId(newId);
+                            }}
+                            className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all"
+                          >
+                            Create New Room
+                          </button>
+                          
+                          <div className="relative py-2 text-center">
+                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+                            <span className="relative px-2 bg-[#080d1a] text-[10px] text-slate-500 font-bold">OR JOIN EXISTING</span>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <input 
+                              value={joinRoomId}
+                              onChange={e => setJoinRoomId(e.target.value.toUpperCase())}
+                              placeholder="Enter Room ID (e.g. ROOM-102)"
+                              className="w-full p-3 rounded-xl bg-black border border-white/10 text-xs text-white focus:border-indigo-400 transition-all outline-none"
+                            />
+                            <button 
+                              onClick={() => {
+                                if (joinRoomId) setActiveRoomId(joinRoomId);
+                              }}
+                              className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all"
+                            >
+                              Join Session
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="glass p-5 rounded-2xl border-white/5 text-center">
+                        <Monitor size={24} className="mx-auto text-indigo-400 mb-2" />
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Live Connections</span>
+                        <span className="text-xl font-black text-white block mt-1">128 Active</span>
+                      </div>
+                    </div>
+
+                    {/* Explore Rooms Grid */}
+                    <div className="grow space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                          <Globe size={16} className="text-indigo-400" />
+                          <span>Active Public Hubs</span>
+                        </h3>
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>LIVE UPDATING</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {exploreRooms.map(room => (
+                          <div key={room.id} className="glass p-5 rounded-3xl border-white/5 hover:border-indigo-500/30 transition-all group cursor-pointer" onClick={() => setActiveRoomId(room.id)}>
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <span className="text-[10px] font-bold text-indigo-400 mb-1 block">{room.id}</span>
+                                <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">{room.name}</h4>
+                              </div>
+                              <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-bold">
+                                <UsersIcon size={10} />
+                                <span>{room.members}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 text-[10px] text-slate-500 mb-4">
+                              <span>By {room.creator}</span>
+                              <div className="w-1 h-1 rounded-full bg-white/10" />
+                              <span className="text-cyan-400">{room.lang}</span>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              {room.tags.map(tag => (
+                                <span key={tag} className="px-2 py-0.5 rounded-full bg-white/5 text-[9px] font-bold text-slate-400 border border-white/5">#{tag}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {collabSubTab === 'active' && (
+                <div className="glass p-12 rounded-3xl border-white/5 text-center space-y-4 max-w-xl mx-auto animate-fade-in">
+                  <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 flex items-center justify-center mx-auto text-indigo-400 border border-indigo-500/20 shadow-2xl shadow-indigo-500/10">
+                    <UsersIcon size={32} />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">No active sessions found</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    You haven't participated in any collaborative labs recently. Create a room to invite your colleagues or join a public session from the Explore tab.
+                  </p>
+                  <button 
+                    onClick={() => setCollabSubTab('explore')}
+                    className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all"
+                  >
+                    Return to Explore
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Collaborative IDE Overlay */}
+          {activeRoomId && (
+            <CollaborativeIDE 
+              roomId={activeRoomId} 
+              userName={currentUser?.name || 'Student'} 
+              onExit={() => setActiveRoomId(null)} 
+            />
           )}
 
           {/* ========================================================= */}
