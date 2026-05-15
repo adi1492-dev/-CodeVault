@@ -135,6 +135,8 @@ func (l *Lexer) NextToken() Token {
 		} else {
 			tok = l.newToken(ILLEGAL, l.ch)
 		}
+	case '.':
+		tok = l.newToken(DOT, l.ch)
 	case '#':
 		tok = Token{Type: INCLUDE, Literal: "#", Line: l.line, Column: l.column}
 	case '"':

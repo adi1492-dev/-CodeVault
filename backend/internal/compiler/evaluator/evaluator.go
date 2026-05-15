@@ -274,6 +274,20 @@ func handlePrintf(args []parser.Expression, env *Environment) Value {
 			}
 			i++
 			argIdx++
+		} else if format[i] == '\\' && i+1 < len(format) {
+			switch format[i+1] {
+			case 'n':
+				out.WriteByte('\n')
+			case 't':
+				out.WriteByte('\t')
+			case '"':
+				out.WriteByte('"')
+			case '\\':
+				out.WriteByte('\\')
+			default:
+				out.WriteByte(format[i+1])
+			}
+			i++
 		} else {
 			out.WriteByte(format[i])
 		}

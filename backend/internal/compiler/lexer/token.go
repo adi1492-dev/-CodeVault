@@ -58,6 +58,7 @@ const (
 	BREAK    = "BREAK"
 	CONTINUE = "CONTINUE"
 	INCLUDE  = "INCLUDE"
+	DOT      = "."
 )
 
 type Token struct {

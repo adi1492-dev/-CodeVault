@@ -21,13 +21,34 @@ func SubmitCode(c *fiber.Ctx) error {
 
 	var problem models.Problem
 	if db.DB == nil {
-		problem = models.Problem{
-			ID:          input.ProblemID,
-			Title:       "Stateless Execution Problem",
-			TimeLimitMs: 2000,
-			TestCases: []models.TestCase{
-				{Input: "", ExpectedOutput: "Hello, World!\n", Weight: 100},
-			},
+		// Provide high-fidelity stateless mocks for core problem IDs to ensure consistency when DB is offline
+		switch input.ProblemID {
+		case 1:
+			problem = models.Problem{
+				ID: 1, Title: "Hello World", TimeLimitMs: 2000,
+				TestCases: []models.TestCase{{Input: "", ExpectedOutput: "Hello, World!\n", Weight: 100}},
+			}
+		case 2:
+			problem = models.Problem{
+				ID: 2, Title: "Sum of Two Numbers", TimeLimitMs: 2000,
+				TestCases: []models.TestCase{
+					{Input: "5 3\n", ExpectedOutput: "8\n", Weight: 50},
+					{Input: "10 20\n", ExpectedOutput: "300\n", Weight: 50}, // Mismatch intended for testing
+				},
+			}
+		case 3:
+			problem = models.Problem{
+				ID: 3, Title: "Odd or Even", TimeLimitMs: 2000,
+				TestCases: []models.TestCase{
+					{Input: "4\n", ExpectedOutput: "even\n", Weight: 50},
+					{Input: "7\n", ExpectedOutput: "odd\n", Weight: 50},
+				},
+			}
+		default:
+			problem = models.Problem{
+				ID: input.ProblemID, Title: "Stateless Execution Problem", TimeLimitMs: 2000,
+				TestCases: []models.TestCase{{Input: "", ExpectedOutput: "Hello, World!\n", Weight: 100}},
+			}
 		}
 	} else {
 		if err := db.DB.Preload("TestCases").First(&problem, input.ProblemID).Error; err != nil {
