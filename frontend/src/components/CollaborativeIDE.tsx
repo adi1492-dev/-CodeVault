@@ -24,7 +24,12 @@ import {
   Send,
   Plus,
   Trash2,
-  FolderOpen
+  FolderOpen,
+  Activity,
+  Wand2,
+  AlertCircle,
+  Info,
+  CheckCircle2
 } from 'lucide-react';
 
 interface Participant {
@@ -88,6 +93,11 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [socketStatus, setSocketStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
 
+  // Analysis State
+  const [analysisResults, setAnalysisResults] = useState<{level: string, line: number, message: string, code: string}[]>([]);
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   const socketRef = useRef<WebSocket | null>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
 
@@ -127,6 +137,16 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
         setMessages(prev => [...prev, { user: msg.user, text: msg.text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
       } else if (msg.type === 'TERMINAL_DATA') {
         setTerminalOutput(prev => [...prev, msg.text]);
+      } else if (msg.type === 'ANALYSIS_RESULTS') {
+        setAnalysisResults(msg.results || []);
+        setIsAnalyzing(false);
+        setIsAnalysisOpen(true);
+        setTerminalOutput(prev => [...prev, `\n[Analyzer] Analysis complete. Found ${msg.results?.length || 0} issues.`]);
+      } else if (msg.type === 'CODE_FIXED') {
+        if (msg.code) {
+          setFiles(prev => ({ ...prev, [activeFile.name]: msg.code }));
+          setTerminalOutput(prev => [...prev, `\n[System] Code auto-fixed successfully.`]);
+        }
       }
     };
 
@@ -166,6 +186,31 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
         fileName: activeFile.name,
         code: files[activeFile.name],
         language: activeFile.language
+      }));
+    }
+  };
+
+  const handleAnalyzeCode = () => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      setIsAnalyzing(true);
+      setIsAnalysisOpen(true);
+      setIsChatOpen(false); // Close chat to make room for analysis
+      setTerminalOutput(prev => [...prev, `\n[Analyzer] Scanning code for potential issues...`]);
+      socketRef.current.send(JSON.stringify({
+        type: 'ANALYZE_CODE',
+        language: activeFile.language,
+        code: files[activeFile.name]
+      }));
+    }
+  };
+
+  const handleFixCode = () => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      setTerminalOutput(prev => [...prev, `\n[System] Applying automated repairs...`]);
+      socketRef.current.send(JSON.stringify({
+        type: 'FIX_CODE',
+        language: activeFile.language,
+        code: files[activeFile.name]
       }));
     }
   };
@@ -234,6 +279,25 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
             <Play size={12} fill="currentColor" />
             <span>RUN</span>
           </button>
+
+          <button 
+            onClick={handleAnalyzeCode}
+            disabled={isAnalyzing}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 text-[10px] font-bold transition-all border border-indigo-500/20 ${isAnalyzing ? 'animate-pulse' : ''}`}
+          >
+            <Activity size={12} />
+            <span>ANALYZE</span>
+          </button>
+
+          {activeFile.language === 'c' && (
+            <button 
+              onClick={handleFixCode}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[10px] font-bold transition-all border border-amber-500/20"
+            >
+              <Wand2 size={12} />
+              <span>FIX</span>
+            </button>
+          )}
 
           <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-bold transition-all border border-white/10">
             <Save size={12} />
@@ -433,6 +497,57 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
                   <Send size={14} />
                 </button>
               </form>
+            </div>
+          </aside>
+        )}
+
+        {/* Right Sidebar (Analysis) */}
+        {isAnalysisOpen && (
+          <aside className="w-72 border-l border-white/10 bg-[#151515] flex flex-col shrink-0 overflow-hidden">
+            <div className="p-3 border-b border-white/10 flex items-center justify-between bg-indigo-500/5">
+              <div className="flex items-center gap-2">
+                <Activity size={14} className="text-indigo-400" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-200">Analysis Results</span>
+              </div>
+              <button onClick={() => setIsAnalysisOpen(false)} className="p-1 hover:bg-white/5 rounded text-slate-500"><X size={12} /></button>
+            </div>
+            
+            <div className="grow overflow-y-auto p-4 space-y-3">
+              {analysisResults.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-40 text-center space-y-2">
+                  <CheckCircle2 size={32} className="text-emerald-500/50" />
+                  <p className="text-[10px] text-slate-500 font-bold uppercase">No Issues Found</p>
+                  <p className="text-[9px] text-slate-600">Your code follows basic syntactic and structural rules.</p>
+                </div>
+              ) : (
+                analysisResults.map((res, i) => (
+                  <div key={i} className={`p-3 rounded-xl border ${
+                    res.level === 'error' ? 'bg-red-500/5 border-red-500/20 text-red-300' : 
+                    res.level === 'warning' ? 'bg-amber-500/5 border-amber-500/20 text-amber-300' : 
+                    'bg-indigo-500/5 border-indigo-500/20 text-indigo-300'
+                  }`}>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      {res.level === 'error' ? <AlertCircle size={14} /> : <Info size={14} />}
+                      <span className="text-[10px] font-black uppercase tracking-wider">{res.level}</span>
+                      {res.line > 0 && <span className="ml-auto text-[9px] font-mono opacity-50">Line {res.line}</span>}
+                    </div>
+                    <p className="text-[11px] leading-relaxed font-medium mb-2">{res.message}</p>
+                    <div className="p-1.5 bg-black/40 rounded-lg font-mono text-[9px] opacity-70 border border-white/5">
+                      Issue: {res.code}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-4 border-t border-white/10 bg-black/20">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Diagnostic Coverage</span>
+              </div>
+              <p className="text-[9px] text-slate-500 leading-relaxed italic">
+                Scanning for: Syntax Errors, Memory Leaks, Unsafe Functions, and Header Mappings.
+              </p>
             </div>
           </aside>
         )}

@@ -145,6 +145,30 @@ func SetupWebSocketRoutes(app *fiber.App) {
 				continue
 			}
 
+			// Handle Code Analysis
+			if msg["type"] == "ANALYZE_CODE" {
+				lang := msg["language"].(string)
+				code := msg["code"].(string)
+				results := AnalyzeCode(lang, code)
+				c.WriteJSON(fiber.Map{
+					"type":    "ANALYSIS_RESULTS",
+					"results": results,
+				})
+				continue
+			}
+
+			// Handle Code Fix
+			if msg["type"] == "FIX_CODE" {
+				lang := msg["language"].(string)
+				code := msg["code"].(string)
+				fixedCode := FixCode(lang, code)
+				c.WriteJSON(fiber.Map{
+					"type": "CODE_FIXED",
+					"code": fixedCode,
+				})
+				continue
+			}
+
 			// Broadcast to everyone in the room EXCEPT the sender
 			roomsMu.Lock()
 			for client := range rooms[roomId] {

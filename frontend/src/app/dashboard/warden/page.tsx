@@ -17,7 +17,10 @@ import {
   Wrench,
   Coffee,
   Lock,
-  Camera
+  Camera,
+  CalendarDays,
+  History,
+  Clock3
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getUsers, getCurrentUser, setCurrentUser, getGrievances, decryptGrievance, UserRecord, GrievanceRecord } from '@/lib/store';
@@ -28,7 +31,7 @@ export default function WardenDashboard() {
   const [students, setStudents] = useState<UserRecord[]>([]);
   
   // Left Navigation Menu
-  const [activeTab, setActiveTab] = useState<'rooms' | 'passes' | 'visitors' | 'directives' | 'mess' | 'maintenance' | 'incidents'>('rooms');
+  const [activeTab, setActiveTab] = useState<'rooms' | 'passes' | 'leave' | 'visitors' | 'directives' | 'mess' | 'maintenance' | 'incidents'>('rooms');
   
   // Grievance State
   const [grievances, setGrievances] = useState<GrievanceRecord[]>([]);
@@ -69,6 +72,15 @@ export default function WardenDashboard() {
     { id: 'wd4', title: 'Winter Vacation Room Key Surrender Protocols', date: '2025-11-28', target: 'All Hostel Blocks' },
     { id: 'wd5', title: 'Monsoon Anti-Mosquito Fogging Safety Guidelines', date: '2025-08-05', target: 'All Residents' }
   ]);
+  
+  const [leaveRequests, setLeaveRequests] = useState([
+    { id: 'l1', studentName: 'Aarav Nikam', type: 'Medical', startDate: '2026-05-18', endDate: '2026-05-20', status: 'Pending', reason: 'Severe viral fever and physician recommended rest.' },
+    { id: 'l2', studentName: 'Ananya Sharma', type: 'Personal', startDate: '2026-05-17', endDate: '2026-05-17', status: 'Approved', reason: 'Family gathering in hometown.' },
+    { id: 'l3', studentName: 'Rahul Verma', type: 'Academic', startDate: '2026-05-22', endDate: '2026-05-25', status: 'Pending', reason: 'Representing college at national robotics competition.' },
+    { id: 'l4', studentName: 'Priya Deshmukh', type: 'Emergency', startDate: '2026-05-12', endDate: '2026-05-15', status: 'Approved', reason: 'Family medical emergency.' },
+  ]);
+
+  const [leaveSubTab, setLeaveSubTab] = useState<'active' | 'history'>('active');
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -108,6 +120,12 @@ export default function WardenDashboard() {
     setSuccessMsg('Hostel directive successfully dispatched to master residential board.');
     setDirectiveTitle('');
     setDirectiveBody('');
+    setTimeout(() => setSuccessMsg(''), 4000);
+  };
+
+  const handleUpdateLeaveStatus = (id: string, status: 'Approved' | 'Rejected') => {
+    setLeaveRequests(leaveRequests.map(l => l.id === id ? { ...l, status } : l));
+    setSuccessMsg(`Leave request for ${leaveRequests.find(l => l.id === id)?.studentName} marked as ${status}.`);
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
@@ -188,6 +206,23 @@ export default function WardenDashboard() {
               </div>
               <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
                 Active
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('leave')}
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
+                activeTab === 'leave' 
+                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20' 
+                  : 'text-slate-400 hover:bg-white/[0.02] hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <CalendarDays size={18} className={activeTab === 'leave' ? 'text-rose-400' : ''} />
+                <span>Leave Management</span>
+              </div>
+              <span className="text-[10px] bg-rose-500 text-white font-bold px-1.5 rounded-full scale-75">
+                {leaveRequests.filter(l => l.status === 'Pending').length}
               </span>
             </button>
 
@@ -447,6 +482,112 @@ export default function WardenDashboard() {
                       </span>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          {/* TAB 2.5: LEAVE MANAGEMENT */}
+          {activeTab === 'leave' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-black/60 border border-white/5 w-fit">
+                <button
+                  onClick={() => setLeaveSubTab('active')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    leaveSubTab === 'active' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Clock3 size={14} />
+                  <span>Pending Leave Requests</span>
+                </button>
+                <button
+                  onClick={() => setLeaveSubTab('history')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    leaveSubTab === 'history' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <History size={14} />
+                  <span>Decision Archives</span>
+                </button>
+              </div>
+
+              {leaveSubTab === 'active' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4 animate-fade-in">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono border-b border-white/5 pb-2">
+                    Current Applied Leaves awaiting Clearance
+                  </h3>
+
+                  <div className="space-y-4">
+                    {leaveRequests.filter(l => l.status === 'Pending').map(leave => (
+                      <div key={leave.id} className="p-5 rounded-2xl bg-black/40 border border-white/5 space-y-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-bold text-white">{leave.studentName}</span>
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${
+                                leave.type === 'Medical' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 
+                                leave.type === 'Emergency' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                                'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                              }`}>
+                                {leave.type}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 block font-mono">
+                              Period: {leave.startDate} to {leave.endDate}
+                            </span>
+                          </div>
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            <button
+                              onClick={() => handleUpdateLeaveStatus(leave.id, 'Approved')}
+                              className="grow sm:grow-0 px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-bold transition-all"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleUpdateLeaveStatus(leave.id, 'Rejected')}
+                              className="grow sm:grow-0 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-bold transition-all"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Stated Purpose</span>
+                          <p className="text-xs text-slate-300 italic">"{leave.reason}"</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {leaveRequests.filter(l => l.status === 'Pending').length === 0 && (
+                      <div className="p-10 text-center text-xs text-slate-500 italic bg-black/20 rounded-2xl">
+                        Zero pending leave applications found in residential queue.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {leaveSubTab === 'history' && (
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-3 animate-fade-in">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono border-b border-white/5 pb-2">
+                    Verified Residential Flow History
+                  </h3>
+                  
+                  <div className="space-y-2">
+                    {leaveRequests.filter(l => l.status !== 'Pending').reverse().map(leave => (
+                      <div key={leave.id} className="p-4 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="font-bold text-slate-200">{leave.studentName}</span>
+                          <span className="text-[10px] text-slate-500 block font-mono mt-0.5">
+                            {leave.type} • {leave.startDate} - {leave.endDate}
+                          </span>
+                        </div>
+                        <span className={`font-mono font-bold text-[10px] px-3 py-1 rounded-full ${
+                          leave.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                        }`}>
+                          {leave.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

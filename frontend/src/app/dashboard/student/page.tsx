@@ -27,7 +27,10 @@ import {
   Search,
   Globe,
   Monitor,
-  Shield
+  Shield,
+  CreditCard,
+  Smartphone,
+  Wallet
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -82,6 +85,10 @@ export default function StudentDashboard() {
   const [reportMsg, setReportMsg] = useState('');
   const [reportPhoto, setReportPhoto] = useState(false);
   const [reportStatus, setReportStatus] = useState<'idle' | 'encrypting' | 'sent'>('idle');
+
+  // Canteen Payment State
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'upi' | 'card'>('wallet');
+  const [isPaying, setIsPaying] = useState(false);
 
   const loadAlerts = () => {
     if (currentUser) {
@@ -851,41 +858,105 @@ export default function StudentDashboard() {
                 </div>
               )}
 
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Select Payment Authority</span>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-3">
+                  <button 
+                    onClick={() => setPaymentMethod('wallet')}
+                    className={`p-3 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
+                      paymentMethod === 'wallet' ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' : 'bg-black/40 border-white/5 text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    <Wallet size={20} />
+                    <span className="text-[10px] font-bold">Wallet</span>
+                  </button>
+                  <button 
+                    onClick={() => setPaymentMethod('upi')}
+                    className={`p-3 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
+                      paymentMethod === 'upi' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300' : 'bg-black/40 border-white/5 text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    <Smartphone size={20} />
+                    <span className="text-[10px] font-bold">UPI</span>
+                  </button>
+                  <button 
+                    onClick={() => setPaymentMethod('card')}
+                    className={`p-3 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
+                      paymentMethod === 'card' ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-black/40 border-white/5 text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    <CreditCard size={20} />
+                    <span className="text-[10px] font-bold">Card</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2">
                 <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2 mb-2">
                   <span>Veg Biryani</span>
                   <button 
+                    disabled={isPaying}
                     onClick={() => {
-                      if (currentUser) {
+                      if (!currentUser) return;
+                      
+                      const handleOrder = () => {
                         const res = placeCanteenOrder(currentUser.id, 'Veg Biryani', 60);
                         if (res.success && res.orderNo && res.pickupTime) {
                           setActiveCanteenOrder({ item: 'Veg Biryani', amount: 60, orderNo: res.orderNo, pickupTime: res.pickupTime });
                           setCurrent(getUsers().find(u => u.id === currentUser.id) || null);
                         } else {
-                          alert('Insufficient Balance!');
+                          alert('Insufficient Balance in Wallet!');
                         }
+                      };
+
+                      if (paymentMethod === 'wallet') {
+                        handleOrder();
+                      } else {
+                        setIsPaying(true);
+                        setTimeout(() => {
+                          setIsPaying(false);
+                          // For simulation, we add balance if UPI/Card and then buy
+                          // But simpler: just place order directly and say "Paid via UPI"
+                          setActiveCanteenOrder({ item: 'Veg Biryani', amount: 60, orderNo: `UPI-${Math.floor(1000+Math.random()*9000)}`, pickupTime: '15 Mins' });
+                        }, 2000);
                       }
                     }}
-                    className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded font-bold text-xs hover:bg-cyan-500/30">
-                    Buy (₹60)
+                    className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded font-bold text-xs hover:bg-cyan-500/30 disabled:opacity-50">
+                    {isPaying ? 'Processing...' : 'Buy (₹60)'}
                   </button>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span>Cold Coffee</span>
                   <button 
+                    disabled={isPaying}
                     onClick={() => {
-                      if (currentUser) {
+                      if (!currentUser) return;
+
+                      const handleOrder = () => {
                         const res = placeCanteenOrder(currentUser.id, 'Cold Coffee', 45);
                         if (res.success && res.orderNo && res.pickupTime) {
                           setActiveCanteenOrder({ item: 'Cold Coffee', amount: 45, orderNo: res.orderNo, pickupTime: res.pickupTime });
                           setCurrent(getUsers().find(u => u.id === currentUser.id) || null);
                         } else {
-                          alert('Insufficient Balance!');
+                          alert('Insufficient Balance in Wallet!');
                         }
+                      };
+
+                      if (paymentMethod === 'wallet') {
+                        handleOrder();
+                      } else {
+                        setIsPaying(true);
+                        setTimeout(() => {
+                          setIsPaying(false);
+                          setActiveCanteenOrder({ item: 'Cold Coffee', amount: 45, orderNo: `${paymentMethod.toUpperCase()}-${Math.floor(1000+Math.random()*9000)}`, pickupTime: '10 Mins' });
+                        }, 2000);
                       }
                     }}
-                    className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded font-bold text-xs hover:bg-cyan-500/30">
-                    Buy (₹45)
+                    className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded font-bold text-xs hover:bg-cyan-500/30 disabled:opacity-50">
+                    {isPaying ? 'Processing...' : 'Buy (₹45)'}
                   </button>
                 </div>
               </div>
