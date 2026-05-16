@@ -485,6 +485,8 @@ export default function WardenDashboard() {
                 </div>
               )}
             </div>
+          )}
+
           {/* TAB 2.5: LEAVE MANAGEMENT */}
           {activeTab === 'leave' && (
             <div className="space-y-6 animate-fade-in">
