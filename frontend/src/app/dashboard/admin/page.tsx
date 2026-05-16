@@ -29,7 +29,8 @@ import {
   Zap,
   AlertCircle,
   Coffee,
-  LayoutDashboard
+  LayoutDashboard,
+  ShieldAlert
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -120,6 +121,13 @@ export default function AdminDashboard() {
   const [newStaffYear, setNewStaffYear] = useState<string>('1st Year');
   const [newStaffMultiYears, setNewStaffMultiYears] = useState<string[]>(['1st Year']);
 
+  // Certificates State
+  const [certStudentIds, setCertStudentIds] = useState<string[]>([]);
+  const [certName, setCertName] = useState('');
+  const [certPhotoUrl, setCertPhotoUrl] = useState('https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?w=800&auto=format&fit=crop&q=80');
+  const [certDescription, setCertDescription] = useState('Awarded for absolute excellence in advanced computing modules and rigorous AST semantic analysis.');
+  const [certIssuerName, setCertIssuerName] = useState('Dr. Ramesh S. & Computing Faculty');
+  const [mintStatus, setMintStatus] = useState<'idle' | 'minting' | 'success'>('idle');
   const [mintTx, setMintTx] = useState('');
 
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
