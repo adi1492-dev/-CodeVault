@@ -44,6 +44,52 @@ export interface UserRecord {
   completedLabs?: number;
   certificates?: { id: string; name: string; txHash: string; date: string; photoUrl?: string; description?: string; issuerName?: string }[];
   canteenTransactions?: { id: string; item: string; amount: number; type: 'debit' | 'credit'; date: string; orderNo?: string; pickupTime?: string }[];
+  documentRequests?: { id: string; type: string; status: 'Pending' | 'Processed' | 'Rejected'; date: string }[];
+}
+
+export interface LeaveRequest {
+  id: string;
+  studentId: string;
+  studentName: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  timestamp: string;
+}
+
+export interface GatePass {
+  id: string;
+  studentId: string;
+  studentName: string;
+  rollNo: string;
+  destination: string;
+  outTime: string;
+  returnTime: string;
+  reason: string;
+  status: 'Pending' | 'Sanctioned' | 'Used' | 'Expired';
+  timestamp: string;
+}
+
+export interface HostelFeedback {
+  id: string;
+  studentId: string;
+  studentName: string;
+  category: 'Food' | 'Cleanliness' | 'Maintenance' | 'Security' | 'General';
+  message: string;
+  rating: number;
+  timestamp: string;
+}
+
+export interface StudentRequest {
+  id: string;
+  studentId: string;
+  studentName: string;
+  type: 'Document' | 'Academic' | 'Administrative';
+  message: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  timestamp: string;
 }
 
 export interface AlertRecord {
@@ -264,6 +310,10 @@ const INITIAL_USERS: UserRecord[] = [
 const STORAGE_KEY = 'campuscore_users_db';
 const ALERTS_STORAGE_KEY = 'campuscore_alerts_db';
 const SESSION_STORAGE_KEY = 'campuscore_current_session';
+const LEAVE_STORAGE_KEY = 'campuscore_leave_db';
+const PASS_STORAGE_KEY = 'campuscore_pass_db';
+const FEEDBACK_STORAGE_KEY = 'campuscore_feedback_db';
+const REQUEST_STORAGE_KEY = 'campuscore_request_db';
 
 // Global In-Memory Fallback for Demo Persistence on IP Addresses
 const memoryStore: Record<string, string> = {};
@@ -969,3 +1019,63 @@ export function assignDepartmentLeadership(departmentId: string, hodId?: string,
   }
 }
 
+// ==========================================
+// LEAVE & GATE PASS PERSISTENCE
+// ==========================================
+
+const INITIAL_LEAVES: LeaveRequest[] = [
+  { id: 'l1', studentId: '4', studentName: 'Aarav Nikam', type: 'Medical', startDate: '2026-05-18', endDate: '2026-05-20', status: 'Pending', reason: 'Severe viral fever and physician recommended rest.', timestamp: '2026-05-15T10:00:00Z' },
+  { id: 'l2', studentId: 'student2', studentName: 'Ananya Sharma', type: 'Personal', startDate: '2026-05-17', endDate: '2026-05-17', status: 'Approved', reason: 'Family gathering in hometown.', timestamp: '2026-05-14T15:30:00Z' },
+];
+
+const INITIAL_PASSES: GatePass[] = [
+  { id: 'p1', studentId: '4', studentName: 'Aarav Nikam', rollNo: 'CS2026-001', destination: 'Local Marketplace / Weekend Groceries', outTime: 'Saturday 04:00 PM', returnTime: 'Saturday 08:00 PM', status: 'Pending', reason: 'Weekly grocery run.', timestamp: '2026-05-15T16:00:00Z' },
+];
+
+export function getLeaves(): LeaveRequest[] {
+  if (typeof window === 'undefined') return INITIAL_LEAVES;
+  const stored = localStorage.getItem(LEAVE_STORAGE_KEY);
+  if (!stored) {
+    localStorage.setItem(LEAVE_STORAGE_KEY, JSON.stringify(INITIAL_LEAVES));
+    return INITIAL_LEAVES;
+  }
+  return JSON.parse(stored);
+}
+
+export function saveLeaves(leaves: LeaveRequest[]) {
+  if (typeof window !== 'undefined') localStorage.setItem(LEAVE_STORAGE_KEY, JSON.stringify(leaves));
+}
+
+export function getPasses(): GatePass[] {
+  if (typeof window === 'undefined') return INITIAL_PASSES;
+  const stored = localStorage.getItem(PASS_STORAGE_KEY);
+  if (!stored) {
+    localStorage.setItem(PASS_STORAGE_KEY, JSON.stringify(INITIAL_PASSES));
+    return INITIAL_PASSES;
+  }
+  return JSON.parse(stored);
+}
+
+export function savePasses(passes: GatePass[]) {
+  if (typeof window !== 'undefined') localStorage.setItem(PASS_STORAGE_KEY, JSON.stringify(passes));
+}
+
+export function getFeedback(): HostelFeedback[] {
+  if (typeof window === 'undefined') return [];
+  const stored = localStorage.getItem(FEEDBACK_STORAGE_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+export function saveFeedback(fb: HostelFeedback[]) {
+  if (typeof window !== 'undefined') localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(fb));
+}
+
+export function getStudentRequests(): StudentRequest[] {
+  if (typeof window === 'undefined') return [];
+  const stored = localStorage.getItem(REQUEST_STORAGE_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+export function saveStudentRequests(reqs: StudentRequest[]) {
+  if (typeof window !== 'undefined') localStorage.setItem(REQUEST_STORAGE_KEY, JSON.stringify(reqs));
+}

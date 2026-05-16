@@ -23,7 +23,7 @@ import {
   Clock3
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getUsers, getCurrentUser, setCurrentUser, getGrievances, decryptGrievance, UserRecord, GrievanceRecord } from '@/lib/store';
+import { getUsers, getCurrentUser, setCurrentUser, getGrievances, decryptGrievance, UserRecord, GrievanceRecord, getLeaves, saveLeaves, getPasses, savePasses, getFeedback, LeaveRequest, GatePass, HostelFeedback } from '@/lib/store';
 
 export default function WardenDashboard() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function WardenDashboard() {
   const [students, setStudents] = useState<UserRecord[]>([]);
   
   // Left Navigation Menu
-  const [activeTab, setActiveTab] = useState<'rooms' | 'passes' | 'leave' | 'visitors' | 'directives' | 'mess' | 'maintenance' | 'incidents'>('rooms');
+  const [activeTab, setActiveTab] = useState<'rooms' | 'passes' | 'leave' | 'visitors' | 'directives' | 'mess' | 'maintenance' | 'incidents' | 'feedback'>('rooms');
   
   // Grievance State
   const [grievances, setGrievances] = useState<GrievanceRecord[]>([]);
@@ -54,13 +54,7 @@ export default function WardenDashboard() {
   ]);
 
   // Sample Outing pass requests
-  const [passes, setPasses] = useState([
-    { id: 'p1', studentName: 'Aarav Nikam', rollNo: 'CS2026-001', destination: 'Local Marketplace / Weekend Groceries', outTime: 'Saturday 04:00 PM', status: 'Pending' },
-    { id: 'p2', studentName: 'Rahul Verma', rollNo: 'CS2026-018', destination: 'Medical Checkup Appointment', outTime: 'Friday 10:00 AM', status: 'Sanctioned' },
-    { id: 'p3', studentName: 'Ananya Sharma', rollNo: 'CS2026-002', destination: 'Inter-College Hackathon Representation', outTime: 'Thursday 06:00 AM', status: 'Sanctioned' },
-    { id: 'p4', studentName: 'Amit Patel', rollNo: 'CS2026-004', destination: 'Family Emergency Leave Request', outTime: 'Monday 08:30 PM', status: 'Sanctioned' },
-    { id: 'p5', studentName: 'Sneha Joshi', rollNo: 'CS2026-007', destination: 'Late Night Library Access Extension', outTime: 'Wednesday 11:00 PM', status: 'Sanctioned' }
-  ]);
+  const [passes, setPasses] = useState<GatePass[]>([]);
 
   // Directives state
   const [directiveTitle, setDirectiveTitle] = useState('');
@@ -73,12 +67,8 @@ export default function WardenDashboard() {
     { id: 'wd5', title: 'Monsoon Anti-Mosquito Fogging Safety Guidelines', date: '2025-08-05', target: 'All Residents' }
   ]);
   
-  const [leaveRequests, setLeaveRequests] = useState([
-    { id: 'l1', studentName: 'Aarav Nikam', type: 'Medical', startDate: '2026-05-18', endDate: '2026-05-20', status: 'Pending', reason: 'Severe viral fever and physician recommended rest.' },
-    { id: 'l2', studentName: 'Ananya Sharma', type: 'Personal', startDate: '2026-05-17', endDate: '2026-05-17', status: 'Approved', reason: 'Family gathering in hometown.' },
-    { id: 'l3', studentName: 'Rahul Verma', type: 'Academic', startDate: '2026-05-22', endDate: '2026-05-25', status: 'Pending', reason: 'Representing college at national robotics competition.' },
-    { id: 'l4', studentName: 'Priya Deshmukh', type: 'Emergency', startDate: '2026-05-12', endDate: '2026-05-15', status: 'Approved', reason: 'Family medical emergency.' },
-  ]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [feedback, setFeedback] = useState<HostelFeedback[]>([]);
 
   const [leaveSubTab, setLeaveSubTab] = useState<'active' | 'history'>('active');
 
@@ -92,6 +82,9 @@ export default function WardenDashboard() {
     
     // Load Grievances
     setGrievances(getGrievances());
+    setLeaveRequests(getLeaves());
+    setPasses(getPasses());
+    setFeedback(getFeedback());
   }, []);
 
   const handleLogout = () => {
@@ -100,10 +93,12 @@ export default function WardenDashboard() {
   };
 
   const handleSanctionPass = (passId: string) => {
-    setPasses(passes.map(p => {
-      if (p.id === passId) return { ...p, status: 'Sanctioned' };
+    const updated = passes.map(p => {
+      if (p.id === passId) return { ...p, status: 'Sanctioned' as const };
       return p;
-    }));
+    });
+    setPasses(updated);
+    savePasses(updated);
     setSuccessMsg('Outing pass application instantly elevated to Sanctioned status.');
     setTimeout(() => setSuccessMsg(''), 4000);
   };
@@ -123,9 +118,19 @@ export default function WardenDashboard() {
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
-  const handleUpdateLeaveStatus = (id: string, status: 'Approved' | 'Rejected') => {
-    setLeaveRequests(leaveRequests.map(l => l.id === id ? { ...l, status } : l));
+  const updateLeaveStatus = (id: string, status: 'Approved' | 'Rejected') => {
+    const updated = leaveRequests.map(l => l.id === id ? { ...l, status } : l);
+    setLeaveRequests(updated);
+    saveLeaves(updated);
     setSuccessMsg(`Leave request for ${leaveRequests.find(l => l.id === id)?.studentName} marked as ${status}.`);
+    setTimeout(() => setSuccessMsg(''), 4000);
+  };
+
+  const updatePassStatus = (id: string, status: 'Sanctioned' | 'Rejected') => {
+    const updated = passes.map(p => p.id === id ? { ...p, status } : p);
+    setPasses(updated as GatePass[]);
+    savePasses(updated as GatePass[]);
+    setSuccessMsg(`Gate pass for ${passes.find(p => p.id === id)?.studentName} ${status === 'Sanctioned' ? 'sanctioned' : 'rejected'}.`);
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
