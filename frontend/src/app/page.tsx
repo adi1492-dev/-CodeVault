@@ -80,28 +80,30 @@ export default function Home() {
     if (finalUser) {
       setCurrentUser(finalUser);
       setLoading(false);
-      // Route dynamically based on database-verified role
+      console.log('Login successful, routing to:', finalUser.role);
+      
+      // Route dynamically using Next.js router for better stability on IP origins
       switch (finalUser.role) {
         case 'admin':
-          window.location.href = '/dashboard/admin';
+          router.push('/dashboard/admin');
           break;
         case 'canteenadmin':
-          window.location.href = '/dashboard/canteenadmin';
+          router.push('/dashboard/canteenadmin');
           break;
         case 'hod':
         case 'vicehod':
-          window.location.href = '/dashboard/hod';
+          router.push('/dashboard/hod');
           break;
         case 'teacher':
         case 'classteacher':
         case 'subjectteacher':
-          window.location.href = '/dashboard/teacher';
+          router.push('/dashboard/teacher');
           break;
         case 'student':
-          window.location.href = '/dashboard/student';
+          router.push('/dashboard/student');
           break;
         case 'parent':
-          window.location.href = '/dashboard/parent';
+          router.push('/dashboard/parent');
           break;
       }
     } else {
@@ -156,18 +158,20 @@ export default function Home() {
     if (finalUser) {
       setCurrentUser(finalUser);
       setLoading(false);
+      console.log('Quick Login successful, routing to:', finalUser.role);
+      
       switch (finalUser.role) {
-        case 'admin': window.location.href = '/dashboard/admin'; break;
-        case 'canteenadmin': window.location.href = '/dashboard/canteenadmin'; break;
-        case 'studentsection': window.location.href = '/dashboard/studentsection'; break;
-        case 'warden': window.location.href = '/dashboard/warden'; break;
+        case 'admin': router.push('/dashboard/admin'); break;
+        case 'canteenadmin': router.push('/dashboard/canteenadmin'); break;
+        case 'studentsection': router.push('/dashboard/studentsection'); break;
+        case 'warden': router.push('/dashboard/warden'); break;
         case 'hod':
-        case 'vicehod': window.location.href = '/dashboard/hod'; break;
+        case 'vicehod': router.push('/dashboard/hod'); break;
         case 'teacher':
         case 'classteacher':
-        case 'subjectteacher': window.location.href = '/dashboard/teacher'; break;
-        case 'student': window.location.href = '/dashboard/student'; break;
-        case 'parent': window.location.href = '/dashboard/parent'; break;
+        case 'subjectteacher': router.push('/dashboard/teacher'); break;
+        case 'student': router.push('/dashboard/student'); break;
+        case 'parent': router.push('/dashboard/parent'); break;
       }
     } else {
       setError('Invalid credentials.');

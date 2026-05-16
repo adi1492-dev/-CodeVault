@@ -257,22 +257,43 @@ const INITIAL_USERS: UserRecord[] = [
     };
   }),
   { id: '5', name: 'Mrs. Sunita Nikam', email: 'parent@campuscore.edu', role: 'parent', password: 'parent123' },
+  { id: 'p_ananya', name: 'Mrs. Priya Sharma', email: 'priya.sharma@campuscore.edu', role: 'parent', password: 'parent123' },
+  { id: 'p_rahul', name: 'Mr. Anil Verma', email: 'anil.verma@campuscore.edu', role: 'parent', password: 'parent123' },
 ];
 
 const STORAGE_KEY = 'campuscore_users_db';
 const ALERTS_STORAGE_KEY = 'campuscore_alerts_db';
+const SESSION_STORAGE_KEY = 'campuscore_current_session';
+
+// Global In-Memory Fallback for Demo Persistence on IP Addresses
+const memoryStore: Record<string, string> = {};
 
 export function getUsers(): UserRecord[] {
   if (typeof window === 'undefined') return INITIAL_USERS;
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_USERS));
-    return INITIAL_USERS;
+  
+  // Try memory first
+  if (memoryStore[STORAGE_KEY]) {
+    try {
+      return JSON.parse(memoryStore[STORAGE_KEY]);
+    } catch { /* fall through */ }
   }
+
   try {
-    const parsed: UserRecord[] = JSON.parse(stored);
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_USERS));
+      return INITIAL_USERS;
+    }
+    const parsed = JSON.parse(stored);
+    
+    // Safety check: Ensure parsed is an array
+    if (!Array.isArray(parsed)) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_USERS));
+      return INITIAL_USERS;
+    }
+
     // Enforce hot-patch reset if browser payload has fewer than 190 students stored
-    if (!parsed || parsed.filter((u: UserRecord) => u.role === 'student').length < 190) {
+    if (parsed.filter((u: UserRecord) => u.role === 'student').length < 190) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_USERS));
       return INITIAL_USERS;
     }
@@ -297,16 +318,22 @@ export function getUsers(): UserRecord[] {
       return updatedParsed;
     }
 
-    return parsed;
-  } catch {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_USERS));
+    return updatedParsed;
+  } catch (err) {
+    console.error('Store access error:', err);
     return INITIAL_USERS;
   }
 }
 
 export function saveUsers(users: UserRecord[]) {
+  const data = JSON.stringify(users);
+  memoryStore[STORAGE_KEY] = data; // Always update memory
   if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+    try {
+      localStorage.setItem(STORAGE_KEY, data);
+    } catch (e) {
+      console.warn('LocalStorage blocked, using memory fallback');
+    }
   }
 }
 
@@ -437,10 +464,16 @@ export function authenticateUser(emailOrRole: string, pass: string): UserRecord 
 }
 
 export function getCurrentUser(): UserRecord | null {
-  if (typeof window === 'undefined') return null;
-  const stored = localStorage.getItem('campuscore_current_session');
-  if (!stored) return null;
+  if (typeof window === 'undefined') return JSON.parse(memoryStore[SESSION_STORAGE_KEY] || 'null');
+  
+  // Try memory first for speed and fallback
+  if (memoryStore[SESSION_STORAGE_KEY]) {
+    return JSON.parse(memoryStore[SESSION_STORAGE_KEY]);
+  }
+
   try {
+    const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!stored) return null;
     return JSON.parse(stored);
   } catch {
     return null;
@@ -448,11 +481,19 @@ export function getCurrentUser(): UserRecord | null {
 }
 
 export function setCurrentUser(user: UserRecord | null) {
+  const data = user ? JSON.stringify(user) : null;
+  if (data) memoryStore[SESSION_STORAGE_KEY] = data;
+  else delete memoryStore[SESSION_STORAGE_KEY];
+
   if (typeof window !== 'undefined') {
-    if (user) {
-      localStorage.setItem('campuscore_current_session', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('campuscore_current_session');
+    try {
+      if (user && data) {
+        localStorage.setItem(SESSION_STORAGE_KEY, data);
+      } else {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+    } catch (err) {
+      console.error('Session storage error:', err);
     }
   }
 }

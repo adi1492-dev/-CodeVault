@@ -119,6 +119,9 @@ func SetupWebSocketRoutes(app *fiber.App) {
 			// Update room data if it's a sync message
 			if msg["type"] == "CODE_SYNC" {
 				roomDataMu.Lock()
+				if roomData[roomId] == nil {
+					roomData[roomId] = make(map[string]interface{})
+				}
 				// Initialize files map if not present
 				if roomData[roomId]["files"] == nil {
 					roomData[roomId]["files"] = make(map[string]interface{})

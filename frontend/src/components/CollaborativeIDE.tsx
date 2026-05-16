@@ -149,6 +149,15 @@ export default function CollaborativeIDE({ roomId, userName, onExit }: Collabora
   };
 
   const handleRunCode = () => {
+    if (activeFile.language === 'html') {
+      const blob = new Blob([files[activeFile.name]], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTerminalOutput(prev => [...prev, `\n[System] Opened HTML live preview in a new tab.`]);
+      setIsTerminalOpen(true);
+      return;
+    }
+
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       setTerminalOutput(prev => [...prev, `\n[Executing ${activeFile.name}...]`]);
       setIsTerminalOpen(true);
