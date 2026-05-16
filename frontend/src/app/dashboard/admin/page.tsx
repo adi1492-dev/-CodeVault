@@ -28,7 +28,8 @@ import {
   ShieldCheck,
   Zap,
   AlertCircle,
-  Coffee
+  Coffee,
+  LayoutDashboard
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -48,7 +49,15 @@ import {
   UserRecord, 
   UserRole, 
   SubjectRecord,
-  DepartmentRecord 
+  DepartmentRecord,
+  getLeaves,
+  getPasses,
+  getGrievances,
+  getStudentRequests,
+  LeaveRequest,
+  GatePass,
+  GrievanceRecord,
+  StudentRequest
 } from '@/lib/store';
 import { useWebSocket } from '@/components/WebSocketProvider';
 
@@ -62,7 +71,7 @@ export default function AdminDashboard() {
   const { broadcastRefresh } = useWebSocket();
   
   // Primary Navigation tabs (Left Menu)
-  const [activeTab, setActiveTab] = useState<'departments' | 'students' | 'users' | 'academics' | 'telemetry' | 'certificates'>('departments');
+  const [activeTab, setActiveTab] = useState<'overview' | 'departments' | 'students' | 'users' | 'academics' | 'telemetry' | 'certificates'>('overview');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('all');
   
   // Secondary Sub-navigation tab states (Top Horizontal Bar)
@@ -111,14 +120,12 @@ export default function AdminDashboard() {
   const [newStaffYear, setNewStaffYear] = useState<string>('1st Year');
   const [newStaffMultiYears, setNewStaffMultiYears] = useState<string[]>(['1st Year']);
 
-  // Certificates State
-  const [certStudentIds, setCertStudentIds] = useState<string[]>([]);
-  const [certName, setCertName] = useState('');
-  const [certPhotoUrl, setCertPhotoUrl] = useState('https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?w=800&auto=format&fit=crop&q=80');
-  const [certDescription, setCertDescription] = useState('Awarded for absolute excellence in advanced computing modules and rigorous AST semantic analysis.');
-  const [certIssuerName, setCertIssuerName] = useState('Dr. Ramesh S. & Computing Faculty');
-  const [mintStatus, setMintStatus] = useState<'idle' | 'minting' | 'success'>('idle');
   const [mintTx, setMintTx] = useState('');
+
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [passes, setPasses] = useState<GatePass[]>([]);
+  const [grievances, setGrievances] = useState<GrievanceRecord[]>([]);
+  const [adminRequests, setAdminRequests] = useState<StudentRequest[]>([]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -128,6 +135,10 @@ export default function AdminDashboard() {
     setUsers(getUsers());
     setSubjects(getSubjects());
     setDepartments(getDepartments());
+    setLeaves(getLeaves());
+    setPasses(getPasses());
+    setGrievances(getGrievances());
+    setAdminRequests(getStudentRequests());
   }, []);
 
   // Default selection when tabs load
@@ -398,6 +409,17 @@ export default function AdminDashboard() {
 
           <div className="flex flex-col gap-2">
             <button
+              onClick={() => setActiveTab('overview')}
+              className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
+                activeTab === 'overview' 
+                  ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <LayoutDashboard size={18} className="shrink-0" />
+              <span className="truncate">Institutional Overview</span>
+            </button>
+            <button
               onClick={() => setActiveTab('departments')}
               className={`w-full px-4 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-start gap-3 ${
                 activeTab === 'departments' 
@@ -522,6 +544,88 @@ export default function AdminDashboard() {
               ))}
             </div>
           </div>
+
+          {activeTab === 'overview' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="glass p-6 rounded-3xl border-white/5 bg-gradient-to-br from-cyan-950/20 to-black/40 space-y-2">
+                  <div className="flex items-center justify-between text-cyan-400">
+                    <Users size={24} />
+                    <TrendingUp size={16} />
+                  </div>
+                  <span className="text-4xl font-black text-white block">{users.filter(u => u.role === 'student').length}</span>
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Total Active Students</span>
+                </div>
+
+                <div className="glass p-6 rounded-3xl border-white/5 bg-gradient-to-br from-indigo-950/20 to-black/40 space-y-2">
+                  <div className="flex items-center justify-between text-indigo-400">
+                    <Briefcase size={24} />
+                    <CheckCircle2 size={16} />
+                  </div>
+                  <span className="text-4xl font-black text-white block">{users.filter(u => u.role !== 'student' && u.role !== 'parent' && u.role !== 'admin').length}</span>
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Teaching & Staff Cadre</span>
+                </div>
+
+                <div className="glass p-6 rounded-3xl border-white/5 bg-gradient-to-br from-rose-950/20 to-black/40 space-y-2">
+                  <div className="flex items-center justify-between text-rose-400">
+                    <ShieldAlert size={24} />
+                    <Zap size={16} />
+                  </div>
+                  <span className="text-4xl font-black text-white block">{grievances.filter(g => g.status === 'Encrypted').length}</span>
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Active Security Reports</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Residency Metrics */}
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider border-b border-white/5 pb-2">Residency Operational State</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Pending Leaves</span>
+                      <span className="text-xl font-bold text-amber-400">{leaves.filter(l => l.status === 'Pending').length}</span>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-black/40 border border-white/5">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold block mb-1">Passes Awaiting Action</span>
+                      <span className="text-xl font-bold text-rose-400">{passes.filter(p => p.status === 'Pending').length}</span>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase font-bold block">Hostel Feedback Index</span>
+                      <span className="text-xs font-bold text-emerald-400">Stable (4.2/5.0)</span>
+                    </div>
+                    <Sparkles className="text-amber-400" size={20} />
+                  </div>
+                </div>
+
+                {/* Administrative Pipeline */}
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider border-b border-white/5 pb-2">Institutional Service Pipeline</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                          <FileText size={16} />
+                        </div>
+                        <span className="text-xs font-bold text-white">Pending Document Requests</span>
+                      </div>
+                      <span className="text-xs font-bold text-purple-400">{adminRequests.filter(r => r.status === 'Pending' && r.type === 'Document').length}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                          <Layers size={16} />
+                        </div>
+                        <span className="text-xs font-bold text-white">Academic Clearances</span>
+                      </div>
+                      <span className="text-xs font-bold text-blue-400">{adminRequests.filter(r => r.status === 'Pending' && r.type === 'Academic').length}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {activeTab === 'departments' && (
             <div className="space-y-6 animate-fade-in">

@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, LogOut, Search, GraduationCap, CreditCard, CalendarCheck, 
   FileText, UserCheck, ChevronRight, CheckCircle2, XCircle, AlertTriangle,
-  LayoutDashboard, ShieldAlert, FileBadge, Lock, EyeOff, Clock, CheckCircle
+  LayoutDashboard, ShieldAlert, FileBadge, Lock, EyeOff, Clock, CheckCircle, MessageSquare
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { 
   getUsers, saveUsers, getCurrentUser, setCurrentUser, 
   UserRecord, getGrievances, saveGrievances, decryptGrievance, 
-  mintCertificate, GrievanceRecord 
+  mintCertificate, GrievanceRecord, getStudentRequests, saveStudentRequests, StudentRequest
 } from '@/lib/store';
 
 const NAV = [
@@ -20,6 +20,7 @@ const NAV = [
   { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
   { id: 'documents', label: 'Documents', icon: FileText },
   { id: 'enrollment', label: 'Enrollment & Clearance', icon: UserCheck },
+  { id: 'requests', label: 'Administrative Requests', icon: MessageSquare },
 ];
 
 export default function StudentSectionDashboard() {
@@ -52,6 +53,7 @@ export default function StudentSectionDashboard() {
     { id: 'q3', studentId: 'student3', name: 'Arjun S.', type: 'Character & Conduct Certificate', status: 'Pending', tx: '' },
     { id: 'q4', studentId: 'std_5', name: 'Sneha R.', type: 'Migration Certificate', status: 'Approved', tx: '0x1a92...e44b' },
   ]);
+  const [requests, setRequests] = useState<StudentRequest[]>([]);
 
   useEffect(() => {
     const u = getCurrentUser(); if (u) setCurrent(u);
@@ -70,6 +72,7 @@ export default function StudentSectionDashboard() {
     } else {
       setGrievances(loaded);
     }
+    setRequests(getStudentRequests());
   }, []);
 
   const refreshStudents = () => {
@@ -178,6 +181,14 @@ export default function StudentSectionDashboard() {
     setStudents(studs);
     setSelected(studs[0] || null);
     flash('Student record removed.');
+  };
+
+  const handleUpdateRequest = (id: string, status: 'Approved' | 'Rejected') => {
+    const all = getStudentRequests();
+    const updated = all.map(r => r.id === id ? { ...r, status } : r);
+    saveStudentRequests(updated);
+    setRequests(updated);
+    flash(`Request marked as ${status}.`);
   };
 
   const feeColor = (s?: string) => s === 'Paid' ? 'text-emerald-400' : s === 'Overdue' ? 'text-red-400' : 'text-amber-400';
@@ -644,6 +655,44 @@ export default function StudentSectionDashboard() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ADMINISTRATIVE REQUESTS */}
+          {activeTab === 'requests' && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="text-sm font-bold text-white border-b border-white/5 pb-2">Student Administrative Requests</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {requests.length === 0 ? (
+                  <div className="col-span-full p-12 text-center text-xs text-slate-500 italic bg-black/20 rounded-2xl border border-white/5">
+                    No active administrative requests found in the institutional queue.
+                  </div>
+                ) : (
+                  requests.map(req => (
+                    <div key={req.id} className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-white block">{req.studentName}</span>
+                          <span className="text-[10px] text-purple-400 font-bold uppercase tracking-tighter">{req.type} Request</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${req.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400' : req.status === 'Rejected' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                          {req.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 bg-white/5 p-3 rounded-xl border border-white/5 leading-relaxed">
+                        {req.message}
+                      </p>
+                      {req.status === 'Pending' && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button onClick={() => handleUpdateRequest(req.id, 'Approved')} className="flex-1 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/20 transition-all">Approve</button>
+                          <button onClick={() => handleUpdateRequest(req.id, 'Rejected')} className="flex-1 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300 text-[10px] font-bold border border-red-500/20 transition-all">Reject</button>
+                        </div>
+                      )}
+                      <div className="text-[9px] text-slate-600 text-right pt-1">{req.timestamp}</div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}

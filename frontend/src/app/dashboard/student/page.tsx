@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getCurrentUser, setCurrentUser, getSubjects, getUsers, placeCanteenOrder, submitAnonymousGrievance, UserRecord, SubjectRecord, getAlerts, markAlertRead, AlertRecord } from '@/lib/store';
+import { getCurrentUser, setCurrentUser, getSubjects, getUsers, placeCanteenOrder, submitAnonymousGrievance, UserRecord, SubjectRecord, getAlerts, markAlertRead, AlertRecord, getLeaves, saveLeaves, getPasses, savePasses, getFeedback, saveFeedback, LeaveRequest, GatePass, HostelFeedback } from '@/lib/store';
 import CollaborativeIDE from '@/components/CollaborativeIDE';
 import ExamInterface from '@/components/ExamInterface';
 
@@ -56,7 +56,7 @@ export default function StudentDashboard() {
   }, []);
   
   // Primary Navigation tabs (Left Menu)
-  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'collab' | 'exams' | 'syllabus' | 'canteen' | 'certificates' | 'report' | 'transport'>('workspace');
+  const [activeTab, setActiveTab] = useState<'workspace' | 'ide' | 'collab' | 'exams' | 'syllabus' | 'canteen' | 'certificates' | 'report' | 'transport' | 'hostel'>('workspace');
   
   // Secondary Sub-navigation tab states (Top Horizontal Bar)
   const [workspaceSubTab, setWorkspaceSubTab] = useState<'metrics' | 'ask'>('metrics');
@@ -86,9 +86,28 @@ export default function StudentDashboard() {
   const [reportPhoto, setReportPhoto] = useState(false);
   const [reportStatus, setReportStatus] = useState<'idle' | 'encrypting' | 'sent'>('idle');
 
-  // Canteen Payment State
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'upi' | 'card'>('wallet');
   const [isPaying, setIsPaying] = useState(false);
+
+  // Hostel States
+  const [leaveType, setLeaveType] = useState('Personal');
+  const [leaveStart, setLeaveStart] = useState('');
+  const [leaveEnd, setLeaveEnd] = useState('');
+  const [leaveReason, setLeaveReason] = useState('');
+  const [leaveRequests, setStudentLeaves] = useState<LeaveRequest[]>([]);
+
+  const [passDest, setPassDest] = useState('');
+  const [passTime, setPassTime] = useState('');
+  const [passReason, setPassReason] = useState('');
+  const [passes, setStudentPasses] = useState<GatePass[]>([]);
+
+  const [fbCategory, setFbCategory] = useState<'Food' | 'Cleanliness' | 'Maintenance' | 'Security' | 'General'>('General');
+  const [fbRating, setFbRating] = useState(5);
+  const [fbMessage, setFbMessage] = useState('');
+
+  const [adminReqType, setAdminReqType] = useState<'Document' | 'Academic' | 'Administrative'>('Document');
+  const [adminReqMsg, setAdminReqMsg] = useState('');
+  const [adminRequests, setAdminRequests] = useState<StudentRequest[]>([]);
 
   const loadAlerts = () => {
     if (currentUser) {
@@ -98,7 +117,12 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const user = getCurrentUser();
-    if (user) setCurrent(user);
+    if (user) {
+      setCurrent(user);
+      setStudentLeaves(getLeaves().filter(l => l.studentId === user.id));
+      setStudentPasses(getPasses().filter(p => p.studentId === user.id));
+      setAdminRequests(getStudentRequests().filter(r => r.studentId === user.id));
+    }
     setSubjects(getSubjects());
   }, []);
 
@@ -125,6 +149,90 @@ export default function StudentDashboard() {
     setDoubt('');
     // Auto switch sub tab view to observe question log
     setWorkspaceSubTab('ask');
+  };
+
+  const handleApplyLeave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !leaveStart || !leaveReason) return;
+    const newReq: LeaveRequest = {
+      id: 'l' + Date.now(),
+      studentId: currentUser.id,
+      studentName: currentUser.name,
+      type: leaveType,
+      startDate: leaveStart,
+      endDate: leaveEnd,
+      reason: leaveReason,
+      status: 'Pending',
+      timestamp: new Date().toISOString()
+    };
+    const all = getLeaves();
+    saveLeaves([...all, newReq]);
+    setStudentLeaves([newReq, ...leaveRequests]);
+    setLeaveReason('');
+    setLeaveStart('');
+    setLeaveEnd('');
+    alert('Leave request submitted to Warden office.');
+  };
+
+  const handleApplyPass = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !passDest || !passTime) return;
+    const newPass: GatePass = {
+      id: 'p' + Date.now(),
+      studentId: currentUser.id,
+      studentName: currentUser.name,
+      rollNo: currentUser.rollNo || 'N/A',
+      destination: passDest,
+      outTime: passTime,
+      returnTime: '',
+      reason: passReason,
+      status: 'Pending',
+      timestamp: new Date().toISOString()
+    };
+    const all = getPasses();
+    savePasses([...all, newPass]);
+    setStudentPasses([newPass, ...passes]);
+    setPassDest('');
+    setPassTime('');
+    setPassReason('');
+    alert('Gate pass request broadcasted to hostel security node.');
+  };
+
+  const handleSubmitHostelFB = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !fbMessage) return;
+    const newFB: HostelFeedback = {
+      id: 'fb' + Date.now(),
+      studentId: currentUser.id,
+      studentName: currentUser.name,
+      category: fbCategory,
+      rating: fbRating,
+      message: fbMessage,
+      timestamp: new Date().toISOString()
+    };
+    const all = getFeedback();
+    saveFeedback([...all, newFB]);
+    setFbMessage('');
+    alert('Thank you for your feedback. Our residential team will review it.');
+  };
+
+  const handleApplyAdminReq = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !adminReqMsg) return;
+    const newReq: StudentRequest = {
+      id: 'req' + Date.now(),
+      studentId: currentUser.id,
+      studentName: currentUser.name,
+      type: adminReqType,
+      message: adminReqMsg,
+      status: 'Pending',
+      timestamp: new Date().toISOString()
+    };
+    const all = getStudentRequests();
+    saveStudentRequests([...all, newReq]);
+    setAdminRequests([newReq, ...adminRequests]);
+    setAdminReqMsg('');
+    alert('Administrative request submitted to Student Section.');
   };
 
   return (
@@ -299,6 +407,18 @@ export default function StudentDashboard() {
           >
             <ShieldAlert size={18} />
             <span>Report Incident</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('hostel')}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-3 ${
+              activeTab === 'hostel' 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <ShieldCheck size={18} />
+            <span>Hostel & Requests</span>
           </button>
         </aside>
 
@@ -1356,6 +1476,189 @@ export default function StudentDashboard() {
                   Last Updated: Live
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 8: HOSTEL & REQUESTS                                  */}
+          {/* ========================================================= */}
+          {activeTab === 'hostel' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Apply for Leave */}
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Calendar size={18} className="text-indigo-400" /> Apply for Leave
+                  </h3>
+                  <form onSubmit={handleApplyLeave} className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <select value={leaveType} onChange={e => setLeaveType(e.target.value)} className="p-2.5 rounded-xl bg-black/60 border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option>Personal</option>
+                        <option>Medical</option>
+                        <option>Academic</option>
+                        <option>Emergency</option>
+                      </select>
+                      <input type="date" value={leaveStart} onChange={e => setLeaveStart(e.target.value)} className="p-2.5 rounded-xl bg-black/60 border border-white/10 text-xs text-white focus:outline-none" />
+                    </div>
+                    <textarea value={leaveReason} onChange={e => setLeaveReason(e.target.value)} placeholder="Reason for leave request..." className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-xs text-white h-20 focus:outline-none focus:border-indigo-500" />
+                    <button type="submit" className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase transition-all shadow-lg shadow-indigo-600/20">
+                      Submit Request
+                    </button>
+                  </form>
+                </div>
+
+                {/* Apply for Gate Pass */}
+                <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <ShieldCheck size={18} className="text-emerald-400" /> Outing / Gate Pass
+                  </h3>
+                  <form onSubmit={handleApplyPass} className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <input value={passDest} onChange={e => setPassDest(e.target.value)} placeholder="Destination" className="p-2.5 rounded-xl bg-black/60 border border-white/10 text-xs text-white focus:outline-none" />
+                      <input value={passTime} onChange={e => setPassTime(e.target.value)} placeholder="Out Time (e.g. 4 PM)" className="p-2.5 rounded-xl bg-black/60 border border-white/10 text-xs text-white focus:outline-none" />
+                    </div>
+                    <textarea value={passReason} onChange={e => setPassReason(e.target.value)} placeholder="Reason for outing..." className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-xs text-white h-20 focus:outline-none focus:border-emerald-500" />
+                    <button type="submit" className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase transition-all shadow-lg shadow-emerald-600/20">
+                      Request Gate Pass
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              {/* Status Tracking */}
+              <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Live Request Status Tracking</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Leave History */}
+                  <div className="space-y-3">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 pb-1 block">Active Leave Records</span>
+                    {leaveRequests.length === 0 ? (
+                      <p className="text-xs text-slate-600 italic">No leave history found.</p>
+                    ) : (
+                      leaveRequests.map(l => (
+                        <div key={l.id} className="p-3 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-white block">{l.type} Leave</span>
+                            <span className="text-[10px] text-slate-500 block">{l.startDate}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${l.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400' : l.status === 'Rejected' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                            {l.status}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  {/* Pass History */}
+                  <div className="space-y-3">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 pb-1 block">Gate Flow Records</span>
+                    {passes.length === 0 ? (
+                      <p className="text-xs text-slate-600 italic">No gate pass records.</p>
+                    ) : (
+                      passes.map(p => (
+                        <div key={p.id} className="p-3 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-white block">📍 {p.destination}</span>
+                            <span className="text-[10px] text-slate-500 block">Leaving at: {p.outTime}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${p.status === 'Sanctioned' ? 'bg-emerald-500/10 text-emerald-400' : p.status === 'Rejected' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                            {p.status}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Hostel Feedback */}
+              <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
+                <div className="flex items-center gap-2 text-indigo-400 border-b border-white/5 pb-3">
+                  <MessageSquare size={18} />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Hostel Experience Feedback</h3>
+                </div>
+                <form onSubmit={handleSubmitHostelFB} className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                  <div className="md:col-span-4 space-y-4">
+                    <div>
+                      <label className="text-[10px] text-slate-500 uppercase font-bold mb-1.5 block">Category</label>
+                      <select value={fbCategory} onChange={e => setFbCategory(e.target.value as any)} className="w-full p-2.5 rounded-xl bg-black/60 border border-white/10 text-xs text-white focus:outline-none">
+                        <option>General</option>
+                        <option>Food</option>
+                        <option>Cleanliness</option>
+                        <option>Maintenance</option>
+                        <option>Security</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 uppercase font-bold mb-1.5 block">Rating (1-5)</label>
+                      <div className="flex items-center gap-2">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <button key={i} type="button" onClick={() => setFbRating(i + 1)} className={`p-1 transition-all ${i < fbRating ? 'text-amber-400 scale-110' : 'text-slate-700 hover:text-slate-500'}`}>
+                            <Sparkles size={16} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="md:col-span-8 space-y-4">
+                    <div>
+                      <label className="text-[10px] text-slate-500 uppercase font-bold mb-1.5 block">Message / Suggestion</label>
+                      <textarea value={fbMessage} onChange={e => setFbMessage(e.target.value)} placeholder="Describe your experience or suggest improvements..." className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-xs text-white h-24 focus:outline-none focus:border-indigo-500" />
+                    </div>
+                    <button type="submit" className="px-6 py-2.5 rounded-xl bg-white text-black font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all">
+                      Submit Feedback
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Administrative & Document Requests */}
+              <div className="glass p-6 rounded-3xl border-purple-500/20 space-y-4">
+                <div className="flex items-center gap-2 text-purple-400 border-b border-white/5 pb-3">
+                  <FileText size={18} />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Administrative & Document Requests</h3>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  <form onSubmit={handleApplyAdminReq} className="lg:col-span-5 space-y-4">
+                    <div>
+                      <label className="text-[10px] text-slate-500 uppercase font-bold mb-1.5 block">Request Type</label>
+                      <select value={adminReqType} onChange={e => setAdminReqType(e.target.value as any)} className="w-full p-2.5 rounded-xl bg-black/60 border border-white/10 text-xs text-white focus:outline-none focus:border-purple-500">
+                        <option>Document</option>
+                        <option>Academic</option>
+                        <option>Administrative</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 uppercase font-bold mb-1.5 block">Message Details</label>
+                      <textarea value={adminReqMsg} onChange={e => setAdminReqMsg(e.target.value)} placeholder="Explain your request (e.g. need Bonafide certificate)..." className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-xs text-white h-24 focus:outline-none focus:border-purple-500" />
+                    </div>
+                    <button type="submit" className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs uppercase transition-all shadow-lg shadow-purple-600/20">
+                      Submit Admin Request
+                    </button>
+                  </form>
+                  <div className="lg:col-span-7 space-y-3">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 pb-1 block">Request Status History</span>
+                    <div className="max-h-64 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                      {adminRequests.length === 0 ? (
+                        <p className="text-xs text-slate-600 italic">No administrative requests found.</p>
+                      ) : (
+                        adminRequests.map(r => (
+                          <div key={r.id} className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-white">{r.type}</span>
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${r.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-400' : r.status === 'Rejected' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                                {r.status}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-400">{r.message}</p>
+                            <div className="text-[8px] text-slate-600 text-right italic">{r.timestamp}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 

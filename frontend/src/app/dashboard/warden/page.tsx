@@ -290,13 +290,27 @@ export default function WardenDashboard() {
               onClick={() => setActiveTab('incidents')}
               className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
                 activeTab === 'incidents' 
-                  ? 'bg-red-500/10 text-red-400 border border-red-500/30' 
-                  : 'text-red-500/50 hover:bg-white/[0.02] hover:text-red-400'
+                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20' 
+                  : 'text-slate-400 hover:bg-white/[0.02] hover:text-white'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Lock size={18} className={activeTab === 'incidents' ? 'text-red-400' : ''} />
+                <ShieldAlert size={18} className={activeTab === 'incidents' ? 'text-rose-400' : ''} />
                 <span>Anonymous Reports</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('feedback')}
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-between ${
+                activeTab === 'feedback' 
+                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20' 
+                  : 'text-slate-400 hover:bg-white/[0.02] hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Send size={18} className={activeTab === 'feedback' ? 'text-rose-400' : ''} />
+                <span>Hostel Feedback</span>
               </div>
             </button>
           </div>
@@ -804,6 +818,45 @@ export default function WardenDashboard() {
             </div>
           )}
 
+          {/* TAB 8: HOSTEL FEEDBACK */}
+          {activeTab === 'feedback' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
+                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono">
+                    Student Residential Feedback Ledger
+                  </h3>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase">Institutional Satisfaction Index</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {feedback.length === 0 ? (
+                    <div className="col-span-full p-12 text-center text-xs text-slate-500 italic bg-black/20 rounded-2xl border border-white/5">
+                      No feedback entries recorded in the current session.
+                    </div>
+                  ) : (
+                    feedback.map(fb => (
+                      <div key={fb.id} className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-white">{fb.studentName}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">{fb.category}</span>
+                        </div>
+                        <p className="text-xs text-slate-400 leading-relaxed italic">"{fb.message}"</p>
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Sparkles key={i} size={10} className={i < fb.rating ? 'text-amber-400' : 'text-slate-700'} />
+                            ))}
+                          </div>
+                          <span className="text-[9px] text-slate-600 font-mono">{fb.timestamp}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
       </main>
