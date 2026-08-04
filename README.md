@@ -1,6 +1,6 @@
 # 🚀 CampusCore
 
-CodeVault is a LAN-based, automated grading platform for first-year CS students. It features a custom-built Go-based C micro-compiler for millisecond execution and beginner-friendly feedback.
+CampusCore is a LAN-based, automated grading platform for first-year CS students. It features a custom-built Go-based C micro-compiler for millisecond execution and beginner-friendly feedback.
 
 ## 🌟 Key Features
 - **Custom C Compiler**: Lexer + Parser + Evaluator built in Go.
